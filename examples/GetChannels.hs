@@ -7,7 +7,7 @@ import           Network.Connection
 import           System.Process ( readProcess )
 import           Data.Aeson
 import           Data.Foldable
-import           Control.Monad ( when )
+import           Control.Monad ( void, when )
 
 import           Network.Mattermost
 
@@ -29,14 +29,14 @@ main = do
                     , password = T.pack pass
                     , teamname = T.pack team }
 
-  (token, _) <- mmLogin cd login
-  putStrLn ("Authenticated: " ++ show token)
+  void $ runMM cd $ do
+    (token, _) <- mmLogin login
+    io $ putStrLn ("Authenticated: " ++ show token)
 
-  (_,Just body) <- mmGetTeams cd token
-  let Success (TL teamList) = fromJSON body :: Result TeamList
-  forM_ teamList $ \t -> do
-    when (teamName t == team) $ do
-      (hdrs,body) <- mmGetChannels cd token t
-      print (teamName t)
-      print (hdrs,body)
-
+    (_, Just body) <- mmGetTeams
+    let Success (TL teamList) = fromJSON body
+    forM_ teamList $ \t -> do
+      when (teamName t == team) $ do
+        (hdrs,body) <- mmGetChannels t
+        io $ print (teamName t)
+        io $ print (hdrs,body)

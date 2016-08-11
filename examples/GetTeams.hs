@@ -1,6 +1,7 @@
 -- Use this module via `cabal repl` and then :load examples/GetTeams.hs
 -- You will need to fill out your username, hostname, and password
 module Main (main) where
+import           Control.Monad ( void )
 import qualified Data.Text as T
 import           Network.Connection
 import           System.Process ( readProcess )
@@ -25,9 +26,8 @@ main = do
                     , password = T.pack pass
                     , teamname = T.pack team }
 
-  (token, _) <- mmLogin cd login
-  putStrLn ("Authenticated: " ++ show token)
-
-  r <- mmGetTeams cd token
-  print r
-
+  void $ runMM cd $ do
+    (token, _) <- mmLogin login
+    io $ putStrLn ("Authenticated: " ++ show token)
+    r <- mmGetTeams
+    io $ print r

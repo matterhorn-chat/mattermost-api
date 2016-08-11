@@ -14,6 +14,8 @@ module Network.Mattermost
 , mmLogin
 , mmGetTeams
 , mmGetChannels
+, runMM
+, io
 ) where
 
 import           Data.Default ( def )
