@@ -7,10 +7,13 @@ module Network.Mattermost
 , Hostname
 , Port
 , ConnectionData
+, Team(..)
+, TeamList(..)
 -- Functions
 , mkConnectionData
 , mmLogin
 , mmGetTeams
+, mmGetChannels
 ) where
 
 import           Data.Default ( def )
@@ -38,7 +41,12 @@ import           Network.URI ( URI, parseRelativeReference )
 import           System.Exit ( exitFailure )
 import           Network.HTTP.Stream ( simpleHTTP_ )
 import qualified Data.Aeson as A
+import qualified Data.Aeson.Types as AT
 import           Control.Exception ( bracket )
+import           Data.Time.Clock ( UTCTime )
+import           Data.Time.Clock.POSIX ( posixSecondsToUTCTime )
+import qualified Data.HashMap.Strict as HM
+import           Data.Ratio ( (%) )
 
 data Login
   = Login
@@ -61,7 +69,7 @@ maxLineLength = 2^(16::Int) -- ugh, this silences a warning about defaulting
 -- connections from the 'connection' package.
 instance Stream Connection where
   readLine   con       = Right . B.unpack . dropTrailingChar <$> connectionGetLine maxLineLength con
-  readBlock  con n     = Right . B.unpack <$> connectionGet con n
+  readBlock  con n     = Right . B.unpack <$> connectionGetExact con n
   writeBlock con block = Right <$> connectionPut con (B.pack block)
   close      con       = connectionClose con
   closeOnEnd _   _     = return ()
@@ -154,6 +162,66 @@ mmLogin cd login = do
       putStrLn "unknown error in mmLogin"
       exitFailure
 
+-- | XXX: No idea what this is
+data TeamType = O | Unknown
+  deriving (Read, Show, Ord, Eq)
+
+instance A.FromJSON TeamType where
+  parseJSON (A.String "O") = pure O
+  parseJSON _              = pure Unknown
+
+newtype Id = Id T.Text
+  deriving (Read, Show, Eq, Ord)
+
+instance A.FromJSON Id where
+  parseJSON = A.withText "Id" $ \s ->
+    pure (Id s)
+
+getTeamIdString :: Team -> String
+getTeamIdString team = case teamId team of
+  Id s -> T.unpack s
+
+data Team
+  = Team
+  { teamId              :: Id
+  , teamCreateAt        :: UTCTime
+  , teamUpdateAt        :: UTCTime
+  , teamDeleteAt        :: UTCTime
+  , teamDisplayName     :: String
+  , teamName            :: String
+  , teamEmail           :: String
+  , teamType            :: TeamType
+  , teamCompanyName     :: String
+  , teamAllowedDomains  :: String
+  , teamInviteId        :: Id
+  , teamAllowOpenInvite :: Bool
+  }
+  deriving (Read, Show, Eq, Ord)
+
+instance A.FromJSON Team where
+  parseJSON = A.withObject "Team" $ \v -> Team     <$>
+    v A..: "id"                                    <*>
+    (millisecondsToUTCTime <$> v A..: "create_at") <*>
+    (millisecondsToUTCTime <$> v A..: "update_at") <*>
+    (millisecondsToUTCTime <$> v A..: "delete_at") <*>
+    v A..: "display_name"                          <*>
+    v A..: "name"                                  <*>
+    v A..: "email"                                 <*>
+    v A..: "type"                                  <*>
+    v A..: "company_name"                          <*>
+    v A..: "allowed_domains"                       <*>
+    v A..: "invite_id"                             <*>
+    v A..: "allow_open_invite"
+
+newtype TeamList = TL [Team]
+  deriving (Read, Show, Eq, Ord)
+
+instance A.FromJSON TeamList where
+  parseJSON = A.withObject "TeamList" $ \hm -> do
+    let tl = map snd (HM.toList hm)
+    tl' <- mapM A.parseJSON tl
+    return (TL tl')
+
 -- | Requires an authenticated user. Returns the full list of teams.
 mmGetTeams :: ConnectionData -> Token -> IO ([Header], Maybe A.Value)
 mmGetTeams cd token = do
@@ -170,6 +238,28 @@ mmGetTeams cd token = do
         Just ct | ct == "application/json" -> return (A.decode (BL.pack body))
         _ -> return Nothing
       return (hdrs, value)
+
+-- | Requires an authenticated user. Returns the full list of channels for a given team
+mmGetChannels :: ConnectionData -> Token -> Team -> IO ([Header], Maybe A.Value)
+mmGetChannels cd token team = do
+  let mb_path = parseRelativeReference ("/api/v3/teams/" ++ getTeamIdString team ++ "/channels/")
+  case mb_path of
+    Nothing   -> exitFailure
+    Just path -> do
+      r <- mmRequest cd token path
+      case r of
+        Left err -> do
+          print err
+          exitFailure
+        Right rsp -> do
+          let hdrs = rspHeaders rsp
+              body = rspBody    rsp
+          putStrLn body
+          value <- case lookupHeader HdrContentType hdrs of
+            Just ct | ct == "application/json" -> return (A.decode (BL.pack body))
+            -- _ -> return Nothing
+            _ -> return (A.decode (BL.pack body))
+          return (hdrs, value)
 
 -- | This is for making a generic authenticated request.
 mmRequest :: ConnectionData -> Token -> URI -> IO (NS.Result Response_String)
@@ -207,3 +297,24 @@ withConnection cd action =
           )
           connectionClose
           action
+
+millisecondsToUTCTime :: Integer -> UTCTime
+millisecondsToUTCTime ms = posixSecondsToUTCTime (fromRational (ms%1000))
+
+-- | Get exact count of bytes from a connection.
+--
+-- The size argument is the exact amount that must be returned to the user.
+-- The call will wait until all data is available.  Hence, it behaves like
+-- 'B.hGet'.
+--
+-- On end of input, 'connectionGetExact' will throw an 'E.isEOFError'
+-- exception.
+-- Taken from: https://github.com/vincenthz/hs-connection/issues/9
+connectionGetExact :: Connection -> Int -> IO B.ByteString
+connectionGetExact con n = loop B.empty 0
+  where loop bs y
+          | y == n = return bs
+          | otherwise = do
+            next <- connectionGet con (n - y)
+            loop (B.append bs next) (y + (B.length next))
+
