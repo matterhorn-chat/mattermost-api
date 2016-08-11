@@ -22,7 +22,6 @@ import qualified Data.ByteString.Lazy.Char8 as BL
 import qualified Data.Text as T
 import           Network.Connection ( Connection
                                     , ConnectionParams(..)
-                                    , ConnectionContext
                                     , connectTo
                                     , connectionGetLine
                                     , connectionGet
@@ -36,9 +35,8 @@ import           Network.HTTP.Base ( Request(..)
                                    , defaultUserAgent
                                    , Response_String
                                    , Response(..) )
-import           Network.Stream as NS ( Result, Stream(..) )
+import           Network.Stream as NS ( Stream(..) )
 import           Network.URI ( URI, parseRelativeReference )
-import           System.Exit ( exitFailure )
 import           Network.HTTP.Stream ( simpleHTTP_ )
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Types as AT
@@ -48,6 +46,9 @@ import           Data.Time.Clock.POSIX ( posixSecondsToUTCTime )
 import qualified Data.HashMap.Strict as HM
 import           Data.Ratio ( (%) )
 
+import Network.Mattermost.Util
+import Network.Mattermost.Types
+
 data Login
   = Login
   { username :: T.Text
@@ -55,11 +56,11 @@ data Login
   , password :: T.Text
   }
 
-newtype Token = Token String
-  deriving (Read, Show, Eq, Ord)
+--newtype Token = Token String
+--  deriving (Read, Show, Eq, Ord)
 
-getTokenString :: Token -> String
-getTokenString (Token s) = s
+--getTokenString :: Token -> String
+--getTokenString (Token s) = s
 
 -- XXX: What value should we really use here?
 maxLineLength :: Int
@@ -80,46 +81,15 @@ instance A.ToJSON Login where
                       ,"password" A..= password l
                       ]
 
-type Hostname = String
-type Port     = Int
-
--- For now we don't support or expose the ability to reuse connections,
--- but we have this field in case we want to support that in the future.
--- Doing so will require some modifications to withConnection (and uses).
--- Note: don't export this until we support connection reuse.
-data AutoClose = No | Yes
-  deriving (Read, Show, Eq, Ord)
-
-data ConnectionData
-  = ConnectionData
-  { cdHostname      :: Hostname
-  , cdPort          :: Port
-  , cdAutoClose     :: AutoClose
-  , cdConnectionCtx :: ConnectionContext
-  }
-
-mkConnectionData :: Hostname -> Port -> ConnectionContext -> ConnectionData
-mkConnectionData host port ctx = ConnectionData
-  { cdHostname      = host
-  , cdPort          = port
-  , cdConnectionCtx = ctx
-  , cdAutoClose     = Yes
-  }
-
--- | We return a list of headers so that we can treat
--- the headers like a monoid.
-autoCloseToHeader :: AutoClose -> [Header]
-autoCloseToHeader No  = []
-autoCloseToHeader Yes = [mkHeader HdrConnection "Close"]
-
 -- API calls
 
 -- | We should really only need this function to get an auth token.
 -- We provide it in a fairly generic form in case we need ever need it
 -- but it could be inlined into mmLogin.
-mmUnauthenticatedHTTPPost :: ConnectionData -> URI -> A.Value -> IO (NS.Result Response_String)
-mmUnauthenticatedHTTPPost cd path json = do
-  withConnection cd $ \con -> do
+mmUnauthenticatedHTTPPost :: URI -> A.Value -> MM Response_String
+mmUnauthenticatedHTTPPost path json = do
+  cd <- getConnectionData
+  ioS show $ withConnection cd $ \con -> do
     let content       = BL.toStrict (A.encode json)
         contentLength = B.length content
         request       = Request { rqURI     = path
@@ -135,32 +105,30 @@ mmUnauthenticatedHTTPPost cd path json = do
 
 -- | Fire off a login attempt. Note: We get back more than just the auth token.
 -- We also get all the server-side configuration data for the user.
-mmLogin :: ConnectionData -> Login -> IO (Token, Maybe A.Value)
-mmLogin cd login = do
-  let Just path = parseRelativeReference "/api/v3/users/login"
-      json      = A.toJSON login
-  r <- mmUnauthenticatedHTTPPost cd path json
-  case r of
-    Left err -> do
-      print err
-      exitFailure
-    Right resp | rspCode resp == (2,0,0) -> do
-      let hdrs = rspHeaders resp
-          body = rspBody    resp
+mmLogin :: Login -> MM (Token, Maybe A.Value)
+mmLogin login = do
+  -- this shouldn't fail, but just for good measure
+  path <- noteT "error parsing path" $
+            parseRelativeReference "/api/v3/users/login"
 
-      token <- case lookupHeader (HdrCustom "Token") hdrs of
-        Nothing -> do
-          putStrLn "No Token Header found in auth response"
-          -- XXX: Do something better than just bailing here
-          exitFailure
-        Just t -> return (Token t)
-      value <- case lookupHeader HdrContentType hdrs of
-        Just ct | ct == "application/json" -> return (A.decode (BL.pack body))
-        _ -> return Nothing
-      return (token, value)
-    _ -> do
-      putStrLn "unknown error in mmLogin"
-      exitFailure
+  resp <- mmUnauthenticatedHTTPPost path (A.toJSON login)
+  assert "expected 200 response" $
+    rspCode resp == (2,0,0)
+
+  let hdrs = rspHeaders resp
+      body = rspBody    resp
+
+  -- make sure the headers are what we expect
+  token <- noteT "No token header found in auth response"
+             (lookupHeader (HdrCustom "Token") hdrs)
+  contentType <- noteT "No content-type header found"
+                   (lookupHeader HdrContentType hdrs)
+  assert "expected JSON content type" (contentType == "application/json")
+
+  value <- noteT "Unable to parse JSON payload" $
+             A.decode (BL.pack body)
+
+  return (Token token, value)
 
 -- | XXX: No idea what this is
 data TeamType = O | Unknown
@@ -222,49 +190,43 @@ instance A.FromJSON TeamList where
     tl' <- mapM A.parseJSON tl
     return (TL tl')
 
+mmPath :: String -> MM URI
+mmPath str = noteT "error parsing path" (parseRelativeReference str)
+
 -- | Requires an authenticated user. Returns the full list of teams.
-mmGetTeams :: ConnectionData -> Token -> IO ([Header], Maybe A.Value)
-mmGetTeams cd token = do
-  let Just path = parseRelativeReference "/api/v3/teams/all"
-  r <- mmRequest cd token path
-  case r of
-    Left err -> do
-      print err
-      exitFailure
-    Right rsp -> do
-      let hdrs = rspHeaders rsp
-          body = rspBody    rsp
-      value <- case lookupHeader HdrContentType hdrs of
-        Just ct | ct == "application/json" -> return (A.decode (BL.pack body))
-        _ -> return Nothing
-      return (hdrs, value)
+mmGetTeams :: MM ([Header], Maybe A.Value)
+mmGetTeams = do
+  path <- mmPath "/api/v3/teams/all"
+  rsp <- mmRequest path
+  mmGetJSONAndHeaders rsp
 
 -- | Requires an authenticated user. Returns the full list of channels for a given team
-mmGetChannels :: ConnectionData -> Token -> Team -> IO ([Header], Maybe A.Value)
-mmGetChannels cd token team = do
-  let mb_path = parseRelativeReference ("/api/v3/teams/" ++ getTeamIdString team ++ "/channels/")
-  case mb_path of
-    Nothing   -> exitFailure
-    Just path -> do
-      r <- mmRequest cd token path
-      case r of
-        Left err -> do
-          print err
-          exitFailure
-        Right rsp -> do
-          let hdrs = rspHeaders rsp
-              body = rspBody    rsp
-          putStrLn body
-          value <- case lookupHeader HdrContentType hdrs of
-            Just ct | ct == "application/json" -> return (A.decode (BL.pack body))
-            -- _ -> return Nothing
-            _ -> return (A.decode (BL.pack body))
-          return (hdrs, value)
+mmGetChannels :: Team -> MM ([Header], Maybe A.Value)
+mmGetChannels team = do
+  path <- mmPath ("/api/v3/teams/" ++ getTeamIdString team ++ "/channels/")
+  rsp <- mmRequest path
+  mmGetJSONAndHeaders rsp
+
+mmGetJSONAndHeaders :: A.FromJSON t => Response_String -> MM ([Header], t)
+mmGetJSONAndHeaders rsp = do
+  value <- mmGetJSONBody rsp
+  return (rspHeaders rsp, value)
+
+mmGetJSONBody :: A.FromJSON t => Response_String -> MM t
+mmGetJSONBody rsp = do
+  contentType <- noteT "No content-type header found" $
+                   lookupHeader HdrContentType (rspHeaders rsp)
+  assert "Expected content type 'application/json'" $
+    contentType == "application/json"
+
+  noteT "Unable to parse JSON" $ A.decode (BL.pack (rspBody rsp))
 
 -- | This is for making a generic authenticated request.
-mmRequest :: ConnectionData -> Token -> URI -> IO (NS.Result Response_String)
-mmRequest cd token path = do
-  withConnection cd $ \con -> do
+mmRequest :: URI -> MM Response_String
+mmRequest path = do
+  cd <- getConnectionData
+  token <- getToken
+  ioS show $ withConnection cd $ \con -> do
     let request = Request { rqURI     = path
                           , rqMethod  = GET
                           , rqHeaders = [ mkHeader HdrAuthorization ("Bearer " ++ getTokenString token)
@@ -317,4 +279,3 @@ connectionGetExact con n = loop B.empty 0
           | otherwise = do
             next <- connectionGet con (n - y)
             loop (B.append bs next) (y + (B.length next))
-
