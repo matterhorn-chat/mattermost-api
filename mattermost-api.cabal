@@ -12,10 +12,16 @@ build-type:          Simple
 extra-source-files:  ChangeLog.md
 cabal-version:       >=1.10
 
+flag build-examples
+  description: Build example applications
+  default:     False
+
 library
   exposed-modules:     Network.Mattermost
-  -- other-modules:       
-  -- other-extensions:    
+                     , Network.Mattermost.WebSocket.Types
+  other-modules:       Network.Mattermost.Util
+                     , Network.Mattermost.Types
+  -- other-extensions:
   build-depends:       base >=4.8 && <4.9
                      , websockets
                      , aeson
@@ -28,7 +34,33 @@ library
                      , text
                      , time
                      , unordered-containers
+                     , mtl
   hs-source-dirs:      src
   default-language:    Haskell2010
   ghc-options:       -Wall
 
+executable mm-get-teams
+  if !flag(build-examples)
+    buildable: False
+  default-language: Haskell2010
+  main-is:          GetTeams.hs
+  hs-source-dirs:   examples
+  build-depends:    base
+                  , mattermost-api
+                  , aeson
+                  , text
+                  , connection
+                  , process
+
+executable mm-get-channels
+  if !flag(build-examples)
+    buildable:        False
+  default-language: Haskell2010
+  main-is:          GetChannels.hs
+  hs-source-dirs:   examples
+  build-depends:    base
+                  , mattermost-api
+                  , aeson
+                  , text
+                  , connection
+                  , process
