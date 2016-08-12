@@ -1,5 +1,6 @@
 -- Use this module via `cabal repl` and then :load examples/GetChannels.hs
 -- You will need to fill out your username, hostname, and password
+{-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 module Main (main) where
 import qualified Data.Text as T
@@ -37,6 +38,8 @@ main = do
     let Success (TL teamList) = fromJSON body
     forM_ teamList $ \t -> do
       when (teamName t == team) $ do
-        (hdrs,body) <- mmGetChannels t
-        io $ print (teamName t)
-        io $ print (hdrs,body)
+        (_hdrs,Just body) <- mmGetChannels t
+        let Success (CL chans) = fromJSON body
+        forM_ chans $ \chan -> do
+          (_, Just body) <- mmGetChannel t chan
+          io $ print body

@@ -9,15 +9,18 @@ module Network.Mattermost
 , ConnectionData
 , Team(..)
 , TeamList(..)
+, ChannelList(..)
 -- Functions
 , mkConnectionData
 , mmLogin
 , mmGetTeams
 , mmGetChannels
+, mmGetChannel
 , runMM
 , io
 ) where
 
+import           Text.Printf ( printf )
 import           Data.Default ( def )
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as BL
@@ -143,7 +146,18 @@ mmGetTeams = do
 -- | Requires an authenticated user. Returns the full list of channels for a given team
 mmGetChannels :: Team -> MM ([Header], Maybe Value)
 mmGetChannels team = do
-  path <- mmPath ("/api/v3/teams/" ++ getTeamIdString team ++ "/channels/")
+  path <- mmPath $ printf "/api/v3/teams/%s/channels/"
+                          (getId team)
+  rsp  <- mmRequest path
+  mmGetJSONAndHeaders rsp
+
+-- | Requires an authenticated user. Returns the details of a
+-- specific channel.
+mmGetChannel :: Team -> Channel -> MM ([Header], Maybe Value)
+mmGetChannel team chan = do
+  path <- mmPath $ printf "/api/v3/teams/%s/channels/%s/"
+                          (getId team)
+                          (getId chan)
   rsp  <- mmRequest path
   mmGetJSONAndHeaders rsp
 

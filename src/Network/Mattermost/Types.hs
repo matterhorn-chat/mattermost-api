@@ -1,8 +1,10 @@
+{-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Network.Mattermost.Types where
 
 import qualified Data.Aeson as A
+import           Data.Aeson ( (.:) )
 import qualified Data.HashMap.Strict as HM
 import           Data.Ratio ( (%) )
 import qualified Data.Text as T
@@ -69,16 +71,15 @@ instance A.ToJSON Login where
 
 
 -- | XXX: No idea what this is
-data TeamType = O | Unknown
+data Type = Type T.Text
   deriving (Read, Show, Ord, Eq)
 
-instance A.FromJSON TeamType where
-  parseJSON (A.String "O") = pure O
-  parseJSON _              = pure Unknown
+instance A.FromJSON Type where
+  parseJSON = A.withText "Type" (pure . Type)
 
 --
 
-newtype Id = Id T.Text
+newtype Id = Id { unId :: T.Text }
   deriving (Read, Show, Eq, Ord)
 
 instance A.FromJSON Id where
@@ -87,9 +88,11 @@ instance A.FromJSON Id where
 
 --
 
-getTeamIdString :: Team -> String
-getTeamIdString team = case teamId team of
-  Id s -> T.unpack s
+class HasId x where
+  getId :: x -> String
+
+instance HasId Team where
+  getId = T.unpack . unId . teamId
 
 data Team
   = Team
@@ -100,7 +103,7 @@ data Team
   , teamDisplayName     :: String
   , teamName            :: String
   , teamEmail           :: String
-  , teamType            :: TeamType
+  , teamType            :: Type
   , teamCompanyName     :: String
   , teamAllowedDomains  :: String
   , teamInviteId        :: Id
@@ -109,19 +112,70 @@ data Team
   deriving (Read, Show, Eq, Ord)
 
 instance A.FromJSON Team where
-  parseJSON = A.withObject "Team" $ \v -> Team     <$>
-    v A..: "id"                                    <*>
-    (millisecondsToUTCTime <$> v A..: "create_at") <*>
-    (millisecondsToUTCTime <$> v A..: "update_at") <*>
-    (millisecondsToUTCTime <$> v A..: "delete_at") <*>
-    v A..: "display_name"                          <*>
-    v A..: "name"                                  <*>
-    v A..: "email"                                 <*>
-    v A..: "type"                                  <*>
-    v A..: "company_name"                          <*>
-    v A..: "allowed_domains"                       <*>
-    v A..: "invite_id"                             <*>
-    v A..: "allow_open_invite"
+  parseJSON = A.withObject "Team" $ \v -> do
+    teamId              <- v .: "id"
+    teamCreateAt        <- millisecondsToUTCTime <$> v .: "create_at"
+    teamUpdateAt        <- millisecondsToUTCTime <$> v .: "update_at"
+    teamDeleteAt        <- millisecondsToUTCTime <$> v .: "delete_at"
+    teamDisplayName     <- v .: "display_name"
+    teamName            <- v .: "name"
+    teamEmail           <- v .: "email"
+    teamType            <- v .: "type"
+    teamCompanyName     <- v .: "company_name"
+    teamAllowedDomains  <- v .: "allowed_domains"
+    teamInviteId        <- v .: "invite_id"
+    teamAllowOpenInvite <- v .: "allow_open_invite"
+    return Team { .. }
+
+data Channel
+  = Channel
+  { channelId            :: Id
+  , channelCreateAt      :: UTCTime
+  , channelUpdateAt      :: UTCTime
+  , channelDeleteAt      :: UTCTime
+  , channelTeamId        :: Id
+  , channelType          :: Type
+  , channelDisplayName   :: String
+  , channelName          :: String
+  , channelHeader        :: String
+  , channelPurpose       :: String
+  , channelLastPostAt    :: UTCTime
+  , channelTotalMsgCount :: Int
+  , channelExtraUpdateAt :: UTCTime
+  , channelCreatorId     :: Id
+  } deriving (Read, Show, Eq, Ord)
+
+instance HasId Channel where
+  getId = T.unpack . unId . channelId
+
+instance A.FromJSON Channel where
+  parseJSON = A.withObject "Channel" $ \v -> do
+    channelId              <- v .: "id"
+    channelCreateAt        <- millisecondsToUTCTime <$> v .: "create_at"
+    channelUpdateAt        <- millisecondsToUTCTime <$> v .: "update_at"
+    channelDeleteAt        <- millisecondsToUTCTime <$> v .: "delete_at"
+    channelTeamId          <- v .: "team_id"
+    channelType            <- v .: "type"
+    channelDisplayName     <- v .: "display_name"
+    channelName            <- v .: "name"
+    channelHeader          <- v .: "header"
+    channelPurpose         <- v .: "purpose"
+    channelLastPostAt      <- millisecondsToUTCTime <$> v .: "last_post_at"
+    channelTotalMsgCount   <- v .: "total_msg_count"
+    channelExtraUpdateAt   <- millisecondsToUTCTime <$> v .: "extra_update_at"
+    channelCreatorId       <- v .: "creator_id"
+    return Channel { .. }
+
+newtype ChannelList = CL [Channel]
+  deriving (Read, Show, Eq, Ord)
+
+instance A.FromJSON ChannelList where
+  parseJSON = A.withObject "ChannelList" $ \o -> do
+    chans <- o .: "channels"
+    cl    <- mapM A.parseJSON chans
+    return (CL cl)
+
+--
 
 millisecondsToUTCTime :: Integer -> UTCTime
 millisecondsToUTCTime ms = posixSecondsToUTCTime (fromRational (ms%1000))
