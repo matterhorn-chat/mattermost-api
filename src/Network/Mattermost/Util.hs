@@ -2,12 +2,13 @@
 
 module Network.Mattermost.Util where
 
-import Data.Char ( toUpper )
+import           Data.Char ( toUpper )
+import qualified Data.Aeson as A
 
-import Control.Monad.Except
-import Control.Monad.State.Strict
+import           Control.Monad.Except
+import           Control.Monad.State.Strict
 
-import Network.Mattermost.Types
+import           Network.Mattermost.Types
 
 -- A convenient, internal wrapper for IO actions that might fail.
 newtype MM a = MM (ExceptT String (StateT ConnectionData IO) a)
@@ -50,6 +51,10 @@ noteT _ (Just r) = pure r
 hoistT :: Either String r -> MM r
 hoistT (Left l)  = throwError l
 hoistT (Right r) = pure r
+
+hoistA :: A.Result r -> MM r
+hoistA (A.Error s)   = throwError s
+hoistA (A.Success r) = pure r
 
 assert :: String -> Bool -> MM ()
 assert _ True  = pure ()

@@ -1,10 +1,15 @@
 {-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Network.Mattermost.Types where
 
+import           Data.Hashable ( Hashable )
 import qualified Data.Aeson as A
 import           Data.Aeson ( (.:) )
+import           Data.Aeson.Types ( ToJSONKey
+                                  , FromJSONKey
+                                  )
 import qualified Data.HashMap.Strict as HM
 import           Data.Ratio ( (%) )
 import qualified Data.Text as T
@@ -80,11 +85,12 @@ instance A.FromJSON Type where
 --
 
 newtype Id = Id { unId :: T.Text }
-  deriving (Read, Show, Eq, Ord)
+  deriving (Read, Show, Eq, Ord, Hashable, ToJSONKey, FromJSONKey)
 
 instance A.FromJSON Id where
   parseJSON = A.withText "Id" $ \s ->
     pure (Id s)
+
 
 --
 
@@ -174,6 +180,102 @@ instance A.FromJSON ChannelList where
     chans <- o .: "channels"
     cl    <- mapM A.parseJSON chans
     return (CL cl)
+
+--
+
+data UserProfile
+  = UserProfile
+  { userProfileEmail          :: String
+  , userProfileRoles          :: String
+  , userProfileLastActivityAt :: UTCTime
+  , userProfileFirstName      :: String
+  , userProfileAuthService    :: String
+  , userProfileLocale         :: String
+  , userProfileUsername       :: String
+  , userProfileAuthData       :: String
+  , userProfileLastName       :: String
+  , userProfileId             :: Id
+  , userProfileNickname       :: String
+  , userProfileDeleteAt       :: UTCTime
+  , userProfileCreateAt       :: UTCTime
+  } deriving (Read, Show, Eq, Ord)
+
+instance HasId UserProfile where
+  getId = T.unpack . unId . userProfileId
+
+instance A.FromJSON UserProfile where
+  parseJSON = A.withObject "UserProfile" $ \v -> do
+    userProfileEmail          <- v .: "email"
+    userProfileRoles          <- v .: "roles"
+    userProfileLastActivityAt <- millisecondsToUTCTime <$> v .: "last_activity_at"
+    userProfileFirstName      <- v .: "first_name"
+    userProfileAuthService    <- v .: "auth_service"
+    userProfileLocale         <- v .: "locale"
+    userProfileUsername       <- v .: "username"
+    userProfileAuthData       <- v .: "auth_data"
+    userProfileLastName       <- v .: "last_name"
+    userProfileId             <- v .: "id"
+    userProfileNickname       <- v .: "nickname"
+    userProfileDeleteAt       <- millisecondsToUTCTime <$> v .: "delete_at"
+    userProfileCreateAt       <- millisecondsToUTCTime <$> v .: "create_at"
+    return UserProfile { .. }
+
+--
+
+data Post
+  = Post
+  { postPendingPostId :: Id
+  , postOriginalId    :: Id
+  , postProps         :: A.Value
+  , postRootId        :: String
+  , postFilenames     :: A.Value
+  , postId            :: Id
+  , postType          :: Type
+  , postMessage       :: String
+  , postDeleteAt      :: UTCTime
+  , postHashtags      :: String
+  , postUpdateAt      :: UTCTime
+  , postUserId        :: Id
+  , postCreateAt      :: UTCTime
+  , postParentId      :: Id
+  , postChannelId     :: Id
+  } deriving (Read, Show, Eq)
+
+instance HasId Post where
+  getId = T.unpack . unId . postId
+
+instance A.FromJSON Post where
+  parseJSON = A.withObject "Post" $ \v -> do
+    postPendingPostId <- v .: "pending_post_id"
+    postOriginalId    <- v .: "original_id"
+    postProps         <- v .: "props"
+    postRootId        <- v .: "root_id"
+    postFilenames     <- v .: "filenames"
+    postId            <- v .: "id"
+    postType          <- v .: "type"
+    postMessage       <- v .: "message"
+    postDeleteAt      <- millisecondsToUTCTime <$> v .: "delete_at"
+    postHashtags      <- v .: "hashtags"
+    postUpdateAt      <- millisecondsToUTCTime <$> v .: "update_at"
+    postUserId        <- v .: "user_id"
+    postCreateAt      <- millisecondsToUTCTime <$> v .: "create_at"
+    postParentId      <- v .: "parent_id"
+    postChannelId     <- v .: "channel_id"
+    return Post { .. }
+
+--
+
+data Posts
+  = Posts
+  { postsPosts :: HM.HashMap Id Post
+  , postsOrder :: [Id]
+  } deriving (Read, Show, Eq)
+
+instance A.FromJSON Posts where
+  parseJSON = A.withObject "Posts" $ \v -> do
+    postsPosts <- v .: "posts"
+    postsOrder <- v .: "order"
+    return Posts { .. }
 
 --
 

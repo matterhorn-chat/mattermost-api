@@ -7,15 +7,25 @@ module Network.Mattermost
 , Hostname
 , Port
 , ConnectionData
+, Id(..)
 , Team(..)
 , TeamList(..)
+, Channel(..)
 , ChannelList(..)
+, UserProfile(..)
+, Post(..)
+, Posts(..)
 -- Functions
 , mkConnectionData
 , mmLogin
 , mmGetTeams
 , mmGetChannels
 , mmGetChannel
+, mmGetPosts
+, mmGetUser
+, mmGetTeamMembers
+, mmGetMe
+, mmGetProfiles
 , runMM
 , io
 ) where
@@ -158,6 +168,46 @@ mmGetChannel team chan = do
   path <- mmPath $ printf "/api/v3/teams/%s/channels/%s/"
                           (getId team)
                           (getId chan)
+  rsp  <- mmRequest path
+  mmGetJSONAndHeaders rsp
+
+mmGetPosts :: Team -> Channel
+           -> Int -- offset in the backlog, 0 is most recent
+           -> Int -- try to fetch this many
+           -> MM ([Header], Maybe Value)
+mmGetPosts team chan offset limit = do
+  path <- mmPath $ printf "/api/v3/teams/%s/channels/%s/posts/page/%d/%d"
+                          (getId team)
+                          (getId chan)
+                          offset
+                          limit
+  rsp  <- mmRequest path
+  mmGetJSONAndHeaders rsp
+
+mmGetUser :: UserProfile -> MM ([Header], Maybe Value)
+mmGetUser user = do
+  path <- mmPath $ printf "/api/v3/users/%s/get"
+                          (getId user)
+  rsp  <- mmRequest path
+  mmGetJSONAndHeaders rsp
+
+mmGetTeamMembers :: Team -> MM ([Header], Maybe Value)
+mmGetTeamMembers team = do
+  path <- mmPath $ printf "/api/v3/teams/members/%s"
+                          (getId team)
+  rsp  <- mmRequest path
+  mmGetJSONAndHeaders rsp
+
+mmGetMe :: MM ([Header], Maybe Value)
+mmGetMe = do
+  path <- mmPath "/api/v3/users/me"
+  rsp  <- mmRequest path
+  mmGetJSONAndHeaders rsp
+
+mmGetProfiles :: Team -> MM ([Header], Maybe Value)
+mmGetProfiles team = do
+  path <- mmPath $ printf "/api/v3/users/profiles/%s"
+                          (getId team)
   rsp  <- mmRequest path
   mmGetJSONAndHeaders rsp
 
