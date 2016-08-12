@@ -2,6 +2,8 @@
 
 module Network.Mattermost.Util where
 
+import Data.Char ( toUpper )
+
 import Control.Monad.Except
 import Control.Monad.State.Strict
 
@@ -65,3 +67,7 @@ getToken = MM $ do
 
 getConnectionData :: MM ConnectionData
 getConnectionData = MM get
+
+-- | Case Insensitive string comparison
+(~=) :: String -> String -> Bool
+a ~= b = map toUpper a == map toUpper b

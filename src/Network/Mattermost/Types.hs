@@ -128,6 +128,9 @@ millisecondsToUTCTime ms = posixSecondsToUTCTime (fromRational (ms%1000))
 
 --
 
+-- TODO: It's probably better to return the actual HashMap instead
+-- of converting to a list. Let the user of the API decide what
+-- they want.
 newtype TeamList = TL [Team]
   deriving (Read, Show, Eq, Ord)
 

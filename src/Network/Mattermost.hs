@@ -82,7 +82,7 @@ mmGetJSONBody :: FromJSON t => Response_String -> MM t
 mmGetJSONBody rsp = do
   contentType <- mmGetHeader rsp HdrContentType
   assert "Expected content type 'application/json'" $
-    contentType == "application/json"
+    contentType ~= "application/json"
 
   noteT "Unable to parse JSON" $ decode (BL.pack (rspBody rsp))
 
@@ -112,7 +112,7 @@ mmUnauthenticatedHTTPPost path json = do
                         , mkHeader HdrContentType   "application/json"
                         , mkHeader HdrContentLength (show contentLength)
                         ] ++ autoCloseToHeader (cdAutoClose cd)
-          , rqBody = B.unpack content
+          , rqBody    = B.unpack content
           }
     simpleHTTP_ con request
 
@@ -123,7 +123,7 @@ mmLogin login = do
   -- this shouldn't fail, but just for good measure
   path <- mmPath "/api/v3/users/login"
 
-  rsp <- mmUnauthenticatedHTTPPost path login
+  rsp  <- mmUnauthenticatedHTTPPost path login
   assert "expected 200 response" (rspCode rsp == (2,0,0))
 
   token <- mmGetHeader rsp (HdrCustom "Token")
@@ -137,20 +137,20 @@ mmLogin login = do
 mmGetTeams :: MM ([Header], Maybe Value)
 mmGetTeams = do
   path <- mmPath "/api/v3/teams/all"
-  rsp <- mmRequest path
+  rsp  <- mmRequest path
   mmGetJSONAndHeaders rsp
 
 -- | Requires an authenticated user. Returns the full list of channels for a given team
 mmGetChannels :: Team -> MM ([Header], Maybe Value)
 mmGetChannels team = do
   path <- mmPath ("/api/v3/teams/" ++ getTeamIdString team ++ "/channels/")
-  rsp <- mmRequest path
+  rsp  <- mmRequest path
   mmGetJSONAndHeaders rsp
 
 -- | This is for making a generic authenticated request.
 mmRequest :: URI -> MM Response_String
 mmRequest path = do
-  cd <- getConnectionData
+  cd    <- getConnectionData
   token <- getToken
   ioS show $ withConnection cd $ \con -> do
     let request = Request
