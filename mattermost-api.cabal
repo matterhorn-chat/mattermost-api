@@ -18,9 +18,9 @@ flag build-examples
 
 library
   exposed-modules:     Network.Mattermost
-                     , Network.Mattermost.WebSocket.Types
-  other-modules:       Network.Mattermost.Util
-                     , Network.Mattermost.Types
+                       Network.Mattermost.Util
+                       Network.Mattermost.WebSocket.Types
+  other-modules:       Network.Mattermost.Types
   -- other-extensions:
   build-depends:       base >=4.8 && <4.9
                      , websockets
@@ -80,4 +80,5 @@ executable mm-get-posts
                   , text
                   , connection
                   , process
+                  , unordered-containers
                   , pretty-show
