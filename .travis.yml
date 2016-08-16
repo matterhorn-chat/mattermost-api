@@ -4,4 +4,4 @@ ghc:
   - 7.6
   - 7.4
 script:
-  - cabal configure -fbuild-examples && cabal build && cabal test
+  - cabal configure --enable-tests -fbuild-examples && cabal build && cabal test
