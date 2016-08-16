@@ -14,6 +14,8 @@ module Network.Mattermost
 , UserProfile(..)
 , Post(..)
 , Posts(..)
+-- Typeclasses
+, HasId(..)
 -- Functions
 , mkConnectionData
 , mmLogin

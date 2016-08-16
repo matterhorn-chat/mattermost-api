@@ -42,11 +42,11 @@ main = do
     teamMap <- mmGetTeams
     forM_ (HM.elems teamMap) $ \t -> do
       when (teamName t == team) $ do
-        userMap <- mmGetProfiles (teamId t)
-        (Channels chans _md) <- mmGetChannels (teamId t)
+        userMap <- mmGetProfiles (getId t)
+        Channels chans _md <- mmGetChannels (getId t)
         forM_ chans $ \chan -> do
           when (channelName chan == channel) $ do
-            posts <- mmGetPosts (teamId t) (channelId chan) 0 10
+            posts <- mmGetPosts (getId t) (getId chan) 0 10
             -- XXX: is the order really reversed?
             forM_ (reverse (postsOrder posts)) $ \postId -> do
               p    <- noteT "lookup post by id"           $ HM.lookup postId         (postsPosts posts)

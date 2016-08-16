@@ -1,6 +1,8 @@
 {-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 module Network.Mattermost.Types where
 
@@ -91,8 +93,8 @@ class IsId x where
   toId   :: x  -> Id
   fromId :: Id -> x
 
-class HasId x where
-  getId :: x -> Id
+class HasId x y | x -> y where
+  getId :: x -> y
 
 newtype Id = Id { unId :: T.Text }
   deriving (Read, Show, Eq, Ord, Hashable, ToJSONKey, FromJSONKey)
@@ -108,7 +110,7 @@ instance IsId Id where
   toId   = id
   fromId = id
 
-instance HasId Id where
+instance HasId Id Id where
   getId  = id
 
 --
@@ -137,8 +139,8 @@ data Team
   }
   deriving (Read, Show, Eq, Ord)
 
-instance HasId Team where
-  getId = toId . teamId
+instance HasId Team TeamId where
+  getId = teamId
 
 instance A.FromJSON Team where
   parseJSON = A.withObject "Team" $ \v -> do
@@ -183,8 +185,8 @@ data Channel
   , channelCreatorId     :: UserId
   } deriving (Read, Show, Eq, Ord)
 
-instance HasId Channel where
-  getId = toId . channelId
+instance HasId Channel ChannelId where
+  getId = channelId
 
 instance A.FromJSON Channel where
   parseJSON = A.withObject "Channel" $ \v -> do
@@ -204,8 +206,8 @@ instance A.FromJSON Channel where
     channelCreatorId       <- v .: "creator_id"
     return Channel { .. }
 
-instance HasId ChannelData where
-  getId = toId . channelDataChannelId
+instance HasId ChannelData ChannelId where
+  getId = channelDataChannelId
 
 data ChannelData
   = ChannelData
@@ -273,8 +275,8 @@ data UserProfile
   , userProfileCreateAt       :: UTCTime
   } deriving (Read, Show, Eq, Ord)
 
-instance HasId UserProfile where
-  getId = toId . userProfileId
+instance HasId UserProfile UserId where
+  getId = userProfileId
 
 instance A.FromJSON UserProfile where
   parseJSON = A.withObject "UserProfile" $ \v -> do
@@ -295,8 +297,8 @@ instance A.FromJSON UserProfile where
 
 --
 
-instance HasId User where
-  getId = toId . userId
+instance HasId User UserId where
+  getId = userId
 
 data User
   = User
@@ -401,8 +403,8 @@ data Post
   , postChannelId     :: ChannelId
   } deriving (Read, Show, Eq)
 
-instance HasId Post where
-  getId = toId . postId
+instance HasId Post PostId where
+  getId = postId
 
 instance A.FromJSON Post where
   parseJSON = A.withObject "Post" $ \v -> do
