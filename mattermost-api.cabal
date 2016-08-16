@@ -1,7 +1,7 @@
 name:                mattermost-api
 version:             0.1.0.0
 synopsis:            Client API for MatterMost chat system
--- description:         
+description:         Client API for MatterMost chat system
 license:             BSD3
 license-file:        LICENSE
 author:              Jason Dagit
@@ -12,6 +12,9 @@ build-type:          Simple
 extra-source-files:  ChangeLog.md
 cabal-version:       >=1.10
 tested-with:         GHC == 7.10.3, GHC == 8.0.1
+source-repository    head
+  type: git
+  location: https://github.com/dagit/mattermost-api.git
 
 flag build-examples
   description: Build example applications
