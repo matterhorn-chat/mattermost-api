@@ -1,34 +1,30 @@
--- Use this module via `cabal repl` and then :load examples/GetChannels.hs
--- You will need to fill out your username, hostname, and password
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
+-- Note: See LocalConfig.hs to configure example for your server
 module Main (main) where
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import           Network.Connection
-import           System.Process ( readProcess )
 import           Data.Foldable
 import           Control.Monad ( when )
 
 import           Network.Mattermost
 
+import           Config
+import           LocalConfig -- You will need to define a function:
+                             -- getConfig :: IO Config
+                             -- See Config.hs
+
 main :: IO ()
 main = do
-  let user         = "<username>"
-      -- Customize this command however you want, the example here assumes OSX Keychain
-      passwordeval = words "security find-generic-password -s <passwordname> -w"
-      team         = "<yourteam>"
-      host         = "mattermost.yourserver.com"
-      port         = 443 -- only supports https at the moment
+  config <- getConfig -- see LocalConfig import
+  ctx    <- initConnectionContext
+  let cd = mkConnectionData (T.unpack (configHostname config))
+                            (fromIntegral (configPort config)) ctx
 
-  ctx <- initConnectionContext
-  let cd = mkConnectionData host port ctx
-
-  -- XXX: this is a hack to drop the trailing newline
-  pass <- head . lines <$> readProcess (head passwordeval) (tail passwordeval) ""
-  let login = Login { username = T.pack user
-                    , password = T.pack pass
-                    , teamname = T.pack team }
+  let login = Login { username = configUsername config
+                    , password = configPassword config
+                    , teamname = configTeam     config }
 
   result <- runMM cd $ do
     mmUser <- mmLogin login
@@ -37,7 +33,7 @@ main = do
 
     teamMap <- mmGetTeams
     forM_ (HM.elems teamMap) $ \t -> do
-      when (teamName t == team) $ do
+      when (teamName t == T.unpack (configTeam config)) $ do
         (Channels chans _) <- mmGetChannels (teamId t)
         forM_ chans $ \chan -> do
           channel <- mmGetChannel (teamId t) (channelId chan)

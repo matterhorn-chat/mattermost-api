@@ -1,5 +1,4 @@
--- Use this module via `cabal repl` and then :load examples/GetTeams.hs
--- You will need to fill out your username, hostname, and password
+-- Note: See LocalConfig.hs to configure example for your server
 module Main (main) where
 import           Control.Monad ( void )
 import qualified Data.Text as T
@@ -8,23 +7,22 @@ import           System.Process ( readProcess )
 
 import           Network.Mattermost
 
+import           Config
+import           LocalConfig -- You will need to define a function:
+                             -- getConfig :: IO Config
+                             -- See Config.hs
+
 main :: IO ()
 main = do
-  let user         = "<your username>"
-      -- Customize this command however you want, the example here assumes OSX Keychain
-      passwordeval = words "security find-generic-password -s <passwordname> -w"
-      team         = "<your teamname>"
-      host         = "mattermost.yourserverhere.com"
-      port         = 443 -- only supports https at the moment
+  config <- getConfig -- see LocalConfig import
+  ctx    <- initConnectionContext
+  let cd = mkConnectionData (T.unpack (configHostname config))
+                            (fromIntegral (configPort config))
+                            ctx
 
-  ctx <- initConnectionContext
-  let cd = mkConnectionData host port ctx
-
-  -- XXX: this is a hack to drop the trailing newline
-  pass <- head . lines <$> readProcess (head passwordeval) (tail passwordeval) ""
-  let login = Login { username = T.pack user
-                    , password = T.pack pass
-                    , teamname = T.pack team }
+  let login = Login { username = configUsername config
+                    , password = configPassword config
+                    , teamname = configTeam     config }
 
   result <- runMM cd $ do
     mmUser <- mmLogin login
