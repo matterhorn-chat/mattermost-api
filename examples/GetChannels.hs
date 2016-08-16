@@ -3,12 +3,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 module Main (main) where
+import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import           Network.Connection
 import           System.Process ( readProcess )
-import           Data.Aeson
 import           Data.Foldable
-import           Control.Monad ( void, when )
+import           Control.Monad ( when )
 
 import           Network.Mattermost
 
@@ -30,16 +30,18 @@ main = do
                     , password = T.pack pass
                     , teamname = T.pack team }
 
-  void $ runMM cd $ do
-    (token, _) <- mmLogin login
-    io $ putStrLn ("Authenticated: " ++ show token)
+  result <- runMM cd $ do
+    mmUser <- mmLogin login
+    io $ putStrLn "Authenticated as:"
+    io $ print mmUser
 
-    (_, Just body) <- mmGetTeams
-    let Success (TL teamList) = fromJSON body
-    forM_ teamList $ \t -> do
+    teamMap <- mmGetTeams
+    forM_ (HM.elems teamMap) $ \t -> do
       when (teamName t == team) $ do
-        (_hdrs,Just body) <- mmGetChannels t
-        let Success (CL chans) = fromJSON body
+        (Channels chans _) <- mmGetChannels (teamId t)
         forM_ chans $ \chan -> do
-          (_, Just body) <- mmGetChannel t chan
-          io $ print body
+          channel <- mmGetChannel (teamId t) (channelId chan)
+          io $ print channel
+  case result of
+    Left err -> putStrLn err
+    _        -> return ()

@@ -9,7 +9,9 @@ import qualified Data.Aeson as A
 import           Data.Aeson ( (.:) )
 import           Data.Aeson.Types ( ToJSONKey
                                   , FromJSONKey
+                                  , FromJSON
                                   )
+import           Data.HashMap.Strict ( HashMap )
 import qualified Data.HashMap.Strict as HM
 import           Data.Ratio ( (%) )
 import qualified Data.Text as T
@@ -84,25 +86,43 @@ instance A.FromJSON Type where
 
 --
 
+-- For converting from type specific Id to generic Id
+class IsId x where
+  toId   :: x  -> Id
+  fromId :: Id -> x
+
+class HasId x where
+  getId :: x -> Id
+
 newtype Id = Id { unId :: T.Text }
   deriving (Read, Show, Eq, Ord, Hashable, ToJSONKey, FromJSONKey)
 
-instance A.FromJSON Id where
-  parseJSON = A.withText "Id" $ \s ->
-    pure (Id s)
+idString :: IsId x => x -> String
+idString x = T.unpack (unId i)
+  where i = toId x
 
+instance A.FromJSON Id where
+  parseJSON = A.withText "Id" (pure . Id)
+
+instance IsId Id where
+  toId   = id
+  fromId = id
+
+instance HasId Id where
+  getId  = id
 
 --
 
-class HasId x where
-  getId :: x -> String
+newtype TeamId = TI { unTI :: Id }
+  deriving (Read, Show, Eq, Ord, Hashable, ToJSONKey, FromJSONKey, FromJSON)
 
-instance HasId Team where
-  getId = T.unpack . unId . teamId
+instance IsId TeamId where
+  toId   = unTI
+  fromId = TI
 
 data Team
   = Team
-  { teamId              :: Id
+  { teamId              :: TeamId
   , teamCreateAt        :: UTCTime
   , teamUpdateAt        :: UTCTime
   , teamDeleteAt        :: UTCTime
@@ -112,10 +132,13 @@ data Team
   , teamType            :: Type
   , teamCompanyName     :: String
   , teamAllowedDomains  :: String
-  , teamInviteId        :: Id
+  , teamInviteId        :: Id -- XXX: What type of Id is this?
   , teamAllowOpenInvite :: Bool
   }
   deriving (Read, Show, Eq, Ord)
+
+instance HasId Team where
+  getId = toId . teamId
 
 instance A.FromJSON Team where
   parseJSON = A.withObject "Team" $ \v -> do
@@ -133,13 +156,22 @@ instance A.FromJSON Team where
     teamAllowOpenInvite <- v .: "allow_open_invite"
     return Team { .. }
 
+--
+
+newtype ChannelId = CI { unCI :: Id }
+  deriving (Read, Show, Eq, Ord, Hashable, ToJSONKey, FromJSONKey, FromJSON)
+
+instance IsId ChannelId where
+  toId   = unCI
+  fromId = CI
+
 data Channel
   = Channel
-  { channelId            :: Id
+  { channelId            :: ChannelId
   , channelCreateAt      :: UTCTime
   , channelUpdateAt      :: UTCTime
   , channelDeleteAt      :: UTCTime
-  , channelTeamId        :: Id
+  , channelTeamId        :: TeamId
   , channelType          :: Type
   , channelDisplayName   :: String
   , channelName          :: String
@@ -148,11 +180,11 @@ data Channel
   , channelLastPostAt    :: UTCTime
   , channelTotalMsgCount :: Int
   , channelExtraUpdateAt :: UTCTime
-  , channelCreatorId     :: Id
+  , channelCreatorId     :: UserId
   } deriving (Read, Show, Eq, Ord)
 
 instance HasId Channel where
-  getId = T.unpack . unId . channelId
+  getId = toId . channelId
 
 instance A.FromJSON Channel where
   parseJSON = A.withObject "Channel" $ \v -> do
@@ -172,16 +204,57 @@ instance A.FromJSON Channel where
     channelCreatorId       <- v .: "creator_id"
     return Channel { .. }
 
-newtype ChannelList = CL [Channel]
-  deriving (Read, Show, Eq, Ord)
+instance HasId ChannelData where
+  getId = toId . channelDataChannelId
 
-instance A.FromJSON ChannelList where
-  parseJSON = A.withObject "ChannelList" $ \o -> do
-    chans <- o .: "channels"
-    cl    <- mapM A.parseJSON chans
-    return (CL cl)
+data ChannelData
+  = ChannelData
+  { channelDataChannelId    :: ChannelId
+  , channelDataUserId       :: UserId
+  , channelDataRoles        :: String -- XXX: what goes here
+  , channelDataLastViewedAt :: UTCTime
+  , channelDataMsgCount     :: Int
+  , channelDataMentionCount :: Int
+  , channelDataNotifyProps  :: HashMap String String
+  , channelDataLastUpdateAt :: UTCTime
+  } deriving (Read, Show, Eq)
+
+instance A.FromJSON ChannelData where
+  parseJSON = A.withObject "ChanelData" $ \o -> do
+    channelDataChannelId <- o .: "channel_id"
+    channelDataUserId    <- o .: "user_id"
+    channelDataRoles     <- o .: "roles"
+    channelDataLastViewedAt <- millisecondsToUTCTime <$> o .: "last_viewed_at"
+    channelDataMsgCount     <- o .: "msg_count"
+    channelDataMentionCount <- o .: "mention_count"
+    channelDataNotifyProps  <- o .: "notify_props"
+    channelDataLastUpdateAt <- millisecondsToUTCTime <$> o .: "last_update_at"
+    return ChannelData { .. }
+
+-- For reasons I cannot fathom, MM returns two thing here.
+-- First they return the channels plus a lot of meta data about each
+-- one. Second they give you a "members" field that has
+-- additional data about the channels, none of which appears
+-- to be data about the members.
+--
+-- We refer to the extra meta data as ChannelData.
+data Channels = Channels [Channel] (HashMap ChannelId ChannelData)
+  deriving (Read, Show, Eq)
+
+instance A.FromJSON Channels where
+  parseJSON = A.withObject "Channels" $ \o -> do
+    channels <- o .: "channels"
+    chandata <- o .: "members"
+    return $ Channels channels chandata
 
 --
+
+newtype UserId = UI { unUI :: Id }
+  deriving (Read, Show, Eq, Ord, Hashable, ToJSONKey, FromJSONKey, FromJSON)
+
+instance IsId UserId where
+  toId   = unUI
+  fromId = UI
 
 data UserProfile
   = UserProfile
@@ -194,14 +267,14 @@ data UserProfile
   , userProfileUsername       :: String
   , userProfileAuthData       :: String
   , userProfileLastName       :: String
-  , userProfileId             :: Id
+  , userProfileId             :: UserId
   , userProfileNickname       :: String
   , userProfileDeleteAt       :: UTCTime
   , userProfileCreateAt       :: UTCTime
   } deriving (Read, Show, Eq, Ord)
 
 instance HasId UserProfile where
-  getId = T.unpack . unId . userProfileId
+  getId = toId . userProfileId
 
 instance A.FromJSON UserProfile where
   parseJSON = A.withObject "UserProfile" $ \v -> do
@@ -222,27 +295,114 @@ instance A.FromJSON UserProfile where
 
 --
 
+instance HasId User where
+  getId = toId . userId
+
+data User
+  = User
+  { userId                 :: UserId
+  , userCreateAt           :: UTCTime
+  , userUpdateAt           :: UTCTime
+  , userDeleteAt           :: UTCTime
+  , userUsername           :: String
+  , userAuthData           :: String
+  , userAuthService        :: String
+  , userEmail              :: String
+  , userEmailVerified      :: Bool
+  , userNickname           :: String
+  , userFirstName          :: String
+  , userLastName           :: String
+  , userRoles              :: String -- XXX: what are the options?
+  , userLastActivityAt     :: UTCTime
+  , userLastPingAt         :: UTCTime
+  , userNotifyProps        :: HashMap String String -- See NotifyProps type below
+  , userLastPasswordUpdate :: UTCTime
+  , userLastPictureUpdate  :: UTCTime
+  , userLocale             :: String
+  } deriving (Read, Show, Eq)
+
+instance A.FromJSON User where
+  parseJSON = A.withObject "User" $ \o -> do
+    userId                 <- o .: "id"
+    userCreateAt           <- millisecondsToUTCTime <$> o .: "create_at"
+    userUpdateAt           <- millisecondsToUTCTime <$> o .: "update_at"
+    userDeleteAt           <- millisecondsToUTCTime <$> o .: "delete_at"
+    userUsername           <- o .: "username"
+    userAuthData           <- o .: "auth_data"
+    userAuthService        <- o .: "auth_service"
+    userEmail              <- o .: "email"
+    userEmailVerified      <- o .: "email_verified"
+    userNickname           <- o .: "nickname"
+    userFirstName          <- o .: "first_name"
+    userLastName           <- o .: "last_name"
+    userRoles              <- o .: "roles"
+    userLastActivityAt     <- millisecondsToUTCTime <$> o .: "last_activity_at"
+    userLastPingAt         <- millisecondsToUTCTime <$> o .: "last_ping_at"
+    userNotifyProps        <- o .: "notify_props"
+    userLastPasswordUpdate <- millisecondsToUTCTime <$> o .: "last_password_update"
+    userLastPictureUpdate  <- millisecondsToUTCTime <$> o .: "last_picture_update"
+    userLocale             <- o .: "locale"
+    return User { .. }
+
+-- XXX: Let's defer making a custom type for this until
+-- we have more information about how we'll use it.
+-- -- XXX: A bunch of these should be bools, but aeson is not
+-- -- parsing them as such. So for now I'm just setting them as strings.
+-- data NotifyProps
+--   = NotifyProps
+--   { notifyPropsAll          :: String -- bool
+--   , notifyPropsChannel      :: String -- bool
+--   , notifyPropsDesktop      :: String -- XXX: what goes here
+--   , notifyPropsDesktopSound :: String -- bool
+--   , notifyPropsEmail        :: String -- bool
+--   , notifyPropsFirstName    :: String -- bool
+--   , notifyPropsMentionKeys  :: [String]
+--   , notifyPropsPush         :: String -- XXX: what goes here
+--   } deriving (Read, Show, Eq, Ord)
+--
+-- instance A.FromJSON NotifyProps where
+--   parseJSON = A.withObject "NotifyProps" $ \o -> do
+--     notifyPropsAll          <- o .: "all"
+--     notifyPropsChannel      <- o .: "channel"
+--     notifyPropsDesktop      <- o .: "desktop"
+--     notifyPropsDesktopSound <- o .: "desktop_sound"
+--     notifyPropsEmail        <- o .: "email"
+--     notifyPropsFirstName    <- o .: "first_name"
+--     mentionKeys             <- T.splitOn "," <$> o .: "mention_keys"
+--     let notifyPropsMentionKeys = map T.unpack mentionKeys
+--     notifyPropsPush         <- o .: "push"
+--     return NotifyProps { .. }
+
+--
+
+newtype PostId = PI { unPI :: Id }
+  deriving (Read, Show, Eq, Ord, Hashable, ToJSONKey, FromJSONKey, FromJSON)
+
+instance IsId PostId where
+  toId   = unPI
+  fromId = PI
+
 data Post
   = Post
-  { postPendingPostId :: Id
-  , postOriginalId    :: Id
+  { postPendingPostId :: PostId
+  , postOriginalId    :: PostId
   , postProps         :: A.Value
   , postRootId        :: String
   , postFilenames     :: A.Value
-  , postId            :: Id
+  , postId            :: PostId
   , postType          :: Type
   , postMessage       :: String
   , postDeleteAt      :: UTCTime
   , postHashtags      :: String
   , postUpdateAt      :: UTCTime
-  , postUserId        :: Id
+  , postUserId        :: UserId
   , postCreateAt      :: UTCTime
-  , postParentId      :: Id
-  , postChannelId     :: Id
+  , postParentId      :: PostId
+  , postChannelId     :: ChannelId
   } deriving (Read, Show, Eq)
 
 instance HasId Post where
-  getId = T.unpack . unId . postId
+  getId = toId . postId
 
 instance A.FromJSON Post where
   parseJSON = A.withObject "Post" $ \v -> do
@@ -267,8 +427,8 @@ instance A.FromJSON Post where
 
 data Posts
   = Posts
-  { postsPosts :: HM.HashMap Id Post
-  , postsOrder :: [Id]
+  { postsPosts :: HM.HashMap PostId Post
+  , postsOrder :: [PostId]
   } deriving (Read, Show, Eq)
 
 instance A.FromJSON Posts where
@@ -284,14 +444,3 @@ millisecondsToUTCTime ms = posixSecondsToUTCTime (fromRational (ms%1000))
 
 --
 
--- TODO: It's probably better to return the actual HashMap instead
--- of converting to a list. Let the user of the API decide what
--- they want.
-newtype TeamList = TL [Team]
-  deriving (Read, Show, Eq, Ord)
-
-instance A.FromJSON TeamList where
-  parseJSON = A.withObject "TeamList" $ \hm -> do
-    let tl = map snd (HM.toList hm)
-    tl' <- mapM A.parseJSON tl
-    return (TL tl')

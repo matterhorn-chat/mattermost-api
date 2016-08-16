@@ -26,8 +26,12 @@ main = do
                     , password = T.pack pass
                     , teamname = T.pack team }
 
-  void $ runMM cd $ do
-    (token, _) <- mmLogin login
-    io $ putStrLn ("Authenticated: " ++ show token)
+  result <- runMM cd $ do
+    mmUser <- mmLogin login
+    io $ putStrLn "Authenticated as: "
+    io $ print mmUser
     r <- mmGetTeams
     io $ print r
+  case result of
+    Left err -> putStrLn err
+    _        -> return ()

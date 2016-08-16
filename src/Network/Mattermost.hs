@@ -9,9 +9,8 @@ module Network.Mattermost
 , ConnectionData
 , Id(..)
 , Team(..)
-, TeamList(..)
 , Channel(..)
-, ChannelList(..)
+, Channels(..)
 , UserProfile(..)
 , Post(..)
 , Posts(..)
@@ -41,7 +40,7 @@ import           Network.Connection ( Connection
                                     , connectionGet
                                     , connectionPut
                                     , connectionClose )
-import           Network.HTTP.Headers ( Header(..), HeaderName(..)
+import           Network.HTTP.Headers ( HeaderName(..)
                                       , mkHeader
                                       , lookupHeader )
 import           Network.HTTP.Base ( Request(..)
@@ -52,11 +51,12 @@ import           Network.HTTP.Base ( Request(..)
 import           Network.Stream as NS ( Stream(..) )
 import           Network.URI ( URI, parseRelativeReference )
 import           Network.HTTP.Stream ( simpleHTTP_ )
+import           Data.HashMap.Strict ( HashMap )
 import           Data.Aeson ( Value
                             , ToJSON
                             , FromJSON
                             , encode
-                            , decode
+                            , eitherDecode
                             )
 import           Control.Exception ( bracket )
 
@@ -83,21 +83,17 @@ instance Stream Connection where
 mmPath :: String -> MM URI
 mmPath str = noteT "error parsing path" (parseRelativeReference str)
 
--- | Return headers and a parsed JSON body from a request
-mmGetJSONAndHeaders :: FromJSON t => Response_String -> MM ([Header], t)
-mmGetJSONAndHeaders rsp = do
-  value <- mmGetJSONBody rsp
-  return (rspHeaders rsp, value)
-
 -- | Parse the JSON body out of a request, failing if it isn't an
 --   'application/json' response, or if the parsing failed
 mmGetJSONBody :: FromJSON t => Response_String -> MM t
 mmGetJSONBody rsp = do
   contentType <- mmGetHeader rsp HdrContentType
-  assert "Expected content type 'application/json'" $
+  assert "mmGetJSONBody: Expected content type 'application/json'" $
     contentType ~= "application/json"
 
-  noteT "Unable to parse JSON" $ decode (BL.pack (rspBody rsp))
+  -- XXX: Good for seeing the json wireformat that mattermost uses
+  -- io $ putStrLn (rspBody rsp)
+  hoistT $ eitherDecode (BL.pack (rspBody rsp))
 
 -- | Grab a header from the response, failing if it isn't present
 mmGetHeader :: Response_String -> HeaderName -> MM String
@@ -131,92 +127,92 @@ mmUnauthenticatedHTTPPost path json = do
 
 -- | Fire off a login attempt. Note: We get back more than just the auth token.
 -- We also get all the server-side configuration data for the user.
-mmLogin :: Login -> MM (Token, Maybe Value)
+mmLogin :: Login -> MM User
 mmLogin login = do
   -- this shouldn't fail, but just for good measure
   path <- mmPath "/api/v3/users/login"
 
   rsp  <- mmUnauthenticatedHTTPPost path login
-  assert "expected 200 response" (rspCode rsp == (2,0,0))
+  assert ("mmLogin: expected 200 response but got " ++ (show (rspCode rsp)))
+         (rspCode rsp == (2,0,0))
 
   token <- mmGetHeader rsp (HdrCustom "Token")
   value <- mmGetJSONBody rsp
 
   setToken (Token token)
 
-  return (Token token, value)
+  return value
 
 -- | Requires an authenticated user. Returns the full list of teams.
-mmGetTeams :: MM ([Header], Maybe Value)
+mmGetTeams :: MM (HashMap TeamId Team)
 mmGetTeams = do
   path <- mmPath "/api/v3/teams/all"
   rsp  <- mmRequest path
-  mmGetJSONAndHeaders rsp
+  mmGetJSONBody rsp
 
 -- | Requires an authenticated user. Returns the full list of channels for a given team
-mmGetChannels :: Team -> MM ([Header], Maybe Value)
-mmGetChannels team = do
-  path <- mmPath $ printf "/api/v3/teams/%s/channels/"
-                          (getId team)
+mmGetChannels :: TeamId -> MM Channels
+mmGetChannels teamid = do
+  path <- mmPath $ printf "/api/v3/teams/%s/channels/" (idString teamid)
   rsp  <- mmRequest path
-  mmGetJSONAndHeaders rsp
+  mmGetJSONBody rsp
 
 -- | Requires an authenticated user. Returns the details of a
 -- specific channel.
-mmGetChannel :: Team -> Channel -> MM ([Header], Maybe Value)
-mmGetChannel team chan = do
+mmGetChannel :: TeamId
+             -> ChannelId
+             -> MM Channel
+mmGetChannel teamid chanid = do
   path <- mmPath $ printf "/api/v3/teams/%s/channels/%s/"
-                          (getId team)
-                          (getId chan)
+                          (idString teamid)
+                          (idString chanid)
   rsp  <- mmRequest path
-  mmGetJSONAndHeaders rsp
+  mmGetJSONBody rsp
 
-mmGetPosts :: Team -> Channel
+mmGetPosts :: TeamId
+           -> ChannelId
            -> Int -- offset in the backlog, 0 is most recent
            -> Int -- try to fetch this many
-           -> MM ([Header], Maybe Value)
-mmGetPosts team chan offset limit = do
+           -> MM Posts
+mmGetPosts teamid chanid offset limit = do
   path <- mmPath $ printf "/api/v3/teams/%s/channels/%s/posts/page/%d/%d"
-                          (getId team)
-                          (getId chan)
+                          (idString teamid)
+                          (idString chanid)
                           offset
                           limit
   rsp  <- mmRequest path
-  mmGetJSONAndHeaders rsp
+  mmGetJSONBody rsp
 
-mmGetUser :: UserProfile -> MM ([Header], Maybe Value)
+mmGetUser :: UserId -> MM User
 mmGetUser user = do
-  path <- mmPath $ printf "/api/v3/users/%s/get"
-                          (getId user)
+  path <- mmPath $ printf "/api/v3/users/%s/get" (idString user)
   rsp  <- mmRequest path
-  mmGetJSONAndHeaders rsp
+  mmGetJSONBody rsp
 
-mmGetTeamMembers :: Team -> MM ([Header], Maybe Value)
-mmGetTeamMembers team = do
-  path <- mmPath $ printf "/api/v3/teams/members/%s"
-                          (getId team)
+mmGetTeamMembers :: TeamId -> MM Value
+mmGetTeamMembers teamid = do
+  path <- mmPath $ printf "/api/v3/teams/members/%s" (idString teamid)
   rsp  <- mmRequest path
-  mmGetJSONAndHeaders rsp
+  mmGetJSONBody rsp
 
-mmGetMe :: MM ([Header], Maybe Value)
+mmGetMe :: MM Value
 mmGetMe = do
   path <- mmPath "/api/v3/users/me"
   rsp  <- mmRequest path
-  mmGetJSONAndHeaders rsp
+  mmGetJSONBody rsp
 
-mmGetProfiles :: Team -> MM ([Header], Maybe Value)
-mmGetProfiles team = do
-  path <- mmPath $ printf "/api/v3/users/profiles/%s"
-                          (getId team)
+mmGetProfiles :: TeamId -> MM (HashMap UserId UserProfile)
+mmGetProfiles teamid = do
+  path <- mmPath $ printf "/api/v3/users/profiles/%s" (idString teamid)
   rsp  <- mmRequest path
-  mmGetJSONAndHeaders rsp
+  mmGetJSONBody rsp
 
 -- | This is for making a generic authenticated request.
 mmRequest :: URI -> MM Response_String
 mmRequest path = do
   cd    <- getConnectionData
   token <- getToken
-  ioS show $ withConnection cd $ \con -> do
+  rsp   <- ioS show $ withConnection cd $ \con -> do
     let request = Request
           { rqURI     = path
           , rqMethod  = GET
@@ -227,6 +223,9 @@ mmRequest path = do
           , rqBody    = ""
           }
     simpleHTTP_ con request
+  assert ("mmRequest: expected 200 response but got: " ++ (show (rspCode rsp)))
+         (rspCode rsp == (2,0,0))
+  return rsp
 
 -- Utility code
 

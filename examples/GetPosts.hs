@@ -6,12 +6,11 @@ module Main (main) where
 import           Text.Printf ( printf )
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
--- import           Text.Show.Pretty ( ppShow )
+import           Text.Show.Pretty ( pPrint )
 import           Network.Connection
 import           System.Process ( readProcess )
-import           Data.Aeson
 import           Data.Foldable
-import           Control.Monad ( void, when )
+import           Control.Monad ( when )
 
 import           Network.Mattermost
 import           Network.Mattermost.Util
@@ -35,34 +34,27 @@ main = do
                     , password = T.pack pass
                     , teamname = T.pack team }
 
-  void $ runMM cd $ do
-    void (mmLogin login)
-    io $ putStrLn "Authenticated."
+  result <- runMM cd $ do
+    mmUser <- mmLogin login
+    io $ putStrLn "Authenticated as:"
+    io $ pPrint mmUser
 
-    (_, body)   <- mmGetTeams
-    rawTeamList <- noteT "get teams" body
-    TL teamList <- hoistA (fromJSON rawTeamList)
-    forM_ teamList $ \t -> do
+    teamMap <- mmGetTeams
+    forM_ (HM.elems teamMap) $ \t -> do
       when (teamName t == team) $ do
-        (_,body)    <- mmGetProfiles t
-        rawProfiles <- noteT "get profiles" body
-        userMap     <- hoistA (fromJSON rawProfiles)
-        (_,body)    <- mmGetChannels t
-        rawChannels <- noteT "get channels" body
-        CL chans    <- hoistA (fromJSON rawChannels)
+        userMap <- mmGetProfiles (teamId t)
+        (Channels chans _md) <- mmGetChannels (teamId t)
         forM_ chans $ \chan -> do
           when (channelName chan == channel) $ do
-            (_,body) <- mmGetPosts t chan 0 10
-            rawPosts <- noteT "get posts" body
-            posts    <- hoistA (fromJSON rawPosts)
+            posts <- mmGetPosts (teamId t) (channelId chan) 0 10
             -- XXX: is the order really reversed?
             forM_ (reverse (postsOrder posts)) $ \postId -> do
-              p    <- noteT "lookup post by id" $
-                        HM.lookup postId (postsPosts posts)
-              user <- noteT "lookup user using post data" $
-                        HM.lookup (postUserId p) userMap
+              p    <- noteT "lookup post by id"           $ HM.lookup postId         (postsPosts posts)
+              user <- noteT "lookup user using post data" $ HM.lookup (postUserId p) userMap
               let message = printf "%s: %s"
                                    (userProfileUsername user)
                                    (postMessage p)
               io $ putStrLn message
-
+  case result of
+    Left err -> putStrLn err
+    Right _  -> return ()

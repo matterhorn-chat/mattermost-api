@@ -54,6 +54,8 @@ executable mm-get-teams
                   , text
                   , connection
                   , process
+                  , unordered-containers
+                  , pretty-show
 
 executable mm-get-channels
   if !flag(build-examples)
@@ -67,6 +69,8 @@ executable mm-get-channels
                   , text
                   , connection
                   , process
+                  , unordered-containers
+                  , pretty-show
 
 executable mm-get-posts
   if !flag(build-examples)
