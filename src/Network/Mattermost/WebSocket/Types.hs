@@ -6,6 +6,9 @@ import           Data.Aeson (Object, FromJSON(..), ToJSON(..), (.:), (.=))
 import qualified Data.Aeson as A
 import           Data.Text (Text)
 
+import           Prelude ()
+import           Prelude.Compat
+
 data WebsocketEventType
   = WMTyping
   | WMPosted
