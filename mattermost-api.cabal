@@ -22,7 +22,7 @@ library
                        Network.Mattermost.WebSocket.Types
   other-modules:       Network.Mattermost.Types
   -- other-extensions:
-  build-depends:       base >=4.8 && <4.9
+  build-depends:       base >=4.8 && <5
                      , websockets
                      , aeson >= 1.0.0.0
                      , connection
