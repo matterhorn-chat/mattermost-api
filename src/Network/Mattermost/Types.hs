@@ -206,6 +206,17 @@ instance A.FromJSON Channel where
     channelCreatorId       <- v .: "creator_id"
     return Channel { .. }
 
+-- This type only exists so that we can strip off the
+-- outer most layer in mmGetChannel. See the
+-- FromJSON instance.
+newtype SingleChannel = SC Channel
+  deriving (Read, Show, Eq, Ord)
+
+instance A.FromJSON SingleChannel where
+  parseJSON = A.withObject "SingleChannel" $ \v -> do
+    channel <- v .: "channel"
+    return (SC channel)
+
 instance HasId ChannelData ChannelId where
   getId = channelDataChannelId
 

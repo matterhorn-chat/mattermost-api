@@ -31,27 +31,25 @@ main = do
                       , password = configPassword config
                       , teamname = configTeam     config }
 
-  result <- runMM cd $ do
-    mmUser <- mmLogin login
-    io $ putStrLn "Authenticated as:"
-    io $ pPrint mmUser
+  (token, mmUser) <- mmLogin cd login
+  putStrLn "Authenticated as:"
+  pPrint mmUser
 
-    teamMap <- mmGetTeams
-    forM_ (HM.elems teamMap) $ \t -> do
-      when (teamName t == T.unpack (configTeam config)) $ do
-        userMap <- mmGetProfiles (getId t)
-        Channels chans _md <- mmGetChannels (getId t)
-        forM_ chans $ \chan -> do
-          when (channelName chan == channel) $ do
-            posts <- mmGetPosts (getId t) (getId chan) 0 10
-            -- XXX: is the order really reversed?
-            forM_ (reverse (postsOrder posts)) $ \postId -> do
-              p    <- noteT "lookup post by id"           $ HM.lookup postId         (postsPosts posts)
-              user <- noteT "lookup user using post data" $ HM.lookup (postUserId p) userMap
-              let message = printf "%s: %s"
-                                   (userProfileUsername user)
-                                   (postMessage p)
-              io $ putStrLn message
-  case result of
-    Left err -> putStrLn err
-    Right _  -> return ()
+  teamMap <- mmGetTeams cd token
+  forM_ (HM.elems teamMap) $ \t -> do
+    when (teamName t == T.unpack (configTeam config)) $ do
+      userMap <- mmGetProfiles cd token (getId t)
+      Channels chans _md <- mmGetChannels cd token (getId t)
+      forM_ chans $ \chan -> do
+        when (channelName chan == channel) $ do
+          posts <- mmGetPosts cd token (getId t) (getId chan) 0 10
+          -- XXX: is the order really reversed?
+          forM_ (reverse (postsOrder posts)) $ \postId -> do
+            -- this is just a toy program, so we don't care about
+            -- this pattern match failure
+            let Just p    = HM.lookup postId (postsPosts posts)
+                Just user = HM.lookup (postUserId p) userMap
+            let message = printf "%s: %s"
+                                 (userProfileUsername user)
+                                 (postMessage p)
+            putStrLn message

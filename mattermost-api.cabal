@@ -22,6 +22,7 @@ flag build-examples
 
 library
   exposed-modules:     Network.Mattermost
+                       Network.Mattermost.Exceptions
                        Network.Mattermost.Util
                        Network.Mattermost.WebSocket.Types
   other-modules:       Network.Mattermost.Types
@@ -39,7 +40,6 @@ library
                      , text
                      , time
                      , unordered-containers
-                     , mtl
                      , hashable
                      -- Only here to make debugging easier
                      , pretty-show

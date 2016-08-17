@@ -2,6 +2,7 @@
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 -- Note: See LocalConfig.hs to configure example for your server
 module Main (main) where
+import           Text.Show.Pretty ( pPrint )
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import           Network.Connection
@@ -26,18 +27,14 @@ main = do
                     , password = configPassword config
                     , teamname = configTeam     config }
 
-  result <- runMM cd $ do
-    mmUser <- mmLogin login
-    io $ putStrLn "Authenticated as:"
-    io $ print mmUser
+  (token, mmUser) <- mmLogin cd login
+  putStrLn "Authenticated as:"
+  pPrint mmUser
 
-    teamMap <- mmGetTeams
-    forM_ (HM.elems teamMap) $ \t -> do
-      when (teamName t == T.unpack (configTeam config)) $ do
-        (Channels chans _) <- mmGetChannels (teamId t)
-        forM_ chans $ \chan -> do
-          channel <- mmGetChannel (teamId t) (channelId chan)
-          io $ print channel
-  case result of
-    Left err -> putStrLn err
-    _        -> return ()
+  teamMap <- mmGetTeams cd token
+  forM_ (HM.elems teamMap) $ \t -> do
+    when (teamName t == T.unpack (configTeam config)) $ do
+      Channels chans _ <- mmGetChannels cd token (teamId t)
+      forM_ chans $ \chan -> do
+        channel <- mmGetChannel cd token (teamId t) (channelId chan)
+        pPrint channel

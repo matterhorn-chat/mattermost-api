@@ -1,78 +1,81 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Network.Mattermost.Util where
+module Network.Mattermost.Util
+( assertE
+, noteE
+, hoistE
+, (~=)
+, dropTrailingChar
+, withConnection
+, connectionGetExact
+) where
 
+import           Data.Default ( def )
 import           Data.Char ( toUpper )
-import qualified Data.Aeson as A
+import qualified Data.ByteString.Char8 as B
 
-import           Control.Monad.Except
-import           Control.Monad.State.Strict
+import           Control.Exception ( Exception
+                                   , throwIO
+                                   , bracket )
+import           Network.Connection ( Connection
+                                    , ConnectionParams(..)
+                                    , connectionGet
+                                    , connectionClose
+                                    , connectTo )
 
 import           Network.Mattermost.Types
 
--- A convenient, internal wrapper for IO actions that might fail.
-newtype MM a = MM (ExceptT String (StateT ConnectionData IO) a)
-  deriving (Functor, Applicative, Monad, MonadError String, MonadIO)
+noteE :: Exception e => Maybe r -> e -> IO r
+noteE Nothing  e  = throwIO e
+noteE (Just r) _  = pure    r
 
--- Lift an IO action into the MM monad
-io :: IO a -> MM a
-io = liftIO
+hoistE :: Exception e => Either e r -> IO r
+hoistE (Left e)  = throwIO e
+hoistE (Right r) = pure    r
 
--- Lift an IO action that produces an Either String into the MM monad
-ioE :: IO (Either String a) -> MM a
-ioE mote = do
-  v <- io mote
-  case v of
-    Left  l -> throwError l
-    Right r -> pure r
-
--- Lift an IO action that produces an Either s into the MM monad,
--- indicating what to do with the Left value to turn it into a
--- string
-ioS :: (s -> String) -> IO (Either s a) -> MM a
-ioS f mote = do
-  v <- io mote
-  case v of
-    Left  l -> throwError (f l)
-    Right r -> pure r
-
--- Lift a Maybe into the MM monad, with a supplied error message should
--- the value be Nothing
-ioM :: String -> IO (Maybe a) -> MM a
-ioM err mote = io mote >>= noteT err
-
-runMM :: ConnectionData -> MM a -> IO (Either String a)
-runMM cd (MM m) = fmap fst (runStateT (runExceptT m) cd)
-
-noteT :: String -> Maybe r -> MM r
-noteT l Nothing  = throwError l
-noteT _ (Just r) = pure r
-
-hoistT :: Either String r -> MM r
-hoistT (Left l)  = throwError l
-hoistT (Right r) = pure r
-
-hoistA :: A.Result r -> MM r
-hoistA (A.Error s)   = throwError s
-hoistA (A.Success r) = pure r
-
-assert :: String -> Bool -> MM ()
-assert _ True  = pure ()
-assert m False = throwError m
-
-setToken :: Token -> MM ()
-setToken b = MM $ modify $ \cd -> cd { cdToken = Just b }
-
-getToken :: MM Token
-getToken = MM $ do
-  v <- cdToken `fmap` get
-  case v of
-    Nothing -> throwError "No token currently set!"
-    Just x  -> pure x
-
-getConnectionData :: MM ConnectionData
-getConnectionData = MM get
+assertE :: Exception e => Bool -> e -> IO ()
+assertE True  _ = pure    ()
+assertE False e = throwIO e
 
 -- | Case Insensitive string comparison
 (~=) :: String -> String -> Bool
 a ~= b = map toUpper a == map toUpper b
+
+-- | HTTP ends newlines with \r\n sequence, but the 'connection' package doesn't
+-- know this so we need to drop the \r after reading lines. This should only be
+-- needed in your compatibility with the HTTP library.
+dropTrailingChar :: B.ByteString -> B.ByteString
+dropTrailingChar bs | not (B.null bs) = B.init bs
+dropTrailingChar _ = ""
+
+-- | Creates a new connection to 'Hostname' from an already initialized 'ConnectionContext'.
+-- Internally it uses 'bracket' to cleanup the connection.
+withConnection :: ConnectionData -> (Connection -> IO a) -> IO a
+withConnection cd action =
+  bracket (connectTo (cdConnectionCtx cd) $ ConnectionParams
+            { connectionHostname  = cdHostname cd
+            , connectionPort      = fromIntegral (cdPort cd)
+            , connectionUseSecure = Just def
+            , connectionUseSocks  = Nothing
+            }
+          )
+          connectionClose
+          action
+
+-- | Get exact count of bytes from a connection.
+--
+-- The size argument is the exact amount that must be returned to the user.
+-- The call will wait until all data is available.  Hence, it behaves like
+-- 'B.hGet'.
+--
+-- On end of input, 'connectionGetExact' will throw an 'E.isEOFError'
+-- exception.
+-- Taken from: https://github.com/vincenthz/hs-connection/issues/9
+connectionGetExact :: Connection -> Int -> IO B.ByteString
+connectionGetExact con n = loop B.empty 0
+  where loop bs y
+          | y == n = return bs
+          | otherwise = do
+            next <- connectionGet con (n - y)
+            loop (B.append bs next) (y + (B.length next))

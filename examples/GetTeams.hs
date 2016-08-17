@@ -2,6 +2,7 @@
 module Main (main) where
 import           Control.Monad ( void )
 import qualified Data.Text as T
+import           Text.Show.Pretty ( pPrint )
 import           Network.Connection
 import           System.Process ( readProcess )
 
@@ -24,12 +25,8 @@ main = do
                     , password = configPassword config
                     , teamname = configTeam     config }
 
-  result <- runMM cd $ do
-    mmUser <- mmLogin login
-    io $ putStrLn "Authenticated as: "
-    io $ print mmUser
-    r <- mmGetTeams
-    io $ print r
-  case result of
-    Left err -> putStrLn err
-    _        -> return ()
+  (token, mmUser) <- mmLogin cd login
+  putStrLn "Authenticated as: "
+  pPrint mmUser
+  r <- mmGetTeams cd token
+  pPrint r
