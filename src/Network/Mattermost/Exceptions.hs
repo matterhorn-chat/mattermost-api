@@ -1,6 +1,7 @@
 module Network.Mattermost.Exceptions
 ( -- Exception Types
-  URIParseException(..)
+  LoginFailureException(..)
+, URIParseException(..)
 , ContentTypeException(..)
 , JSONDecodeException(..)
 , HeaderNotFoundException(..)
@@ -13,6 +14,18 @@ import           Control.Exception ( Exception(..) )
 import           Network.Stream ( ConnError )
 
 --
+
+-- Unlike many exceptions in this file, this is a mattermost specific exception
+data LoginFailureException = LoginFailureException String
+  deriving (Show, Typeable)
+
+instance Exception LoginFailureException
+
+--
+
+-- TODO: These three (URIParseException, ContentTypeException, and
+-- JSONDecodeException)
+-- are good candidates to be merged into a sum type
 
 data URIParseException = URIParseException String
   deriving (Show, Typeable)
@@ -37,6 +50,8 @@ data JSONDecodeException
 instance Exception JSONDecodeException
 
 --
+
+-- TODO: combine these three into one type
 
 data HeaderNotFoundException = HeaderNotFoundException String
   deriving (Show, Typeable)

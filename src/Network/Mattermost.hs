@@ -27,6 +27,9 @@ module Network.Mattermost
 , mmGetTeamMembers
 , mmGetMe
 , mmGetProfiles
+, hoistE
+, noteE
+, assertE
 ) where
 
 import           Text.Printf ( printf )
@@ -129,19 +132,17 @@ mmUnauthenticatedHTTPPost cd path json = do
 
 -- | Fire off a login attempt. Note: We get back more than just the auth token.
 -- We also get all the server-side configuration data for the user.
-mmLogin :: ConnectionData -> Login -> IO (Token, User)
+mmLogin :: ConnectionData -> Login -> IO (Either LoginFailureException (Token, User))
 mmLogin cd login = do
   path <- mmPath "/api/v3/users/login"
 
   rsp  <- mmUnauthenticatedHTTPPost cd path login
-  assertE (rspCode rsp == (2,0,0))
-          (HTTPResponseException (printf "mmLogin: expected 200 response but got %s"
-                                         (show (rspCode rsp))))
-
-  token <- mmGetHeader   rsp (HdrCustom "Token")
-  value <- mmGetJSONBody rsp
-
-  return (Token token, value)
+  if (rspCode rsp /= (2,0,0))
+    then return (Left (LoginFailureException (show (rspCode rsp))))
+    else do
+      token <- mmGetHeader   rsp (HdrCustom "Token")
+      value <- mmGetJSONBody rsp
+      return (Right (Token token, value))
 
 -- | Requires an authenticated user. Returns the full list of teams.
 mmGetTeams :: ConnectionData -> Token -> IO (HashMap TeamId Team)

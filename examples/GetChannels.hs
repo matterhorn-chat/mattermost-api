@@ -7,7 +7,7 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import           Network.Connection
 import           Data.Foldable
-import           Control.Monad ( when )
+import           Control.Monad ( when, join )
 
 import           Network.Mattermost
 
@@ -27,7 +27,7 @@ main = do
                     , password = configPassword config
                     , teamname = configTeam     config }
 
-  (token, mmUser) <- mmLogin cd login
+  (token, mmUser) <- join (hoistE <$> mmLogin cd login)
   putStrLn "Authenticated as:"
   pPrint mmUser
 

@@ -1,6 +1,6 @@
 -- Note: See LocalConfig.hs to configure example for your server
 module Main (main) where
-import           Control.Monad ( void )
+import           Control.Monad ( void, join )
 import qualified Data.Text as T
 import           Text.Show.Pretty ( pPrint )
 import           Network.Connection
@@ -25,7 +25,7 @@ main = do
                     , password = configPassword config
                     , teamname = configTeam     config }
 
-  (token, mmUser) <- mmLogin cd login
+  (token, mmUser) <- join (hoistE <$> mmLogin cd login)
   putStrLn "Authenticated as: "
   pPrint mmUser
   r <- mmGetTeams cd token

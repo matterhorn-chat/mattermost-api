@@ -9,7 +9,7 @@ import           Text.Show.Pretty ( pPrint )
 import           Network.Connection
 import           System.Process ( readProcess )
 import           Data.Foldable
-import           Control.Monad ( when )
+import           Control.Monad ( when, join )
 
 import           Network.Mattermost
 import           Network.Mattermost.Util
@@ -31,7 +31,7 @@ main = do
                       , password = configPassword config
                       , teamname = configTeam     config }
 
-  (token, mmUser) <- mmLogin cd login
+  (token, mmUser) <- join (hoistE <$> mmLogin cd login)
   putStrLn "Authenticated as:"
   pPrint mmUser
 
