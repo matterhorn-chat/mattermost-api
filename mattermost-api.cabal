@@ -97,3 +97,20 @@ executable mm-get-posts
                   , process
                   , unordered-containers
                   , pretty-show
+
+executable mm-make-post
+  if !flag(build-examples)
+    buildable:        False
+  default-language: Haskell2010
+  main-is:          MakePost.hs
+  other-modules:    Config
+                    LocalConfig
+  hs-source-dirs:   examples
+  build-depends:    base
+                  , mattermost-api
+                  , aeson
+                  , text
+                  , connection
+                  , process
+                  , unordered-containers
+                  , pretty-show

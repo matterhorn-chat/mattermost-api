@@ -6,19 +6,22 @@
 
 module Network.Mattermost.Types where
 
+import           Text.Printf ( printf )
 import           Data.Hashable ( Hashable )
 import qualified Data.Aeson as A
-import           Data.Aeson ( (.:) )
+import           Data.Aeson ( (.:), (.=) )
 import           Data.Aeson.Types ( ToJSONKey
                                   , FromJSONKey
                                   , FromJSON
+                                  , ToJSON
                                   )
 import           Data.HashMap.Strict ( HashMap )
 import qualified Data.HashMap.Strict as HM
 import           Data.Ratio ( (%) )
 import qualified Data.Text as T
-import           Data.Time.Clock ( UTCTime )
-import           Data.Time.Clock.POSIX ( posixSecondsToUTCTime )
+import           Data.Time.Clock ( UTCTime, getCurrentTime )
+import           Data.Time.Clock.POSIX ( posixSecondsToUTCTime
+                                       , utcTimeToPOSIXSeconds )
 import           Network.Connection (ConnectionContext)
 import           Network.HTTP.Headers (Header, HeaderName(..), mkHeader)
 
@@ -97,7 +100,7 @@ class HasId x y | x -> y where
   getId :: x -> y
 
 newtype Id = Id { unId :: T.Text }
-  deriving (Read, Show, Eq, Ord, Hashable, ToJSONKey, FromJSONKey)
+  deriving (Read, Show, Eq, Ord, Hashable, ToJSON, ToJSONKey, FromJSONKey)
 
 idString :: IsId x => x -> String
 idString x = T.unpack (unId i)
@@ -161,7 +164,7 @@ instance A.FromJSON Team where
 --
 
 newtype ChannelId = CI { unCI :: Id }
-  deriving (Read, Show, Eq, Ord, Hashable, ToJSONKey, FromJSONKey, FromJSON)
+  deriving (Read, Show, Eq, Ord, Hashable, ToJSON, ToJSONKey, FromJSONKey, FromJSON)
 
 instance IsId ChannelId where
   toId   = unCI
@@ -263,7 +266,7 @@ instance A.FromJSON Channels where
 --
 
 newtype UserId = UI { unUI :: Id }
-  deriving (Read, Show, Eq, Ord, Hashable, ToJSONKey, FromJSONKey, FromJSON)
+  deriving (Read, Show, Eq, Ord, Hashable, ToJSON, ToJSONKey, FromJSONKey, FromJSON)
 
 instance IsId UserId where
   toId   = unUI
@@ -436,6 +439,50 @@ instance A.FromJSON Post where
     postChannelId     <- v .: "channel_id"
     return Post { .. }
 
+data PendingPost
+  = PendingPost
+  { pendingPostChannelId :: ChannelId
+  , pendingPostCreateAt  :: UTCTime
+  , pendingPostFilenames :: [FilePath]
+  , pendingPostMessage   :: String
+  , pendingPostId        :: PendingPostId
+  , pendingPostUserId    :: UserId
+  } deriving (Read, Show, Eq)
+
+instance A.ToJSON PendingPost where
+  toJSON post = A.object
+    [ "channel_id"      .= pendingPostChannelId post
+    , "create_at"       .= utcTimeToMilliseconds (pendingPostCreateAt  post)
+    , "filenames"       .= pendingPostFilenames post
+    , "message"         .= pendingPostMessage   post
+    , "pending_post_id" .= pendingPostId        post
+    , "user_id"         .= pendingPostUserId    post
+    ]
+
+newtype PendingPostId = PPI { unPPI :: Id }
+  deriving (Read, Show, Eq, Ord, Hashable, ToJSON, ToJSONKey, FromJSONKey, FromJSON)
+
+instance IsId PendingPostId where
+  toId   = unPPI
+  fromId = PPI
+
+instance HasId PendingPost PendingPostId where
+  getId = pendingPostId
+
+mkPendingPost :: String -> UserId -> ChannelId -> IO PendingPost
+mkPendingPost msg userid channelid = do
+  now <- getCurrentTime
+  let ms  = utcTimeToMilliseconds now :: Int
+      pid = T.pack $ printf "%s:%d" (idString userid) ms
+  return PendingPost
+    { pendingPostId        = PPI (Id pid)
+    , pendingPostChannelId = channelid
+    , pendingPostCreateAt  = now
+    , pendingPostFilenames = []
+    , pendingPostMessage   = msg
+    , pendingPostUserId    = userid
+    }
+
 --
 
 data Posts
@@ -454,6 +501,9 @@ instance A.FromJSON Posts where
 
 millisecondsToUTCTime :: Integer -> UTCTime
 millisecondsToUTCTime ms = posixSecondsToUTCTime (fromRational (ms%1000))
+
+utcTimeToMilliseconds :: UTCTime -> Int
+utcTimeToMilliseconds utc = truncate ((utcTimeToPOSIXSeconds utc)*1000)
 
 --
 

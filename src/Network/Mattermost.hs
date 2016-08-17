@@ -27,6 +27,8 @@ module Network.Mattermost
 , mmGetTeamMembers
 , mmGetMe
 , mmGetProfiles
+, mmPost
+, mkPendingPost
 , hoistE
 , noteE
 , assertE
@@ -194,6 +196,20 @@ mmGetProfiles :: ConnectionData -> Token
 mmGetProfiles cd token teamid = mmDoRequest cd token $
   printf "/api/v3/users/profiles/%s" (idString teamid)
 
+mmPost :: ConnectionData
+       -> Token
+       -> TeamId
+       -> PendingPost
+       -> IO Post -- TODO: return something informative for failures
+mmPost cd token teamid post = do
+  let chanid = pendingPostChannelId post
+      path   = printf "/api/v3/teams/%s/channels/%s/posts/create"
+                      (idString teamid)
+                      (idString chanid)
+  uri <- mmPath path
+  rsp <- mmPOST cd token uri post
+  mmGetJSONBody rsp
+
 -- | This is for making a generic authenticated request.
 mmRequest :: ConnectionData -> Token -> URI -> IO Response_String
 mmRequest cd token path = do
@@ -234,3 +250,26 @@ mmWithRequest cd token path action = do
   rsp  <- mmRequest cd token uri
   json <- mmGetJSONBody rsp
   action json
+
+mmPOST :: ToJSON t => ConnectionData -> Token -> URI -> t -> IO Response_String
+mmPOST cd token path json = do
+  rawRsp <- withConnection cd $ \con -> do
+    let content       = BL.toStrict (encode json)
+        contentLength = B.length content
+        request       = Request
+          { rqURI     = path
+          , rqMethod  = POST
+          , rqHeaders = [ mkHeader HdrAuthorization ("Bearer " ++ getTokenString token)
+                        , mkHeader HdrHost          (cdHostname cd)
+                        , mkHeader HdrUserAgent     defaultUserAgent
+                        , mkHeader HdrContentType   "application/json"
+                        , mkHeader HdrContentLength (show contentLength)
+                        ] ++ autoCloseToHeader (cdAutoClose cd)
+          , rqBody    = B.unpack content
+          }
+    simpleHTTP_ con request
+  rsp <- hoistE $ left ConnectionException rawRsp
+  assertE (rspCode rsp == (2,0,0))
+          (HTTPResponseException
+            ("mmRequest: expected 200 response but got: " ++ (show (rspCode rsp))))
+  return rsp
