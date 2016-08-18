@@ -1,6 +1,9 @@
 module Main(main) where
 
 import           Control.Monad ( when, join )
+import           Data.Bits (xor)
+import           Data.Char (ord)
+import           Data.Word (Word8)
 import qualified Data.Text as T
 import qualified Data.HashMap.Strict as HM
 import           Network.Connection
@@ -68,35 +71,56 @@ main = do
     putStrLn "Authenticated as:"
     pPrint mmUser
 
-  let getUser = mmGetUser cd token
-  mmWithWebSocket cd token (printEvent getUser) checkForExit
+  mmWithWebSocket cd token (printEvent cd token) checkForExit
 
-printEvent :: (UserId -> IO User) -> WebsocketEvent -> IO ()
-printEvent getUser we =
+hash :: String -> Int
+hash = foldl xor 0 . fmap ord
+
+color :: String -> String
+color s = h ++ s ++ "\x1b[39m"
+  where h = case fromIntegral (hash s) `mod` 13 of
+          1  -> "\x1b[32m"
+          2  -> "\x1b[33m"
+          3  -> "\x1b[34m"
+          4  -> "\x1b[35m"
+          5  -> "\x1b[36m"
+          6  -> "\x1b[37m"
+          7  -> "\x1b[91m"
+          8  -> "\x1b[92m"
+          9  -> "\x1b[93m"
+          10 -> "\x1b[94m"
+          11 -> "\x1b[95m"
+          12 -> "\x1b[96m"
+          _  -> "\x1b[31m"
+
+printEvent :: ConnectionData -> Token -> WebsocketEvent -> IO ()
+printEvent cd token we = do
+  let tId = weTeamId we
+      cId = weChannelId we
+  profiles <- mmGetProfiles cd token tId
+  channel <- mmGetChannel cd token tId cId
+  let cName = color ("#" ++ channelName channel)
   case weAction we of
     WMPosted -> case wepPost (weProps we) of
       Just (Post { postMessage = msg
                  , postUserId  = usrId
                  }) -> do
-        user <- getUser usrId
-        let nick = userUsername user
-        putStrLn (nick ++ ": " ++ msg)
+        let nick = color ("@" ++ userProfileUsername (profiles HM.! usrId))
+        putStrLn (nick ++ " in " ++ cName ++ ":  " ++ msg)
       Nothing -> return ()
     WMPostEdited -> case wepPost (weProps we) of
       Just (Post { postMessage = msg
                  , postUserId  = usrId
                  }) -> do
-        user <- getUser usrId
-        let nick = userUsername user
-        putStrLn (nick ++ " [edited previous post to]: " ++ msg)
+        let nick = color ("@" ++ userProfileUsername (profiles HM.! usrId))
+        putStrLn (nick ++ " [edit]:  " ++ msg)
       Nothing -> return ()
     WMPostDeleted -> case wepPost (weProps we) of
       Just (Post { postMessage = msg
                  , postUserId  = usrId
                  }) -> do
-        user <- getUser usrId
-        let nick = userUsername user
-        putStrLn (nick ++ " [deleted previous post which read]: " ++ msg)
+        let nick = color ("@" ++ userProfileUsername (profiles HM.! usrId))
+        putStrLn (nick ++ " [deletion]:  " ++ msg)
       Nothing -> return ()
     _ -> return ()
 
