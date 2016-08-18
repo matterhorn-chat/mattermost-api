@@ -15,6 +15,7 @@ import           System.Exit ( exitFailure
 import           Network.Mattermost
 import           Network.Mattermost.Util
 import           Network.Mattermost.WebSocket
+import           Network.Mattermost.WebSocket.Types (WebsocketEvent)
 
 import           Config
 import           LocalConfig -- You will need to define a function:
@@ -23,49 +24,20 @@ import           LocalConfig -- You will need to define a function:
 
 data Options
   = Options
-  { optChannel :: String
-  , optVerbose :: Bool
-  , optOffset  :: Int
-  , optLimit   :: Int
+  { optVerbose :: Bool
   } deriving (Read, Show)
 
 defaultOptions :: Options
 defaultOptions = Options
-  { optChannel = "town-square"
-  , optVerbose = False
-  , optOffset  = 0
-  , optLimit   = 10
+  { optVerbose = False
   }
 
 options :: [ OptDescr (Options -> IO Options) ]
 options =
-  [ Option "c" ["channel"]
-      (ReqArg
-        (\arg opt -> return opt { optChannel = arg })
-        "CHANNEL")
-      "Channel to fetch posts from"
-  , Option "v" ["verbose"]
+  [ Option "v" ["verbose"]
       (NoArg
         (\opt -> return opt { optVerbose = True }))
       "Enable verbose output"
-  , Option "o" ["offset"]
-      (ReqArg
-        (\arg opt -> do
-          case readMaybe arg of
-            Nothing -> do putStrLn "offset must be an int"
-                          exitFailure
-            Just i  -> return opt { optOffset = i })
-        "OFFSET")
-      "Starting offset to grab posts, 0 is most recent"
-  , Option "l" ["limit"]
-      (ReqArg
-        (\arg opt -> do
-          case readMaybe arg of
-            Nothing -> do putStrLn "limit must be an int"
-                          exitFailure
-            Just n  -> return opt { optLimit = n })
-        "LIMIT")
-      "Maximum number of posts to fetch"
   , Option "h" ["help"]
       (NoArg
         (\_ -> do
@@ -95,4 +67,15 @@ main = do
     putStrLn "Authenticated as:"
     pPrint mmUser
 
-  mmWsConnect cd token
+  mmWithWebSocket cd token printEvent checkForExit
+
+printEvent :: WebsocketEvent -> IO ()
+printEvent we =
+  pPrint we
+
+checkForExit :: MMWebSocket -> IO ()
+checkForExit ws = do
+  ln <- getLine
+  if ln == "exit"
+    then mmCloseWebSocket ws
+    else checkForExit ws

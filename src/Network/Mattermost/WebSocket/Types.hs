@@ -4,16 +4,14 @@
 
 module Network.Mattermost.WebSocket.Types where
 
-import           Data.Aeson ( Object
-                            , FromJSON(..)
+import           Data.Aeson ( FromJSON(..)
                             , ToJSON(..)
                             , (.:)
                             , (.:?)
                             , (.=)
                             )
 import qualified Data.Aeson as A
-import           Data.ByteString.Lazy (ByteString, fromStrict, toStrict)
-import           Data.HashMap.Strict (HashMap)
+import           Data.ByteString.Lazy (fromStrict, toStrict)
 import           Data.Maybe (fromJust)
 import           Data.Text (Text)
 import           Data.Text.Encoding (decodeUtf8, encodeUtf8)
@@ -105,7 +103,7 @@ instance FromJSON WebsocketEvent where
     weChannelId <- o .:  "channel_id"
     weProps     <- o .:  "props"
     return WebsocketEvent { .. }
-{-
+
 instance ToJSON WebsocketEvent where
   toJSON WebsocketEvent { .. } = A.object
     [ "team_id"    .= weTeamId
@@ -114,10 +112,10 @@ instance ToJSON WebsocketEvent where
     , "channel_id" .= weChannelId
     , "props"      .= weProps
     ]
--}
+
 instance WebSocketsData WebsocketEvent where
   fromLazyByteString = fromJust. A.decode
-  -- toLazyByteString = A.encode
+  toLazyByteString = A.encode
 
 --
 
@@ -137,7 +135,7 @@ instance FromJSON WEProps where
     wepChannelDisplayName <- o .:? "channel_name"
     wepPost               <- o .:? "post"
     return WEProps { .. }
-{-
+
 instance ToJSON WEProps where
   toJSON WEProps { .. } = A.object
     [ "channel_id"   .= wepChannelId
@@ -146,4 +144,5 @@ instance ToJSON WEProps where
     , "channel_name" .= wepChannelDisplayName
     , "post"         .= wepPost
     ]
--}
+
+--

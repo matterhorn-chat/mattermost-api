@@ -1,12 +1,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Network.Mattermost.WebSocket where
+module Network.Mattermost.WebSocket
+( MMWebSocket
+, mmWithWebSocket
+, mmCloseWebSocket
+) where
 
+import           Control.Concurrent (forkIO)
+import           Control.Exception (catch)
 import           Control.Monad (forever)
-import           Data.Aeson (Value, eitherDecode)
 import qualified Data.ByteString.Char8 as B
-import           Data.ByteString.Lazy (ByteString, toStrict)
+import           Data.ByteString.Lazy (toStrict)
 import           Data.Monoid ((<>))
 import           Network.Connection ( Connection
                                     , connectionClose
@@ -20,7 +25,6 @@ import           Network.Mattermost
 import           Network.Mattermost.Util
 import           Network.Mattermost.Types
 import           Network.Mattermost.WebSocket.Types
-import           Text.Show.Pretty ( pPrint )
 
 
 connectionToStream :: Connection -> IO Stream
@@ -33,8 +37,17 @@ connectionToStream con = makeStream rd wr
             then Nothing
             else (Just bs)
 
-mmWsConnect :: ConnectionData -> Token -> IO ()
-mmWsConnect cd (Token tk) = do
+newtype MMWebSocket = MMWS WS.Connection
+
+mmCloseWebSocket :: MMWebSocket -> IO ()
+mmCloseWebSocket (MMWS c) = WS.sendClose c B.empty
+
+mmWithWebSocket :: ConnectionData
+                -> Token
+                -> (WebsocketEvent -> IO ())
+                -> (MMWebSocket -> IO ())
+                -> IO ()
+mmWithWebSocket cd (Token tk) recv body = do
   con <- mkConnection cd
   stream <- connectionToStream con
   WS.runClientWithStream stream
@@ -42,9 +55,9 @@ mmWsConnect cd (Token tk) = do
                       "/api/v3/users/websocket"
                       WS.defaultConnectionOptions
                       [ ("Authorization", "Bearer " <> B.pack tk) ]
-                      printStuff
-
-printStuff :: WS.Connection -> IO ()
-printStuff con = forever $ do
-  msg <- WS.receiveData con
-  pPrint (eitherDecode msg :: Either String WebsocketEvent)
+                      (\ c -> action c `catch` cleanup)
+  where action c = do
+          _ <- forkIO $ forever (WS.receiveData c >>= recv)
+          body (MMWS c)
+        cleanup :: WS.ConnectionException -> IO ()
+        cleanup _ = return ()

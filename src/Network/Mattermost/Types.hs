@@ -89,6 +89,9 @@ data Type = Type T.Text
 instance A.FromJSON Type where
   parseJSON = A.withText "Type" (pure . Type)
 
+instance A.ToJSON Type where
+  toJSON (Type t) = A.toJSON t
+
 --
 
 -- For converting from type specific Id to generic Id
@@ -392,7 +395,7 @@ instance A.FromJSON User where
 --
 
 newtype PostId = PI { unPI :: Id }
-  deriving (Read, Show, Eq, Ord, Hashable, ToJSONKey, FromJSONKey, FromJSON)
+  deriving (Read, Show, Eq, Ord, Hashable, ToJSON, ToJSONKey, FromJSONKey, FromJSON)
 
 instance IsId PostId where
   toId   = unPI
@@ -438,6 +441,25 @@ instance A.FromJSON Post where
     postParentId      <- v .: "parent_id"
     postChannelId     <- v .: "channel_id"
     return Post { .. }
+
+instance A.ToJSON Post where
+  toJSON Post { .. } = A.object
+    [ "pending_post_id" .= postPendingPostId
+    , "original_id"     .= postOriginalId
+    , "props"           .= postProps
+    , "root_id"         .= postRootId
+    , "filenames"       .= postFilenames
+    , "id"              .= postId
+    , "type"            .= postType
+    , "message"         .= postMessage
+    , "delete_at"       .= postDeleteAt
+    , "hashtags"        .= postHashtags
+    , "update_at"       .= postUpdateAt
+    , "user_id"         .= postUserId
+    , "create_at"       .= postCreateAt
+    , "parent_id"       .= postParentId
+    , "channel_id"      .= postChannelId
+    ]
 
 data PendingPost
   = PendingPost
