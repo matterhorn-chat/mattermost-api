@@ -70,8 +70,7 @@ main = do
   mmWithWebSocket cd token printEvent checkForExit
 
 printEvent :: WebsocketEvent -> IO ()
-printEvent we =
-  pPrint we
+printEvent we = pPrint we
 
 checkForExit :: MMWebSocket -> IO ()
 checkForExit ws = do
