@@ -8,6 +8,8 @@ module Network.Mattermost
 , Port
 , ConnectionData
 , Id(..)
+, User(..)
+, UserId
 , Team(..)
 , Channel(..)
 , Channels(..)

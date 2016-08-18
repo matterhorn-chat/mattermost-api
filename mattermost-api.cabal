@@ -133,3 +133,20 @@ executable mm-get-websocket-connection
                   , process
                   , unordered-containers
                   , pretty-show
+
+executable mm-show-events
+  if !flag(build-examples)
+    buildable:        False
+  default-language: Haskell2010
+  main-is:          ShowEvents.hs
+  other-modules:    Config
+                    LocalConfig
+  hs-source-dirs:   examples
+  build-depends:    base
+                  , mattermost-api
+                  , aeson
+                  , text
+                  , connection
+                  , process
+                  , unordered-containers
+                  , pretty-show

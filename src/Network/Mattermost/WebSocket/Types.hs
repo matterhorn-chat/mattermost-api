@@ -2,7 +2,11 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Network.Mattermost.WebSocket.Types where
+module Network.Mattermost.WebSocket.Types
+( WebsocketEventType(..)
+, WebsocketEvent(..)
+, WEProps(..)
+) where
 
 import           Data.Aeson ( FromJSON(..)
                             , ToJSON(..)
@@ -11,6 +15,7 @@ import           Data.Aeson ( FromJSON(..)
                             , (.=)
                             )
 import qualified Data.Aeson as A
+import qualified Data.Aeson.Types as A
 import           Data.ByteString.Lazy (fromStrict, toStrict)
 import           Data.Maybe (fromJust)
 import           Data.Text (Text)
@@ -73,17 +78,14 @@ instance ToJSON WebsocketEventType where
 
 --
 
-newtype ValueString a = ValueString a
-  deriving (Eq, Read, Show)
+toValueString :: ToJSON a => a -> A.Value
+toValueString v =  toJSON (decodeUtf8 (toStrict (A.encode v)))
 
-instance FromJSON a => FromJSON (ValueString a) where
-  parseJSON = A.withText "ValueString" $ \s -> do
+fromValueString :: FromJSON a => A.Value -> A.Parser a
+fromValueString = A.withText "string-encoded json" $ \s -> do
     case A.eitherDecode (fromStrict (encodeUtf8 s)) of
-      Right v  -> return (ValueString v)
+      Right v  -> return v
       Left err -> fail err
-
-instance ToJSON a => ToJSON (ValueString a) where
-  toJSON (ValueString v) = toJSON (decodeUtf8 (toStrict (A.encode v)))
 
 --
 
@@ -124,7 +126,7 @@ data WEProps = WEProps
   , wepTeamId             :: Maybe TeamId
   , wepSenderName         :: Maybe Text
   , wepChannelDisplayName :: Maybe Text
-  , wepPost               :: Maybe (ValueString Post)
+  , wepPost               :: Maybe Post
   } deriving (Read, Show, Eq)
 
 instance FromJSON WEProps where
@@ -133,7 +135,10 @@ instance FromJSON WEProps where
     wepTeamId             <- o .:? "team_id"
     wepSenderName         <- o .:? "sender_name"
     wepChannelDisplayName <- o .:? "channel_name"
-    wepPost               <- o .:? "post"
+    wepPostRaw            <- o .:? "post"
+    wepPost <- case wepPostRaw of
+      Just str -> fromValueString str
+      Nothing  -> return Nothing
     return WEProps { .. }
 
 instance ToJSON WEProps where
@@ -142,7 +147,7 @@ instance ToJSON WEProps where
     , "team_id"      .= wepTeamId
     , "sender_name"  .= wepSenderName
     , "channel_name" .= wepChannelDisplayName
-    , "post"         .= wepPost
+    , "post"         .= toValueString wepPost
     ]
 
 --
