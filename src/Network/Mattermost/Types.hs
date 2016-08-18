@@ -119,7 +119,7 @@ instance HasId Id Id where
 --
 
 newtype TeamId = TI { unTI :: Id }
-  deriving (Read, Show, Eq, Ord, Hashable, ToJSONKey, FromJSONKey, FromJSON)
+  deriving (Read, Show, Eq, Ord, Hashable, ToJSON, ToJSONKey, FromJSONKey, FromJSON)
 
 instance IsId TeamId where
   toId   = unTI

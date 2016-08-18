@@ -1,13 +1,26 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Network.Mattermost.WebSocket.Types where
 
-import           Data.Aeson (Object, FromJSON(..), ToJSON(..), (.:), (.=))
+import           Data.Aeson ( Object
+                            , FromJSON(..)
+                            , ToJSON(..)
+                            , (.:)
+                            , (.:?)
+                            , (.=)
+                            )
 import qualified Data.Aeson as A
+import           Data.ByteString.Lazy (ByteString, fromStrict, toStrict)
+import           Data.HashMap.Strict (HashMap)
+import           Data.Maybe (fromJust)
 import           Data.Text (Text)
+import           Data.Text.Encoding (decodeUtf8, encodeUtf8)
+import           Network.WebSockets (WebSocketsData(..))
 
-import           Prelude ()
-import           Prelude.Compat
+import           Network.Mattermost.Types
+
 
 data WebsocketEventType
   = WMTyping
@@ -28,20 +41,20 @@ data WebsocketEventType
 
 instance FromJSON WebsocketEventType where
   parseJSON = A.withText "event type" $ \s -> case s of
-    "typing"             -> pure WMTyping
-    "posted"             -> pure WMPosted
-    "post_edited"        -> pure WMPostEdited
-    "post_deleted"       -> pure WMPostDeleted
-    "channel_deleted"    -> pure WMChannelDeleted
-    "channel_viewed"     -> pure WMChannelViewed
-    "direct_added"       -> pure WMDirectAdded
-    "new_user"           -> pure WMNewUser
-    "leave_team"         -> pure WMLeaveTeam
-    "user_added"         -> pure WMUserAdded
-    "user_removed"       -> pure WMUserRemoved
-    "preference_changed" -> pure WMPreferenceChanged
-    "ephemeral_message"  -> pure WMEphemeralMessage
-    "status_change"      -> pure WMStatusChange
+    "typing"             -> return WMTyping
+    "posted"             -> return WMPosted
+    "post_edited"        -> return WMPostEdited
+    "post_deleted"       -> return WMPostDeleted
+    "channel_deleted"    -> return WMChannelDeleted
+    "channel_viewed"     -> return WMChannelViewed
+    "direct_added"       -> return WMDirectAdded
+    "new_user"           -> return WMNewUser
+    "leave_team"         -> return WMLeaveTeam
+    "user_added"         -> return WMUserAdded
+    "user_removed"       -> return WMUserRemoved
+    "preference_changed" -> return WMPreferenceChanged
+    "ephemeral_message"  -> return WMEphemeralMessage
+    "status_change"      -> return WMStatusChange
     _                    -> fail ("Unknown websocket message: " ++ show s)
 
 instance ToJSON WebsocketEventType where
@@ -62,72 +75,75 @@ instance ToJSON WebsocketEventType where
 
 --
 
+newtype ValueString a = ValueString a
+  deriving (Eq, Read, Show)
+
+instance FromJSON a => FromJSON (ValueString a) where
+  parseJSON = A.withText "ValueString" $ \s -> do
+    case A.eitherDecode (fromStrict (encodeUtf8 s)) of
+      Right v  -> return (ValueString v)
+      Left err -> fail err
+
+instance ToJSON a => ToJSON (ValueString a) where
+  toJSON (ValueString v) = toJSON (decodeUtf8 (toStrict (A.encode v)))
+
+--
+
 data WebsocketEvent = WebsocketEvent
-  { weEvent     :: WebsocketEventType
-  , weTeamId    :: Text
-  , weChannelId :: Text
-  , weUserId    :: Text
-  , weData      :: Object
+  { weTeamId    :: TeamId
+  , weAction    :: WebsocketEventType
+  , weUserId    :: UserId
+  , weChannelId :: ChannelId
+  , weProps     :: WEProps
   } deriving (Read, Show, Eq)
 
 instance FromJSON WebsocketEvent where
-  parseJSON = A.withObject "websocket event" $ \o ->
-    WebsocketEvent <$> o .: "event"
-                   <*> o .: "team_id"
-                   <*> o .: "channel_id"
-                   <*> o .: "user_id"
-                   <*> o .: "data"
-
+  parseJSON = A.withObject "WebsocketEvent" $ \o -> do
+    weTeamId    <- o .:  "team_id"
+    weAction    <- o .:  "action"
+    weUserId    <- o .:  "user_id"
+    weChannelId <- o .:  "channel_id"
+    weProps     <- o .:  "props"
+    return WebsocketEvent { .. }
+{-
 instance ToJSON WebsocketEvent where
-  toJSON we = A.object
-    [ "event"      .= weEvent we
-    , "team_id"    .= weTeamId we
-    , "channel_id" .= weChannelId we
-    , "user_id"    .= weUserId we
-    , "data"       .= weData we
+  toJSON WebsocketEvent { .. } = A.object
+    [ "team_id"    .= weTeamId
+    , "action"     .= weAction
+    , "user_id"    .= weUserId
+    , "channel_id" .= weChannelId
+    , "props"      .= weProps
     ]
+-}
+instance WebSocketsData WebsocketEvent where
+  fromLazyByteString = fromJust. A.decode
+  -- toLazyByteString = A.encode
 
 --
 
-data WebsocketResponse = WebsocketResponse
-  { wrStatus   :: Text
-  , wrSeqReply :: Maybe Int
-  , wrData     :: Maybe Object
-  , wrError    :: Maybe Text
+data WEProps = WEProps
+  { wepChannelId          :: Maybe ChannelId
+  , wepTeamId             :: Maybe TeamId
+  , wepSenderName         :: Maybe Text
+  , wepChannelDisplayName :: Maybe Text
+  , wepPost               :: Maybe (ValueString Post)
   } deriving (Read, Show, Eq)
 
-instance FromJSON WebsocketResponse where
-  parseJSON = A.withObject "websocket response" $ \o ->
-    WebsocketResponse <$> o .: "status"
-                      <*> o .: "seq_reply"
-                      <*> o .: "data"
-                      <*> o .: "error"
-
-instance ToJSON WebsocketResponse where
-  toJSON wr = A.object
-    [ "status"    .= wrStatus wr
-    , "seq_reply" .= wrSeqReply wr
-    , "data"      .= wrData wr
-    , "error"     .= wrError wr
+instance FromJSON WEProps where
+  parseJSON = A.withObject "WebSocketEvent Props" $ \o -> do
+    wepChannelId          <- o .:? "channel_id"
+    wepTeamId             <- o .:? "team_id"
+    wepSenderName         <- o .:? "sender_name"
+    wepChannelDisplayName <- o .:? "channel_name"
+    wepPost               <- o .:? "post"
+    return WEProps { .. }
+{-
+instance ToJSON WEProps where
+  toJSON WEProps { .. } = A.object
+    [ "channel_id"   .= wepChannelId
+    , "team_id"      .= wepTeamId
+    , "sender_name"  .= wepSenderName
+    , "channel_name" .= wepChannelDisplayName
+    , "post"         .= wepPost
     ]
-
---
-
-data WebsocketRequest = WebsocketRequest
-  { wqSeq    :: Int
-  , wqAction :: Text
-  , wqData   :: Object
-  } deriving (Read, Show, Eq)
-
-instance ToJSON WebsocketRequest where
-  toJSON wq = A.object
-    [ "seq"    .= wqSeq wq
-    , "action" .= wqAction wq
-    , "data"   .= wqData wq
-    ]
-
-instance FromJSON WebsocketRequest where
-  parseJSON = A.withObject "websocket request" $ \o ->
-    WebsocketRequest <$> o .: "seq"
-                     <*> o .: "action"
-                     <*> o .: "data"
+-}

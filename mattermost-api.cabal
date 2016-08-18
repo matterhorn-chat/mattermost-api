@@ -24,6 +24,7 @@ library
   exposed-modules:     Network.Mattermost
                        Network.Mattermost.Exceptions
                        Network.Mattermost.Util
+                       Network.Mattermost.WebSocket
                        Network.Mattermost.WebSocket.Types
   other-modules:       Network.Mattermost.Types
   -- other-extensions:
@@ -41,6 +42,7 @@ library
                      , time
                      , unordered-containers
                      , hashable
+                     , base64-bytestring
                      -- Only here to make debugging easier
                      , pretty-show
   hs-source-dirs:      src
@@ -103,6 +105,23 @@ executable mm-make-post
     buildable:        False
   default-language: Haskell2010
   main-is:          MakePost.hs
+  other-modules:    Config
+                    LocalConfig
+  hs-source-dirs:   examples
+  build-depends:    base
+                  , mattermost-api
+                  , aeson
+                  , text
+                  , connection
+                  , process
+                  , unordered-containers
+                  , pretty-show
+
+executable mm-get-websocket-connection
+  if !flag(build-examples)
+    buildable:        False
+  default-language: Haskell2010
+  main-is:          GetWebsocketConnection.hs
   other-modules:    Config
                     LocalConfig
   hs-source-dirs:   examples

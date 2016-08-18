@@ -8,6 +8,7 @@ module Network.Mattermost.Util
 , (~=)
 , dropTrailingChar
 , withConnection
+, mkConnection
 , connectionGetExact
 ) where
 
@@ -53,15 +54,21 @@ dropTrailingChar _ = ""
 -- Internally it uses 'bracket' to cleanup the connection.
 withConnection :: ConnectionData -> (Connection -> IO a) -> IO a
 withConnection cd action =
-  bracket (connectTo (cdConnectionCtx cd) $ ConnectionParams
-            { connectionHostname  = cdHostname cd
-            , connectionPort      = fromIntegral (cdPort cd)
-            , connectionUseSecure = Just def
-            , connectionUseSocks  = Nothing
-            }
-          )
+  bracket (mkConnection cd)
           connectionClose
           action
+
+-- | Creates a connection from a 'ConnectionData' value, returning it. It
+--   is the user's responsibility to close this appropriately.
+mkConnection :: ConnectionData -> IO Connection
+mkConnection cd =
+  connectTo (cdConnectionCtx cd) $ ConnectionParams
+    { connectionHostname  = cdHostname cd
+    , connectionPort      = fromIntegral (cdPort cd)
+    , connectionUseSecure = Just def
+    , connectionUseSocks  = Nothing
+    }
+
 
 -- | Get exact count of bytes from a connection.
 --
