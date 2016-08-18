@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main(main) where
 
 import           Control.Monad ( when, join )
@@ -70,8 +72,24 @@ main = do
   when (optVerbose opts) $ do
     putStrLn "Authenticated as:"
     pPrint mmUser
+  let myId = userId mmUser
 
-  mmWithWebSocket cd token (printEvent cd token) checkForExit
+  teamMap <- mmGetTeams cd token
+  let [myTeam] = [ t | t <- HM.elems teamMap
+                     , teamName t == T.unpack (configTeam config)
+                     ]
+  Channels channels _ <- mmGetChannels cd token (getId myTeam)
+
+  let channelMap = HM.fromList [ (channelName c, c)
+                               | c <- channels
+                               , channelType c == "O"
+                               ]
+
+  mmWithWebSocket
+    cd
+    token
+    (printEvent cd token)
+    (checkForExit cd token myId channelMap)
 
 hash :: String -> Int
 hash = foldl xor 0 . fmap ord
@@ -124,8 +142,50 @@ printEvent cd token we = do
       Nothing -> return ()
     _ -> return ()
 
-checkForExit :: MMWebSocket -> IO ()
-checkForExit ws = do
-  putStrLn "Connected. Press enter to quit."
-  ln <- getLine
-  mmCloseWebSocket ws
+checkForExit :: ConnectionData
+             -> Token
+             -> UserId
+             -> HM.HashMap String Channel
+             -> MMWebSocket
+             -> IO ()
+checkForExit cd token userId channelMap ws = getCommand Nothing
+  where getCommand focus = do
+          ln <- getLine
+          case ln of
+            '/':rs -> runCommand (words rs) focus
+            _     -> putMessage ln focus
+        runCommand ["focus", room] old
+          | HM.member room channelMap = do
+              putStrLn (" + setting focus to #" ++ room)
+              getCommand (Just room)
+          | otherwise = do
+              putStrLn ("I don't know the channel #" ++ room)
+              getCommand old
+        runCommand ["quit"] _ = do
+          putStrLn "Quitting"
+          mmCloseWebSocket ws
+        runCommand ["channels"] focus = do
+          putStrLn "Available channels include:"
+          sequence_ [ putStrLn ("  #" ++ c)
+                    | c <- HM.keys channelMap
+                    ]
+          getCommand focus
+        runCommand ["help"] focus = do
+          putStrLn "Available commands:"
+          putStrLn "  /focus [room]"
+          putStrLn "  /channels"
+          putStrLn "  /help"
+          putStrLn "  /quit"
+          getCommand focus
+        runCommand cmd focus = do
+          putStrLn ("Unknown command: " ++ unwords cmd)
+          getCommand focus
+        putMessage ln Nothing = do
+          putStrLn "I don't know where to send that message."
+          putStrLn "Set your target with /focus [channel-name]"
+          getCommand Nothing
+        putMessage ln focus@(Just rm) = do
+          let c = channelMap HM.! rm
+          pendingPost <- mkPendingPost ln userId (getId c)
+          post <- mmPost cd token (channelTeamId c) pendingPost
+          getCommand focus

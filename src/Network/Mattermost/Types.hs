@@ -22,6 +22,7 @@ import qualified Data.Text as T
 import           Data.Time.Clock ( UTCTime, getCurrentTime )
 import           Data.Time.Clock.POSIX ( posixSecondsToUTCTime
                                        , utcTimeToPOSIXSeconds )
+import           GHC.Exts ( IsString(..) )
 import           Network.Connection (ConnectionContext)
 import           Network.HTTP.Headers (Header, HeaderName(..), mkHeader)
 
@@ -85,6 +86,9 @@ instance A.ToJSON Login where
 -- | XXX: No idea what this is
 data Type = Type T.Text
   deriving (Read, Show, Ord, Eq)
+
+instance IsString Type where
+  fromString = Type . fromString
 
 instance A.FromJSON Type where
   parseJSON = A.withText "Type" (pure . Type)
