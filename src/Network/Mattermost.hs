@@ -11,6 +11,7 @@ module Network.Mattermost
 , User(..)
 , UserId
 , Team(..)
+, TeamId(..)
 , Channel(..)
 , Channels(..)
 , UserProfile(..)
@@ -31,6 +32,7 @@ module Network.Mattermost
 , mmGetProfiles
 , mmPost
 , mkPendingPost
+, idString
 , hoistE
 , noteE
 , assertE

@@ -6,6 +6,7 @@ import           Control.Monad ( when, join )
 import           Data.Bits (xor)
 import           Data.Char (ord)
 import           Data.Word (Word8)
+import           Data.List ( sort )
 import qualified Data.Text as T
 import qualified Data.HashMap.Strict as HM
 import           Network.Connection
@@ -72,24 +73,27 @@ main = do
   when (optVerbose opts) $ do
     putStrLn "Authenticated as:"
     pPrint mmUser
-  let myId = userId mmUser
+  let myId = getId mmUser
 
   teamMap <- mmGetTeams cd token
   let [myTeam] = [ t | t <- HM.elems teamMap
                      , teamName t == T.unpack (configTeam config)
                      ]
   Channels channels _ <- mmGetChannels cd token (getId myTeam)
+  users               <- mmGetProfiles cd token (getId myTeam)
 
   let channelMap = HM.fromList [ (channelName c, c)
                                | c <- channels
-                               , channelType c == "O"
+                               ]
+      userMap    = HM.fromList [ (userProfileUsername u, u)
+                               | u <- HM.elems users
                                ]
 
   mmWithWebSocket
     cd
     token
     (printEvent cd token)
-    (checkForExit cd token myId channelMap)
+    (checkForExit cd token myId (getId myTeam) channelMap userMap)
 
 hash :: String -> Int
 hash = foldl xor 0 . fmap ord
@@ -116,15 +120,17 @@ printEvent cd token we = do
   let tId = weTeamId we
       cId = weChannelId we
   profiles <- mmGetProfiles cd token tId
-  channel <- mmGetChannel cd token tId cId
-  let cName = color ("#" ++ channelName channel)
+  channel  <- mmGetChannel cd token tId cId
   case weAction we of
     WMPosted -> case wepPost (weProps we) of
       Just (Post { postMessage = msg
                  , postUserId  = usrId
                  }) -> do
-        let nick = color ("@" ++ userProfileUsername (profiles HM.! usrId))
-        putStrLn (nick ++ " in " ++ cName ++ ":  " ++ msg)
+        let nick  = color ("@" ++ userProfileUsername (profiles HM.! usrId))
+            cName = color ("#" ++ channelName channel)
+        if channelType channel == "O"
+          then putStrLn (nick ++ " in " ++ cName ++ ":  " ++ msg)
+          else putStrLn ("dm by " ++ nick ++ ":  " ++ msg)
       Nothing -> return ()
     WMPostEdited -> case wepPost (weProps we) of
       Just (Post { postMessage = msg
@@ -145,10 +151,12 @@ printEvent cd token we = do
 checkForExit :: ConnectionData
              -> Token
              -> UserId
+             -> TeamId
              -> HM.HashMap String Channel
+             -> HM.HashMap String UserProfile
              -> MMWebSocket
              -> IO ()
-checkForExit cd token userId channelMap ws = getCommand Nothing
+checkForExit cd token userId teamId channelMap userMap ws = getCommand Nothing
   where getCommand focus = do
           ln <- getLine
           case ln of
@@ -161,19 +169,37 @@ checkForExit cd token userId channelMap ws = getCommand Nothing
           | otherwise = do
               putStrLn ("I don't know the channel #" ++ room)
               getCommand old
+        runCommand ["direct", user] old
+          | HM.member user userMap = do
+              putStrLn (" + setting focus to @" ++ user)
+              let [loUser, hiUser] = sort [ getId (userMap HM.! user), userId ]
+              let cname = idString loUser ++ "__" ++ idString hiUser
+              getCommand (Just cname)
+          | otherwise = do
+              putStrLn ("I don't know the user @" ++ user)
+              getCommand old
         runCommand ["quit"] _ = do
           putStrLn "Quitting"
           mmCloseWebSocket ws
         runCommand ["channels"] focus = do
           putStrLn "Available channels include:"
-          sequence_ [ putStrLn ("  #" ++ c)
-                    | c <- HM.keys channelMap
+          sequence_ [ putStrLn ("  #" ++ channelName c)
+                    | c <- HM.elems channelMap
+                    , channelType c == "O"
+                    ]
+          getCommand focus
+        runCommand ["users"] focus = do
+          putStrLn "Available users include:"
+          sequence_ [ putStrLn ("  @" ++ u)
+                    | u <- HM.keys userMap
                     ]
           getCommand focus
         runCommand ["help"] focus = do
           putStrLn "Available commands:"
           putStrLn "  /focus [room]"
+          putStrLn "  /direct [username]"
           putStrLn "  /channels"
+          putStrLn "  /users"
           putStrLn "  /help"
           putStrLn "  /quit"
           getCommand focus
@@ -182,10 +208,10 @@ checkForExit cd token userId channelMap ws = getCommand Nothing
           getCommand focus
         putMessage ln Nothing = do
           putStrLn "I don't know where to send that message."
-          putStrLn "Set your target with /focus [channel-name]"
+          putStrLn "Set your target with /focus [channel-name] or /direct [username]"
           getCommand Nothing
         putMessage ln focus@(Just rm) = do
           let c = channelMap HM.! rm
           pendingPost <- mkPendingPost ln userId (getId c)
-          post <- mmPost cd token (channelTeamId c) pendingPost
+          post <- mmPost cd token teamId pendingPost
           getCommand focus
