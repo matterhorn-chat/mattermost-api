@@ -200,7 +200,15 @@ checkForExit cd token userId teamId channelMap userMap ws = do
                      ++ HM.keys userMap
       channelList  = map ("#"++) (HM.keys channelMap)
                      ++ HM.keys channelMap
-      wordList     = usernameList ++ channelList
+      commandList  = ["/unfocus"
+                     ,"/focus"
+                     ,"/direct"
+                     ,"/channels"
+                     ,"/users"
+                     ,"/help"
+                     ,"/quit"
+                     ]
+      wordList     = usernameList ++ channelList ++ commandList
       searchFunc s = return (map simpleCompletion (filter (s `isPrefixOf`) wordList))
       settings     = setComplete (completeWord Nothing " \t" searchFunc) defaultSettings
   runInputT settings (getCommand NoFocus)
@@ -264,6 +272,8 @@ checkForExit cd token userId teamId channelMap userMap ws = do
           liftIO $ putStrLn ("Unknown command: " ++ unwords cmd)
           getCommand focus
         putMessage :: String -> Focus -> InputT IO ()
+        putMessage [] focus   = do
+          getCommand focus
         putMessage ln NoFocus = do
           liftIO $ putStrLn "I don't know where to send that message."
           liftIO $ putStrLn "Set your target with /focus [channel-name] or /direct [username]"
