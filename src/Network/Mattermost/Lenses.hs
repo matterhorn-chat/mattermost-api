@@ -1,7 +1,10 @@
+{-# LANGUAGE RankNTypes #-}
+
 module Network.Mattermost.Lenses
 (
+  Lens'
 -- * Mattermost Types
-  cdHostnameL
+, cdHostnameL
 , cdPortL
 , cdAutoCloseL
 , cdConnectionCtxL
@@ -121,7 +124,17 @@ import Network.Connection (ConnectionContext)
 
 import Network.Mattermost.Types
 import Network.Mattermost.WebSocket.Types
-import Network.Mattermost.LensInternal
+
+-- This is all we need to create a Lens: the type and a trivial
+-- @makeLens@ function:
+
+-- This is the same type alias as in @Control.Lens@, and so can be used
+-- anywhere lenses are needed.
+type Lens' a b = forall f. Functor f => (b -> f b) -> (a -> f a)
+
+-- Create a lens by combining a getter and a setter.
+makeLens :: (a -> b) -> (b -> a -> a) -> Lens' a b
+makeLens get set f a = (`set` a) `fmap` f (get a)
 
 
 cdHostnameL :: Lens' ConnectionData Hostname
