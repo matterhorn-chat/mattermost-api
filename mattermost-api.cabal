@@ -23,10 +23,12 @@ flag build-examples
 library
   exposed-modules:     Network.Mattermost
                        Network.Mattermost.Exceptions
+                       Network.Mattermost.Lenses
                        Network.Mattermost.Util
                        Network.Mattermost.WebSocket
                        Network.Mattermost.WebSocket.Types
   other-modules:       Network.Mattermost.Types
+                       Network.Mattermost.LensInternal
   -- other-extensions:
   build-depends:       base >=4.4 && <5
                      , websockets
