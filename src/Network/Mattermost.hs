@@ -9,7 +9,7 @@ module Network.Mattermost
 , ConnectionData
 , Id(..)
 , User(..)
-, UserId
+, UserId(..)
 , Team(..)
 , TeamId(..)
 , Channel(..)
@@ -17,6 +17,7 @@ module Network.Mattermost
 , Channels(..)
 , UserProfile(..)
 , Post(..)
+, PostId(..)
 , Posts(..)
 -- Typeclasses
 , HasId(..)

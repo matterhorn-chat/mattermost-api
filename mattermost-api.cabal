@@ -29,11 +29,9 @@ library
   other-modules:       Network.Mattermost.Types
   -- other-extensions:
   build-depends:       base >=4.4 && <5
-                     , base-compat
                      , websockets
                      , aeson >= 1.0.0.0
                      , connection
-                     , data-default
                      , bytestring
                      , process
                      , HTTP
@@ -42,7 +40,6 @@ library
                      , time
                      , unordered-containers
                      , hashable
-                     , base64-bytestring
                      -- Only here to make debugging easier
                      , pretty-show
   hs-source-dirs:      src

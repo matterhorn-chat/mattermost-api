@@ -12,7 +12,6 @@ module Network.Mattermost.Util
 , connectionGetExact
 ) where
 
-import           Data.Default ( def )
 import           Data.Char ( toUpper )
 import qualified Data.ByteString.Char8 as B
 
@@ -21,6 +20,7 @@ import           Control.Exception ( Exception
                                    , bracket )
 import           Network.Connection ( Connection
                                     , ConnectionParams(..)
+                                    , TLSSettings(..)
                                     , connectionGet
                                     , connectionClose
                                     , connectTo )
@@ -65,7 +65,7 @@ mkConnection cd =
   connectTo (cdConnectionCtx cd) $ ConnectionParams
     { connectionHostname  = cdHostname cd
     , connectionPort      = fromIntegral (cdPort cd)
-    , connectionUseSecure = Just def
+    , connectionUseSecure = Just (TLSSettingsSimple False False False)
     , connectionUseSocks  = Nothing
     }
 
