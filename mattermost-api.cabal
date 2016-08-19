@@ -150,3 +150,9 @@ executable mm-show-events
                   , process
                   , unordered-containers
                   , pretty-show
+                  -- These two are needed for readline-like support:
+                  , haskeline
+                  , transformers
+                  -- This is not great, we just need it to disable
+                  -- The thing where Ctrl-C twice causes the rts to exit.
+                  , unix

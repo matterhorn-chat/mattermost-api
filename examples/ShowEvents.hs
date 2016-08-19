@@ -2,11 +2,18 @@
 
 module Main(main) where
 
-import           Control.Monad ( when, join )
+import           Control.Exception as E
+import           Control.Concurrent ( myThreadId )
+import           System.Posix.Signals ( installHandler
+                                      , keyboardSignal
+                                      , Handler(..)
+                                      )
+import           Control.Monad ( when, join, forever )
+import           Control.Monad.IO.Class ( liftIO )
 import           Data.Bits (xor)
 import           Data.Char (ord)
 import           Data.Word (Word8)
-import           Data.List ( sort )
+import           Data.List ( sort, isPrefixOf )
 import qualified Data.Text as T
 import qualified Data.HashMap.Strict as HM
 import           Network.Connection
@@ -14,6 +21,17 @@ import           Text.Read ( readMaybe )
 import           Text.Show.Pretty ( pPrint )
 
 import           System.Console.GetOpt
+import           System.Console.Haskeline ( InputT
+                                          , defaultSettings
+                                          , getInputLine
+                                          , withInterrupt
+                                          , handleInterrupt
+                                          , simpleCompletion
+                                          , completeWord
+                                          , setComplete
+                                          , Completion
+                                          , Settings(..)
+                                          , runInputT )
 import           System.Environment ( getArgs, getProgName )
 import           System.Exit ( exitFailure
                              , exitWith
@@ -56,44 +74,53 @@ options =
 
 main :: IO ()
 main = do
+  tid  <- myThreadId
+  installHandler keyboardSignal (Catch (throwTo tid UserInterrupt)) Nothing
   args <- getArgs
   let (actions, nonOptions, errors) = getOpt RequireOrder options args
   opts <- foldl (>>=) (return defaultOptions) actions
 
   config <- getConfig -- see LocalConfig import
-  ctx    <- initConnectionContext
-  let cd      = mkConnectionData (T.unpack (configHostname config))
-                                 (fromIntegral (configPort config))
-                                 ctx
-      login   = Login { username = configUsername config
-                      , password = configPassword config
-                      , teamname = configTeam     config }
+  let repl = do
+        ctx    <- initConnectionContext
+        let cd      = mkConnectionData (T.unpack (configHostname config))
+                                       (fromIntegral (configPort config))
+                                       ctx
+            login   = Login { username = configUsername config
+                            , password = configPassword config
+                            , teamname = configTeam     config }
 
-  (token, mmUser) <- join (hoistE <$> mmLogin cd login)
-  when (optVerbose opts) $ do
-    putStrLn "Authenticated as:"
-    pPrint mmUser
-  let myId = getId mmUser
+        (token, mmUser) <- join (hoistE <$> mmLogin cd login)
+        when (optVerbose opts) $ do
+          putStrLn "Authenticated as:"
+          pPrint mmUser
+        let myId = getId mmUser
 
-  teamMap <- mmGetTeams cd token
-  let [myTeam] = [ t | t <- HM.elems teamMap
-                     , teamName t == T.unpack (configTeam config)
-                     ]
-  Channels channels _ <- mmGetChannels cd token (getId myTeam)
-  users               <- mmGetProfiles cd token (getId myTeam)
+        teamMap <- mmGetTeams cd token
+        let [myTeam] = [ t | t <- HM.elems teamMap
+                           , teamName t == T.unpack (configTeam config)
+                           ]
+        Channels channels _ <- mmGetChannels cd token (getId myTeam)
+        users               <- mmGetProfiles cd token (getId myTeam)
 
-  let channelMap = HM.fromList [ (channelName c, c)
-                               | c <- channels
-                               ]
-      userMap    = HM.fromList [ (userProfileUsername u, u)
-                               | u <- HM.elems users
-                               ]
+        let channelNameMap = HM.fromList [ (channelName c, c)
+                                         | c <- channels
+                                         ]
+            channelIdMap   = HM.fromList [ (getId c, c)
+                                         | c <- channels
+                                         ]
+            userMap        = HM.fromList [ (userProfileUsername u, u)
+                                         | u <- HM.elems users
+                                         ]
 
-  mmWithWebSocket
-    cd
-    token
-    (printEvent cd token)
-    (checkForExit cd token myId (getId myTeam) channelMap userMap)
+        mmWithWebSocket
+          cd
+          token
+          (printEvent cd token users channelIdMap)
+          (checkForExit cd token myId (getId myTeam) channelNameMap userMap)
+  let loop = repl `catch` (\UserInterrupt -> loop)
+                  `catch` (\(SomeException e) ->  pPrint e >> loop)
+  loop
 
 hash :: String -> Int
 hash = foldl xor 0 . fmap ord
@@ -115,12 +142,15 @@ color s = h ++ s ++ "\x1b[39m"
           12 -> "\x1b[96m"
           _  -> "\x1b[31m"
 
-printEvent :: ConnectionData -> Token -> WebsocketEvent -> IO ()
-printEvent cd token we = do
+printEvent :: ConnectionData
+           -> Token
+           -> HM.HashMap UserId    UserProfile
+           -> HM.HashMap ChannelId Channel
+           -> WebsocketEvent -> IO ()
+printEvent cd token profiles chanMap we = do
   let tId = weTeamId we
       cId = weChannelId we
-  profiles <- mmGetProfiles cd token tId
-  channel  <- mmGetChannel cd token tId cId
+      channel = chanMap HM.! cId
   case weAction we of
     WMPosted -> case wepPost (weProps we) of
       Just (Post { postMessage = msg
@@ -148,6 +178,15 @@ printEvent cd token we = do
       Nothing -> return ()
     _ -> return ()
 
+data Focus = NoFocus
+           | ChannelFocus String
+           | DMFocus      String -- ^ Channel Name
+                          String -- ^ Username
+
+isChannelOrDM :: Focus -> Bool
+isChannelOrDM NoFocus = False
+isChannelOrDM _       = True
+
 checkForExit :: ConnectionData
              -> Token
              -> UserId
@@ -156,62 +195,85 @@ checkForExit :: ConnectionData
              -> HM.HashMap String UserProfile
              -> MMWebSocket
              -> IO ()
-checkForExit cd token userId teamId channelMap userMap ws = getCommand Nothing
-  where getCommand focus = do
-          ln <- getLine
+checkForExit cd token userId teamId channelMap userMap ws = do
+  let usernameList = map ("@"++) (HM.keys userMap)
+                     ++ HM.keys userMap
+      channelList  = map ("#"++) (HM.keys channelMap)
+                     ++ HM.keys channelMap
+      wordList     = usernameList ++ channelList
+      searchFunc s = return (map simpleCompletion (filter (s `isPrefixOf`) wordList))
+      settings     = setComplete (completeWord Nothing " \t" searchFunc) defaultSettings
+  runInputT settings (getCommand NoFocus)
+  where
+        getCommand :: Focus -> InputT IO ()
+        getCommand focus = do
+          let prompt = case focus of
+                       NoFocus          -> "mm> "
+                       ChannelFocus f   -> "#" ++ f ++ "> "
+                       DMFocus      _ u -> "@" ++ u ++ "> "
+          ln <- getInputLine prompt
           case ln of
-            '/':rs -> runCommand (words rs) focus
-            _     -> putMessage ln focus
+            Nothing       -> return ()
+            Just ('/':rs) -> runCommand (words rs) focus
+            Just ln       -> putMessage ln focus
+        runCommand :: [String] -> Focus -> InputT IO ()
+        runCommand ["unfocus"] old = getCommand NoFocus
         runCommand ["focus", room] old
           | HM.member room channelMap = do
-              putStrLn (" + setting focus to #" ++ room)
-              getCommand (Just room)
+              liftIO $ putStrLn (" + setting focus to #" ++ room)
+              getCommand (ChannelFocus room)
           | otherwise = do
-              putStrLn ("I don't know the channel #" ++ room)
+              liftIO $ putStrLn ("I don't know the channel #" ++ room)
               getCommand old
         runCommand ["direct", user] old
           | HM.member user userMap = do
-              putStrLn (" + setting focus to @" ++ user)
+              liftIO $ putStrLn (" + setting focus to @" ++ user)
               let [loUser, hiUser] = sort [ getId (userMap HM.! user), userId ]
               let cname = idString loUser ++ "__" ++ idString hiUser
-              getCommand (Just cname)
+              getCommand (DMFocus cname user)
           | otherwise = do
-              putStrLn ("I don't know the user @" ++ user)
+              liftIO $ putStrLn ("I don't know the user @" ++ user)
               getCommand old
         runCommand ["quit"] _ = do
-          putStrLn "Quitting"
-          mmCloseWebSocket ws
+          liftIO $ putStrLn "Quitting"
+          liftIO $ mmCloseWebSocket ws
         runCommand ["channels"] focus = do
-          putStrLn "Available channels include:"
-          sequence_ [ putStrLn ("  #" ++ channelName c)
-                    | c <- HM.elems channelMap
-                    , channelType c == "O"
-                    ]
+          liftIO $ putStrLn "Available channels include:"
+          liftIO $ sequence_ [ putStrLn ("  #" ++ channelName c)
+                             | c <- HM.elems channelMap
+                             , channelType c == "O"
+                             ]
           getCommand focus
         runCommand ["users"] focus = do
-          putStrLn "Available users include:"
-          sequence_ [ putStrLn ("  @" ++ u)
-                    | u <- HM.keys userMap
-                    ]
+          liftIO $ putStrLn "Available users include:"
+          liftIO $ sequence_ [ putStrLn ("  @" ++ u)
+                             | u <- HM.keys userMap
+                             ]
           getCommand focus
         runCommand ["help"] focus = do
-          putStrLn "Available commands:"
-          putStrLn "  /focus [room]"
-          putStrLn "  /direct [username]"
-          putStrLn "  /channels"
-          putStrLn "  /users"
-          putStrLn "  /help"
-          putStrLn "  /quit"
+          liftIO $ putStrLn "Available commands:"
+          liftIO $ putStrLn "  /unfocus"
+          liftIO $ putStrLn "  /focus [room]"
+          liftIO $ putStrLn "  /direct [username]"
+          liftIO $ putStrLn "  /channels"
+          liftIO $ putStrLn "  /users"
+          liftIO $ putStrLn "  /help"
+          liftIO $ putStrLn "  /quit"
           getCommand focus
         runCommand cmd focus = do
-          putStrLn ("Unknown command: " ++ unwords cmd)
+          liftIO $ putStrLn ("Unknown command: " ++ unwords cmd)
           getCommand focus
-        putMessage ln Nothing = do
-          putStrLn "I don't know where to send that message."
-          putStrLn "Set your target with /focus [channel-name] or /direct [username]"
-          getCommand Nothing
-        putMessage ln focus@(Just rm) = do
+        putMessage :: String -> Focus -> InputT IO ()
+        putMessage ln NoFocus = do
+          liftIO $ putStrLn "I don't know where to send that message."
+          liftIO $ putStrLn "Set your target with /focus [channel-name] or /direct [username]"
+          getCommand NoFocus
+        putMessage ln focus = do
+          let rm = case focus of
+                   NoFocus           -> error "the impossible"
+                   ChannelFocus rm   -> rm
+                   DMFocus      rm _ -> rm
           let c = channelMap HM.! rm
-          pendingPost <- mkPendingPost ln userId (getId c)
-          post <- mmPost cd token teamId pendingPost
+          pendingPost <- liftIO $ mkPendingPost ln userId (getId c)
+          post <- liftIO $ mmPost cd token teamId pendingPost
           getCommand focus

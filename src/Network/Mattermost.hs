@@ -13,6 +13,7 @@ module Network.Mattermost
 , Team(..)
 , TeamId(..)
 , Channel(..)
+, ChannelId(..)
 , Channels(..)
 , UserProfile(..)
 , Post(..)
