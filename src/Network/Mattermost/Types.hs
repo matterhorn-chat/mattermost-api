@@ -72,14 +72,13 @@ getTokenString (Token s) = s
 data Login
   = Login
   { username :: T.Text
-  , teamname :: T.Text
   , password :: T.Text
   }
 
 instance A.ToJSON Login where
-  toJSON l = A.object ["name"     A..= teamname l
-                      ,"login_id" A..= username l
+  toJSON l = A.object ["login_id" A..= username l
                       ,"password" A..= password l
+                      -- XXX do we also need "token" -> "" like the web client?
                       ]
 
 
@@ -315,6 +314,22 @@ instance A.FromJSON UserProfile where
     userProfileDeleteAt       <- millisecondsToUTCTime <$> v .: "delete_at"
     userProfileCreateAt       <- millisecondsToUTCTime <$> v .: "create_at"
     return UserProfile { .. }
+
+--
+
+-- Note: there's lots of other stuff in an initial_load response but
+-- this is what we use for now.
+data InitialLoad
+  = InitialLoad
+  { initialLoadUser :: User
+  , initialLoadTeams :: [Team]
+  } deriving (Eq, Show)
+
+instance A.FromJSON InitialLoad where
+  parseJSON = A.withObject "InitialLoad" $ \o -> do
+    initialLoadUser        <- o .: "user"
+    initialLoadTeams       <- o .: "teams"
+    return InitialLoad { .. }
 
 --
 

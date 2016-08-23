@@ -10,6 +10,7 @@ module Network.Mattermost
 , Id(..)
 , User(..)
 , UserId(..)
+, InitialLoad(..)
 , Team(..)
 , TeamId(..)
 , Channel(..)
@@ -32,6 +33,7 @@ module Network.Mattermost
 , mmGetTeamMembers
 , mmGetMe
 , mmGetProfiles
+, mmGetInitialLoad
 , mmPost
 , mkPendingPost
 , idString
@@ -151,6 +153,11 @@ mmLogin cd login = do
       token <- mmGetHeader   rsp (HdrCustom "Token")
       value <- mmGetJSONBody rsp
       return (Right (Token token, value))
+
+-- | Fire off a login attempt. Note: We get back more than just the auth token.
+-- We also get all the server-side configuration data for the user.
+mmGetInitialLoad :: ConnectionData -> Token -> IO InitialLoad
+mmGetInitialLoad cd token = mmDoRequest cd token "/api/v3/users/initial_load"
 
 -- | Requires an authenticated user. Returns the full list of teams.
 mmGetTeams :: ConnectionData -> Token -> IO (HashMap TeamId Team)

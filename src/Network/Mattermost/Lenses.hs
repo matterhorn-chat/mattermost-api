@@ -10,7 +10,6 @@ module Network.Mattermost.Lenses
 , cdConnectionCtxL
 , cdTokenL
 , usernameL
-, teamnameL
 , passwordL
 , teamIdL
 , teamCreateAtL
@@ -157,9 +156,6 @@ cdTokenL = makeLens cdToken (\ t s -> s { cdToken = t })
 
 usernameL :: Lens' Login Text
 usernameL = makeLens username (\ t s -> s { username = t })
-
-teamnameL :: Lens' Login Text
-teamnameL = makeLens teamname (\ t s -> s { teamname = t })
 
 passwordL :: Lens' Login Text
 passwordL = makeLens password (\ t s -> s { password = t })
