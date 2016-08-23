@@ -94,17 +94,17 @@ main = do
                                  ctx
       login   = Login { username = configUsername config
                       , password = configPassword config
-                      , teamname = configTeam     config }
+                      }
 
   (token, mmUser) <- join (hoistE <$> mmLogin cd login)
   when (optVerbose opts) $ do
     putStrLn "Authenticated as:"
     pPrint mmUser
 
-  teamMap <- mmGetTeams cd token
+  i <- mmGetInitialLoad cd token
   when (optVerbose opts) $ do
-    pPrint teamMap
-  forM_ (HM.elems teamMap) $ \t -> do
+    pPrint i
+  forM_ (initialLoadTeams i) $ \t -> do
     when (teamName t == T.unpack (configTeam config)) $ do
       userMap <- mmGetProfiles cd token (getId t)
       when (optVerbose opts) $ do

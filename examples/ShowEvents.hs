@@ -88,7 +88,7 @@ main = do
                                        ctx
             login   = Login { username = configUsername config
                             , password = configPassword config
-                            , teamname = configTeam     config }
+                            }
 
         (token, mmUser) <- join (hoistE <$> mmLogin cd login)
         when (optVerbose opts) $ do
@@ -96,8 +96,8 @@ main = do
           pPrint mmUser
         let myId = getId mmUser
 
-        teamMap <- mmGetTeams cd token
-        let [myTeam] = [ t | t <- HM.elems teamMap
+        i <- mmGetInitialLoad cd token
+        let [myTeam] = [ t | t <- initialLoadTeams i
                            , teamName t == T.unpack (configTeam config)
                            ]
         Channels channels _ <- mmGetChannels cd token (getId myTeam)

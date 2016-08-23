@@ -60,7 +60,7 @@ main = do
                                  ctx
       login   = Login { username = configUsername config
                       , password = configPassword config
-                      , teamname = configTeam     config }
+                      }
 
   (token, mmUser) <- join (hoistE <$> mmLogin cd login)
   when (optVerbose opts) $ do

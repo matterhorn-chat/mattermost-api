@@ -23,10 +23,10 @@ main = do
 
   let login = Login { username = configUsername config
                     , password = configPassword config
-                    , teamname = configTeam     config }
+                    }
 
   (token, mmUser) <- join (hoistE <$> mmLogin cd login)
   putStrLn "Authenticated as: "
   pPrint mmUser
-  r <- mmGetTeams cd token
-  pPrint r
+  i <- mmGetInitialLoad cd token
+  pPrint $ initialLoadTeams i

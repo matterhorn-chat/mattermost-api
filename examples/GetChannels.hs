@@ -25,14 +25,14 @@ main = do
 
   let login = Login { username = configUsername config
                     , password = configPassword config
-                    , teamname = configTeam     config }
+                    }
 
   (token, mmUser) <- join (hoistE <$> mmLogin cd login)
   putStrLn "Authenticated as:"
   pPrint mmUser
 
-  teamMap <- mmGetTeams cd token
-  forM_ (HM.elems teamMap) $ \t -> do
+  i <- mmGetInitialLoad cd token
+  forM_ (initialLoadTeams i) $ \t -> do
     when (teamName t == T.unpack (configTeam config)) $ do
       Channels chans _ <- mmGetChannels cd token (teamId t)
       forM_ chans $ \chan -> do
