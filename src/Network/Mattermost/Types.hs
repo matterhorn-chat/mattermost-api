@@ -9,7 +9,7 @@ module Network.Mattermost.Types where
 import           Text.Printf ( printf )
 import           Data.Hashable ( Hashable )
 import qualified Data.Aeson as A
-import           Data.Aeson ( (.:), (.=) )
+import           Data.Aeson ( (.:), (.=), (.:?) )
 import           Data.Aeson.Types ( ToJSONKey
                                   , FromJSONKey
                                   , FromJSON
@@ -340,7 +340,7 @@ data User
   , userLastPingAt         :: UTCTime
   , userNotifyProps        :: HashMap String String -- See NotifyProps type below
   , userLastPasswordUpdate :: UTCTime
-  , userLastPictureUpdate  :: UTCTime
+  , userLastPictureUpdate  :: Maybe UTCTime
   , userLocale             :: String
   } deriving (Read, Show, Eq)
 
@@ -363,7 +363,7 @@ instance A.FromJSON User where
     userLastPingAt         <- millisecondsToUTCTime <$> o .: "last_ping_at"
     userNotifyProps        <- o .: "notify_props"
     userLastPasswordUpdate <- millisecondsToUTCTime <$> o .: "last_password_update"
-    userLastPictureUpdate  <- millisecondsToUTCTime <$> o .: "last_picture_update"
+    userLastPictureUpdate  <- (millisecondsToUTCTime <$>) <$> (o .:? "last_picture_update")
     userLocale             <- o .: "locale"
     return User { .. }
 

@@ -377,7 +377,7 @@ userNotifyPropsL = makeLens userNotifyProps (\ t s -> s { userNotifyProps = t })
 userLastPasswordUpdateL :: Lens' User UTCTime
 userLastPasswordUpdateL = makeLens userLastPasswordUpdate (\ t s -> s { userLastPasswordUpdate = t })
 
-userLastPictureUpdateL :: Lens' User UTCTime
+userLastPictureUpdateL :: Lens' User (Maybe UTCTime)
 userLastPictureUpdateL = makeLens userLastPictureUpdate (\ t s -> s { userLastPictureUpdate = t })
 
 userLocaleL :: Lens' User String
