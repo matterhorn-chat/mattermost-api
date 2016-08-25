@@ -151,8 +151,8 @@ printEvent cd token profiles chanMap we = do
   let tId = weTeamId we
       cId = weChannelId we
       channel = chanMap HM.! cId
-  case weAction we of
-    WMPosted -> case wepPost (weProps we) of
+  case weEvent we of
+    WMPosted -> case wepPost (weData we) of
       Just (Post { postMessage = msg
                  , postUserId  = usrId
                  }) -> do
@@ -162,14 +162,14 @@ printEvent cd token profiles chanMap we = do
           then putStrLn (nick ++ " in " ++ cName ++ ":  " ++ msg)
           else putStrLn ("dm by " ++ nick ++ ":  " ++ msg)
       Nothing -> return ()
-    WMPostEdited -> case wepPost (weProps we) of
+    WMPostEdited -> case wepPost (weData we) of
       Just (Post { postMessage = msg
                  , postUserId  = usrId
                  }) -> do
         let nick = color ("@" ++ userProfileUsername (profiles HM.! usrId))
         putStrLn (nick ++ " [edit]:  " ++ msg)
       Nothing -> return ()
-    WMPostDeleted -> case wepPost (weProps we) of
+    WMPostDeleted -> case wepPost (weData we) of
       Just (Post { postMessage = msg
                  , postUserId  = usrId
                  }) -> do

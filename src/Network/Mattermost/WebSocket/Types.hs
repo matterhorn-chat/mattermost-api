@@ -5,9 +5,10 @@
 module Network.Mattermost.WebSocket.Types
 ( WebsocketEventType(..)
 , WebsocketEvent(..)
-, WEProps(..)
+, WEData(..)
 ) where
 
+import           Control.Exception ( throw )
 import           Data.Aeson ( FromJSON(..)
                             , ToJSON(..)
                             , (.:)
@@ -17,12 +18,15 @@ import           Data.Aeson ( FromJSON(..)
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Types as A
 import           Data.ByteString.Lazy (fromStrict, toStrict)
+import qualified Data.ByteString.Lazy.Char8 as BC
 import           Data.Maybe (fromJust)
 import           Data.Text (Text)
+import qualified Data.Text as T
 import           Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import           Network.WebSockets (WebSocketsData(..))
 
 import           Network.Mattermost.Types
+import           Network.Mattermost.Exceptions
 
 
 data WebsocketEventType
@@ -85,43 +89,45 @@ fromValueString :: FromJSON a => A.Value -> A.Parser a
 fromValueString = A.withText "string-encoded json" $ \s -> do
     case A.eitherDecode (fromStrict (encodeUtf8 s)) of
       Right v  -> return v
-      Left err -> fail err
+      Left err -> throw (JSONDecodeException err (T.unpack s))
 
 --
 
 data WebsocketEvent = WebsocketEvent
   { weTeamId    :: TeamId
-  , weAction    :: WebsocketEventType
+  , weEvent     :: WebsocketEventType
   , weUserId    :: UserId
   , weChannelId :: ChannelId
-  , weProps     :: WEProps
+  , weData      :: WEData
   } deriving (Read, Show, Eq)
 
 instance FromJSON WebsocketEvent where
   parseJSON = A.withObject "WebsocketEvent" $ \o -> do
     weTeamId    <- o .:  "team_id"
-    weAction    <- o .:  "action"
+    weEvent     <- o .:  "event"
     weUserId    <- o .:  "user_id"
     weChannelId <- o .:  "channel_id"
-    weProps     <- o .:  "props"
+    weData      <- o .:  "data"
     return WebsocketEvent { .. }
 
 instance ToJSON WebsocketEvent where
   toJSON WebsocketEvent { .. } = A.object
     [ "team_id"    .= weTeamId
-    , "action"     .= weAction
+    , "event"      .= weEvent
     , "user_id"    .= weUserId
     , "channel_id" .= weChannelId
-    , "props"      .= weProps
+    , "data"       .= weData
     ]
 
 instance WebSocketsData WebsocketEvent where
-  fromLazyByteString = fromJust. A.decode
+  fromLazyByteString s = case A.eitherDecode s of
+    Left err -> throw (JSONDecodeException err (BC.unpack s))
+    Right v  -> v
   toLazyByteString = A.encode
 
 --
 
-data WEProps = WEProps
+data WEData = WEData
   { wepChannelId          :: Maybe ChannelId
   , wepTeamId             :: Maybe TeamId
   , wepSenderName         :: Maybe Text
@@ -129,8 +135,8 @@ data WEProps = WEProps
   , wepPost               :: Maybe Post
   } deriving (Read, Show, Eq)
 
-instance FromJSON WEProps where
-  parseJSON = A.withObject "WebSocketEvent Props" $ \o -> do
+instance FromJSON WEData where
+  parseJSON = A.withObject "WebSocketEvent Data" $ \o -> do
     wepChannelId          <- o .:? "channel_id"
     wepTeamId             <- o .:? "team_id"
     wepSenderName         <- o .:? "sender_name"
@@ -139,10 +145,10 @@ instance FromJSON WEProps where
     wepPost <- case wepPostRaw of
       Just str -> fromValueString str
       Nothing  -> return Nothing
-    return WEProps { .. }
+    return WEData { .. }
 
-instance ToJSON WEProps where
-  toJSON WEProps { .. } = A.object
+instance ToJSON WEData where
+  toJSON WEData { .. } = A.object
     [ "channel_id"   .= wepChannelId
     , "team_id"      .= wepTeamId
     , "sender_name"  .= wepSenderName

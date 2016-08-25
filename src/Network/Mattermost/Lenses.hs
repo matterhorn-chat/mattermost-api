@@ -100,10 +100,10 @@ module Network.Mattermost.Lenses
 -- * Websocket Types
 -- ** WebsocketEvent Lenses
 , weTeamIdL
-, weActionL
+, weEventL
 , weUserIdL
 , weChannelIdL
-, wePropsL
+, weDataL
 -- ** WEProps Lenses
 , wepChannelIdL
 , wepTeamIdL
@@ -448,8 +448,8 @@ postsOrderL = makeLens postsOrder (\ t s -> s { postsOrder = t })
 weTeamIdL :: Lens' WebsocketEvent TeamId
 weTeamIdL = makeLens weTeamId (\ t s -> s { weTeamId = t })
 
-weActionL :: Lens' WebsocketEvent WebsocketEventType
-weActionL = makeLens weAction (\ t s -> s { weAction = t })
+weEventL :: Lens' WebsocketEvent WebsocketEventType
+weEventL = makeLens weEvent (\ t s -> s { weEvent = t })
 
 weUserIdL :: Lens' WebsocketEvent UserId
 weUserIdL = makeLens weUserId (\ t s -> s { weUserId = t })
@@ -457,23 +457,23 @@ weUserIdL = makeLens weUserId (\ t s -> s { weUserId = t })
 weChannelIdL :: Lens' WebsocketEvent ChannelId
 weChannelIdL = makeLens weChannelId (\ t s -> s { weChannelId = t })
 
-wePropsL :: Lens' WebsocketEvent WEProps
-wePropsL = makeLens weProps (\ t s -> s { weProps = t })
+weDataL :: Lens' WebsocketEvent WEData
+weDataL = makeLens weData (\ t s -> s { weData = t })
 
 --
 
-wepChannelIdL :: Lens' WEProps (Maybe ChannelId)
+wepChannelIdL :: Lens' WEData (Maybe ChannelId)
 wepChannelIdL = makeLens wepChannelId (\ t s -> s { wepChannelId = t })
 
-wepTeamIdL :: Lens' WEProps (Maybe TeamId)
+wepTeamIdL :: Lens' WEData (Maybe TeamId)
 wepTeamIdL = makeLens wepTeamId (\ t s -> s { wepTeamId = t })
 
-wepSenderNameL :: Lens' WEProps (Maybe Text)
+wepSenderNameL :: Lens' WEData (Maybe Text)
 wepSenderNameL = makeLens wepSenderName (\ t s -> s { wepSenderName = t })
 
-wepChannelDisplayNameL :: Lens' WEProps (Maybe Text)
+wepChannelDisplayNameL :: Lens' WEData (Maybe Text)
 wepChannelDisplayNameL = makeLens wepChannelDisplayName
                                   (\ t s -> s { wepChannelDisplayName = t })
 
-wepPostL :: Lens' WEProps (Maybe Post)
+wepPostL :: Lens' WEData (Maybe Post)
 wepPostL = makeLens wepPost (\ t s -> s { wepPost = t })
