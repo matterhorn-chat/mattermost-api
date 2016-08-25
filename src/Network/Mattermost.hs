@@ -31,6 +31,7 @@ module Network.Mattermost
 , mmGetPosts
 , mmGetUser
 , mmGetTeamMembers
+, mmGetProfilesForDMList
 , mmGetMe
 , mmGetProfiles
 , mmGetInitialLoad
@@ -102,7 +103,9 @@ mmGetJSONBody rsp = do
   contentType <- mmGetHeader rsp HdrContentType
   assertE (contentType ~= "application/json")
           (ContentTypeException
-            "mmGetJSONBody: Expected content type 'application/json'")
+            ("mmGetJSONBody: " ++
+             "Expected content type 'application/json'" ++
+             " found " ++ contentType))
 
   -- XXX: Good for seeing the json wireformat that mattermost uses
   -- putStrLn (rspBody rsp)
@@ -200,6 +203,11 @@ mmGetUser cd token userid = mmDoRequest cd token $
 mmGetTeamMembers :: ConnectionData -> Token -> TeamId -> IO Value
 mmGetTeamMembers cd token teamid = mmDoRequest cd token $
   printf "/api/v3/teams/members/%s" (idString teamid)
+
+mmGetProfilesForDMList :: ConnectionData -> Token -> TeamId
+                       -> IO (HashMap UserId UserProfile)
+mmGetProfilesForDMList cd token teamid = mmDoRequest cd token $
+  printf "/api/v3/users/profiles_for_dm_list/%s" (idString teamid)
 
 mmGetMe :: ConnectionData -> Token -> IO Value
 mmGetMe cd token = mmDoRequest cd token "/api/v3/users/me"
