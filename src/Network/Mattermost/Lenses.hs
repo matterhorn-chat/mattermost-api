@@ -47,7 +47,6 @@ module Network.Mattermost.Lenses
 , channelDataLastUpdateAtL
 , userProfileEmailL
 , userProfileRolesL
-, userProfileLastActivityAtL
 , userProfileFirstNameL
 , userProfileAuthServiceL
 , userProfileLocaleL
@@ -71,8 +70,6 @@ module Network.Mattermost.Lenses
 , userFirstNameL
 , userLastNameL
 , userRolesL
-, userLastActivityAtL
-, userLastPingAtL
 , userNotifyPropsL
 , userLastPasswordUpdateL
 , userLastPictureUpdateL
@@ -286,9 +283,6 @@ userProfileEmailL = makeLens userProfileEmail (\ t s -> s { userProfileEmail = t
 userProfileRolesL :: Lens' UserProfile String
 userProfileRolesL = makeLens userProfileRoles (\ t s -> s { userProfileRoles = t })
 
-userProfileLastActivityAtL :: Lens' UserProfile UTCTime
-userProfileLastActivityAtL = makeLens userProfileLastActivityAt (\ t s -> s { userProfileLastActivityAt = t })
-
 userProfileFirstNameL :: Lens' UserProfile String
 userProfileFirstNameL = makeLens userProfileFirstName (\ t s -> s { userProfileFirstName = t })
 
@@ -360,12 +354,6 @@ userLastNameL = makeLens userLastName (\ t s -> s { userLastName = t })
 
 userRolesL :: Lens' User String
 userRolesL = makeLens userRoles (\ t s -> s { userRoles = t })
-
-userLastActivityAtL :: Lens' User UTCTime
-userLastActivityAtL = makeLens userLastActivityAt (\ t s -> s { userLastActivityAt = t })
-
-userLastPingAtL :: Lens' User UTCTime
-userLastPingAtL = makeLens userLastPingAt (\ t s -> s { userLastPingAt = t })
 
 userNotifyPropsL :: Lens' User (HashMap String String)
 userNotifyPropsL = makeLens userNotifyProps (\ t s -> s { userNotifyProps = t })

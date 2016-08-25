@@ -282,7 +282,6 @@ data UserProfile
   = UserProfile
   { userProfileEmail          :: String
   , userProfileRoles          :: String
-  , userProfileLastActivityAt :: UTCTime
   , userProfileFirstName      :: String
   , userProfileAuthService    :: String
   , userProfileLocale         :: String
@@ -302,7 +301,6 @@ instance A.FromJSON UserProfile where
   parseJSON = A.withObject "UserProfile" $ \v -> do
     userProfileEmail          <- v .: "email"
     userProfileRoles          <- v .: "roles"
-    userProfileLastActivityAt <- millisecondsToUTCTime <$> v .: "last_activity_at"
     userProfileFirstName      <- v .: "first_name"
     userProfileAuthService    <- v .: "auth_service"
     userProfileLocale         <- v .: "locale"
@@ -351,8 +349,6 @@ data User
   , userFirstName          :: String
   , userLastName           :: String
   , userRoles              :: String -- XXX: what are the options?
-  , userLastActivityAt     :: UTCTime
-  , userLastPingAt         :: UTCTime
   , userNotifyProps        :: HashMap String String -- See NotifyProps type below
   , userLastPasswordUpdate :: UTCTime
   , userLastPictureUpdate  :: Maybe UTCTime
@@ -374,8 +370,6 @@ instance A.FromJSON User where
     userFirstName          <- o .: "first_name"
     userLastName           <- o .: "last_name"
     userRoles              <- o .: "roles"
-    userLastActivityAt     <- millisecondsToUTCTime <$> o .: "last_activity_at"
-    userLastPingAt         <- millisecondsToUTCTime <$> o .: "last_ping_at"
     userNotifyProps        <- o .: "notify_props"
     userLastPasswordUpdate <- millisecondsToUTCTime <$> o .: "last_password_update"
     userLastPictureUpdate  <- (millisecondsToUTCTime <$>) <$> (o .:? "last_picture_update")
