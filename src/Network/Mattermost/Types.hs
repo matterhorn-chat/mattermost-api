@@ -83,7 +83,7 @@ instance A.ToJSON Login where
 
 
 -- | XXX: No idea what this is
-data Type = Type T.Text
+newtype Type = Type T.Text
   deriving (Read, Show, Ord, Eq)
 
 instance IsString Type where

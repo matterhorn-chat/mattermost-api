@@ -12,6 +12,7 @@ module Network.Mattermost
 , UserId(..)
 , InitialLoad(..)
 , Team(..)
+, Type(..)
 , TeamId(..)
 , Channel(..)
 , ChannelId(..)
