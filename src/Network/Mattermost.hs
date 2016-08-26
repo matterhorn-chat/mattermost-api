@@ -29,6 +29,7 @@ module Network.Mattermost
 , mmGetTeams
 , mmGetChannels
 , mmGetChannel
+, mmUpdateLastViewedAt
 , mmGetPosts
 , mmGetUser
 , mmGetTeamMembers
@@ -183,6 +184,18 @@ mmGetChannel cd token teamid chanid = mmWithRequest cd token
           (idString teamid)
           (idString chanid))
   (\(SC channel) -> return channel)
+
+mmUpdateLastViewedAt :: ConnectionData -> Token
+                     -> TeamId
+                     -> ChannelId
+                     -> IO ()
+mmUpdateLastViewedAt cd token teamid chanid = do
+  let uri = printf "/api/v3/teams/%s/channels/%s/update_last_viewed_at"
+                   (idString teamid)
+                   (idString chanid)
+  path <- mmPath uri
+  _ <- mmRawPOST cd token path ""
+  return ()
 
 mmGetPosts :: ConnectionData -> Token
            -> TeamId
