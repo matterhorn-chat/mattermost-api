@@ -19,7 +19,6 @@ import qualified Data.Aeson as A
 import qualified Data.Aeson.Types as A
 import           Data.ByteString.Lazy (fromStrict, toStrict)
 import qualified Data.ByteString.Lazy.Char8 as BC
-import           Data.Maybe (fromJust)
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Text.Encoding (decodeUtf8, encodeUtf8)
