@@ -274,10 +274,13 @@ mmWithRequest cd token path action = do
   action json
 
 mmPOST :: ToJSON t => ConnectionData -> Token -> URI -> t -> IO Response_String
-mmPOST cd token path json = do
+mmPOST cd token path json =
+  mmRawPOST cd token path (BL.toStrict (encode json))
+
+mmRawPOST :: ConnectionData -> Token -> URI -> B.ByteString -> IO Response_String
+mmRawPOST cd token path content = do
   rawRsp <- withConnection cd $ \con -> do
-    let content       = BL.toStrict (encode json)
-        contentLength = B.length content
+    let contentLength = B.length content
         request       = Request
           { rqURI     = path
           , rqMethod  = POST
