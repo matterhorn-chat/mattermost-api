@@ -19,6 +19,7 @@ import           System.Console.GetOpt
 import           System.Environment ( getArgs, getProgName )
 
 import           Network.Mattermost
+import           Network.Mattermost.Logging
 import           Network.Mattermost.Util
 
 import           Config
@@ -33,6 +34,7 @@ data Options
   , optVerbose :: Bool
   , optOffset  :: Int
   , optLimit   :: Int
+  , optLogging :: Bool
   } deriving (Read, Show)
 
 defaultOptions :: Options
@@ -41,6 +43,7 @@ defaultOptions = Options
   , optVerbose = False
   , optOffset  = 0
   , optLimit   = 10
+  , optLogging = False
   }
 
 options :: [ OptDescr (Options -> IO Options) ]
@@ -54,6 +57,11 @@ options =
       (NoArg
         (\opt -> return opt { optVerbose = True }))
       "Enable verbose output"
+  , Option "L" ["logging"]
+      (NoArg
+        (\opt -> do
+            return opt { optLogging = True }))
+      "Log debug output to stderr"
   , Option "o" ["offset"]
       (ReqArg
         (\arg opt -> do
@@ -89,12 +97,15 @@ main = do
 
   config <- getConfig -- see LocalConfig import
   ctx    <- initConnectionContext
-  let cd      = mkConnectionData (T.unpack (configHostname config))
+  let cd'      = mkConnectionData (T.unpack (configHostname config))
                                  (fromIntegral (configPort config))
                                  ctx
       login   = Login { username = configUsername config
                       , password = configPassword config
                       }
+      cd = if optLogging opts
+             then cd' `withLogger` mmLoggerDebugErr
+             else cd'
 
   (token, mmUser) <- join (hoistE <$> mmLogin cd login)
   when (optVerbose opts) $ do
