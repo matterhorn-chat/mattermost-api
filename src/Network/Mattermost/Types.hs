@@ -24,7 +24,32 @@ import           Data.Time.Clock.POSIX ( posixSecondsToUTCTime
                                        , utcTimeToPOSIXSeconds )
 import           GHC.Exts ( IsString(..) )
 import           Network.Connection (ConnectionContext)
+import           Network.HTTP.Base (RequestMethod)
 import           Network.HTTP.Headers (Header, HeaderName(..), mkHeader)
+
+-- | A 'Logger' is any function which responds to log events:
+type Logger = LogEvent -> IO ()
+
+-- | If there is a 'Logger' in the 'ConnectionData' struct, it will
+--   be sporadically called with values of type 'LogEvent'.
+data LogEvent = LogEvent
+  { logFunction  :: String
+  , logEventType :: LogEventType
+  } deriving (Eq, Show)
+
+-- | A 'LogEventType' describes the particular event that happened
+data LogEventType
+  = HttpRequest RequestMethod String (Maybe A.Value)
+  | HttpResponse Int String (Maybe A.Value)
+  | WebSocketRequest A.Value
+  | WebSocketResponse A.Value
+    deriving (Eq, Show)
+
+runLogger :: ConnectionData -> String -> LogEventType -> IO ()
+runLogger ConnectionData { cdLogger = Just l } n ev =
+  l (LogEvent n ev)
+runLogger _ _ _ = return ()
+
 
 type Hostname = String
 type Port     = Int
@@ -50,6 +75,7 @@ data ConnectionData
   , cdAutoClose     :: AutoClose
   , cdConnectionCtx :: ConnectionContext
   , cdToken         :: Maybe Token
+  , cdLogger        :: Maybe Logger
   }
 
 mkConnectionData :: Hostname -> Port -> ConnectionContext -> ConnectionData
@@ -59,7 +85,14 @@ mkConnectionData host port ctx = ConnectionData
   , cdConnectionCtx = ctx
   , cdAutoClose     = Yes
   , cdToken         = Nothing
+  , cdLogger        = Nothing
   }
+
+withLogger :: ConnectionData -> Logger -> ConnectionData
+withLogger cd logger = cd { cdLogger = Just logger }
+
+noLogger :: ConnectionData -> ConnectionData
+noLogger cd = cd { cdLogger = Nothing }
 
 data Token = Token String
   deriving (Read, Show, Eq, Ord)

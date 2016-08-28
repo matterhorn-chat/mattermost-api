@@ -21,6 +21,12 @@ module Network.Mattermost
 , Post(..)
 , PostId(..)
 , Posts(..)
+-- Log-related types
+, Logger
+, LogEvent(..)
+, LogEventType(..)
+, withLogger
+, noLogger
 -- Typeclasses
 , HasId(..)
 -- Functions
