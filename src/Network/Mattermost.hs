@@ -212,7 +212,11 @@ mmUpdateLastViewedAt cd token teamid chanid = do
                    (idString teamid)
                    (idString chanid)
   path <- mmPath uri
+  runLogger cd "mmUpdateLastViewedAt" $
+    HttpRequest POST uri Nothing
   _ <- mmRawPOST cd token path ""
+  runLogger cd "mmUpdateLastViewedAt" $
+    HttpResponse 200 uri Nothing
   return ()
 
 mmGetPosts :: ConnectionData -> Token
@@ -262,8 +266,13 @@ mmPost cd token teamid post = do
                       (idString teamid)
                       (idString chanid)
   uri <- mmPath path
+  runLogger cd "mmPost" $
+    HttpRequest POST path (Just (toJSON post))
   rsp <- mmPOST cd token uri post
-  snd `fmap` mmGetJSONBody rsp
+  (val, r) <- mmGetJSONBody rsp
+  runLogger cd "mmPost" $
+    HttpResponse 200 path (Just (val))
+  return r
 
 -- | This is for making a generic authenticated request.
 mmRequest :: ConnectionData -> Token -> URI -> IO Response_String
