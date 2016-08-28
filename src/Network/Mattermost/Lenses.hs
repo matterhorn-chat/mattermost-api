@@ -148,6 +148,9 @@ cdConnectionCtxL = makeLens cdConnectionCtx (\ t s -> s { cdConnectionCtx = t })
 cdTokenL :: Lens' ConnectionData (Maybe Token)
 cdTokenL = makeLens cdToken (\ t s -> s { cdToken = t })
 
+cdLoggerL :: Lens' ConnectionData (Maybe Logger)
+cdLoggerL = makeLens cdToken (\ t s -> s { cdLogger = t })
+
 --
 
 
