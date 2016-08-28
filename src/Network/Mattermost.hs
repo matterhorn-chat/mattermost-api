@@ -71,7 +71,7 @@ import           Network.URI ( URI, parseRelativeReference )
 import           Network.HTTP.Stream ( simpleHTTP_ )
 import           Data.HashMap.Strict ( HashMap )
 import           Data.Aeson ( Value
-                            , ToJSON
+                            , ToJSON(..)
                             , FromJSON
                             , encode
                             , eitherDecode
@@ -106,7 +106,7 @@ mmPath str =
 
 -- | Parse the JSON body out of a request, failing if it isn't an
 --   'application/json' response, or if the parsing failed
-mmGetJSONBody :: FromJSON t => Response_String -> IO t
+mmGetJSONBody :: FromJSON t => Response_String -> IO (Value, t)
 mmGetJSONBody rsp = do
   contentType <- mmGetHeader rsp HdrContentType
   assertE (contentType ~= "application/json")
@@ -120,7 +120,13 @@ mmGetJSONBody rsp = do
   let value = left (\s -> JSONDecodeException ("mmGetJSONBody: " ++ s)
                                               (rspBody rsp))
                    (eitherDecode (BL.pack (rspBody rsp)))
-  hoistE value
+  let rawVal = left (\s -> JSONDecodeException ("mmGetJSONBody: " ++ s)
+                                              (rspBody rsp))
+                   (eitherDecode (BL.pack (rspBody rsp)))
+  hoistE $ do
+    x <- rawVal
+    y <- value
+    return (x, y)
 
 -- | Grab a header from the response, failing if it isn't present
 mmGetHeader :: Response_String -> HeaderName -> IO String
@@ -155,28 +161,34 @@ mmUnauthenticatedHTTPPost cd path json = do
 -- We also get all the server-side configuration data for the user.
 mmLogin :: ConnectionData -> Login -> IO (Either LoginFailureException (Token, User))
 mmLogin cd login = do
-  path <- mmPath "/api/v3/users/login"
-
+  let rawPath = "/api/v3/users/login"
+  path <- mmPath rawPath
+  runLogger cd "mmLogin" $
+    HttpRequest GET rawPath (Just (toJSON login))
   rsp  <- mmUnauthenticatedHTTPPost cd path login
   if (rspCode rsp /= (2,0,0))
     then return (Left (LoginFailureException (show (rspCode rsp))))
     else do
       token <- mmGetHeader   rsp (HdrCustom "Token")
-      value <- mmGetJSONBody rsp
+      (raw, value) <- mmGetJSONBody rsp
+      runLogger cd "mmLogin" $
+        HttpResponse 200 rawPath (Just raw)
       return (Right (Token token, value))
 
 -- | Fire off a login attempt. Note: We get back more than just the auth token.
 -- We also get all the server-side configuration data for the user.
 mmGetInitialLoad :: ConnectionData -> Token -> IO InitialLoad
-mmGetInitialLoad cd token = mmDoRequest cd token "/api/v3/users/initial_load"
+mmGetInitialLoad cd token =
+  mmDoRequest cd "mmGetInitialLoad" token "/api/v3/users/initial_load"
 
 -- | Requires an authenticated user. Returns the full list of teams.
 mmGetTeams :: ConnectionData -> Token -> IO (HashMap TeamId Team)
-mmGetTeams cd token = mmDoRequest cd token "/api/v3/teams/all"
+mmGetTeams cd token =
+  mmDoRequest cd "mmGetTeams" token "/api/v3/teams/all"
 
 -- | Requires an authenticated user. Returns the full list of channels for a given team
 mmGetChannels :: ConnectionData -> Token -> TeamId -> IO Channels
-mmGetChannels cd token teamid = mmDoRequest cd token $
+mmGetChannels cd token teamid = mmDoRequest cd "mmGetChannels" token $
   printf "/api/v3/teams/%s/channels/" (idString teamid)
 
 -- | Requires an authenticated user. Returns the details of a
@@ -185,7 +197,7 @@ mmGetChannel :: ConnectionData -> Token
              -> TeamId
              -> ChannelId
              -> IO Channel
-mmGetChannel cd token teamid chanid = mmWithRequest cd token
+mmGetChannel cd token teamid chanid = mmWithRequest cd "mmGetChannel" token
   (printf "/api/v3/teams/%s/channels/%s/"
           (idString teamid)
           (idString chanid))
@@ -209,7 +221,8 @@ mmGetPosts :: ConnectionData -> Token
            -> Int -- offset in the backlog, 0 is most recent
            -> Int -- try to fetch this many
            -> IO Posts
-mmGetPosts cd token teamid chanid offset limit = mmDoRequest cd token $
+mmGetPosts cd token teamid chanid offset limit =
+  mmDoRequest cd "mmGetPosts" token $
   printf "/api/v3/teams/%s/channels/%s/posts/page/%d/%d"
          (idString teamid)
          (idString chanid)
@@ -217,24 +230,25 @@ mmGetPosts cd token teamid chanid offset limit = mmDoRequest cd token $
          limit
 
 mmGetUser :: ConnectionData -> Token -> UserId -> IO User
-mmGetUser cd token userid = mmDoRequest cd token $
+mmGetUser cd token userid = mmDoRequest cd "mmGetUser" token $
   printf "/api/v3/users/%s/get" (idString userid)
 
 mmGetTeamMembers :: ConnectionData -> Token -> TeamId -> IO Value
-mmGetTeamMembers cd token teamid = mmDoRequest cd token $
+mmGetTeamMembers cd token teamid = mmDoRequest cd "mmGetTeamMembers" token $
   printf "/api/v3/teams/members/%s" (idString teamid)
 
 mmGetProfilesForDMList :: ConnectionData -> Token -> TeamId
                        -> IO (HashMap UserId UserProfile)
-mmGetProfilesForDMList cd token teamid = mmDoRequest cd token $
-  printf "/api/v3/users/profiles_for_dm_list/%s" (idString teamid)
+mmGetProfilesForDMList cd token teamid =
+  mmDoRequest cd "mmGetProfilesForDMList" token $
+    printf "/api/v3/users/profiles_for_dm_list/%s" (idString teamid)
 
 mmGetMe :: ConnectionData -> Token -> IO Value
-mmGetMe cd token = mmDoRequest cd token "/api/v3/users/me"
+mmGetMe cd token = mmDoRequest cd "mmGetMe" token "/api/v3/users/me"
 
 mmGetProfiles :: ConnectionData -> Token
               -> TeamId -> IO (HashMap UserId UserProfile)
-mmGetProfiles cd token teamid = mmDoRequest cd token $
+mmGetProfiles cd token teamid = mmDoRequest cd "mmGetProfiles" token $
   printf "/api/v3/users/profiles/%s" (idString teamid)
 
 mmPost :: ConnectionData
@@ -249,7 +263,7 @@ mmPost cd token teamid post = do
                       (idString chanid)
   uri <- mmPath path
   rsp <- mmPOST cd token uri post
-  mmGetJSONBody rsp
+  snd `fmap` mmGetJSONBody rsp
 
 -- | This is for making a generic authenticated request.
 mmRequest :: ConnectionData -> Token -> URI -> IO Response_String
@@ -274,22 +288,28 @@ mmRequest cd token path = do
 -- This captures the most common pattern when making requests.
 mmDoRequest :: FromJSON t
             => ConnectionData
+            -> String
             -> Token
             -> String
             -> IO t
-mmDoRequest cd token path = mmWithRequest cd token path return
+mmDoRequest cd fnname token path = mmWithRequest cd fnname token path return
 
 -- The slightly more general variant
 mmWithRequest :: FromJSON t
               => ConnectionData
+              -> String
               -> Token
               -> String
               -> (t -> IO a)
               -> IO a
-mmWithRequest cd token path action = do
+mmWithRequest cd fnname token path action = do
   uri  <- mmPath path
+  runLogger cd fnname $
+    HttpRequest GET path Nothing
   rsp  <- mmRequest cd token uri
-  json <- mmGetJSONBody rsp
+  (raw,json) <- mmGetJSONBody rsp
+  runLogger cd fnname $
+    HttpResponse 200 path (Just raw)
   action json
 
 mmPOST :: ToJSON t => ConnectionData -> Token -> URI -> t -> IO Response_String
