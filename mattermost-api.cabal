@@ -24,6 +24,7 @@ library
   exposed-modules:     Network.Mattermost
                        Network.Mattermost.Exceptions
                        Network.Mattermost.Lenses
+                       Network.Mattermost.Logging
                        Network.Mattermost.Util
                        Network.Mattermost.WebSocket
                        Network.Mattermost.WebSocket.Types
