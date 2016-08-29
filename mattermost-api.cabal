@@ -155,3 +155,20 @@ executable mm-show-events
                   -- This is not great, we just need it to disable
                   -- The thing where Ctrl-C twice causes the rts to exit.
                   , unix
+
+executable mm-show-raw-events
+  if !flag(build-examples)
+    buildable:        False
+  default-language: Haskell2010
+  main-is:          ShowRawEvents.hs
+  other-modules:    Config
+                    LocalConfig
+  hs-source-dirs:   examples
+  build-depends:    base
+                  , mattermost-api
+                  , aeson
+                  , text
+                  , connection
+                  , process
+                  , unordered-containers
+                  , pretty-show
