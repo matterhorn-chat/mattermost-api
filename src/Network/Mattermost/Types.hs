@@ -451,7 +451,7 @@ data Post
   = Post
   { postPendingPostId :: PostId
   , postOriginalId    :: PostId
-  , postProps         :: A.Value
+  , postProps         :: HM.HashMap String String
   , postRootId        :: String
   , postFilenames     :: A.Value
   , postId            :: PostId

@@ -380,7 +380,7 @@ postPendingPostIdL = makeLens postPendingPostId (\ t s -> s { postPendingPostId 
 postOriginalIdL :: Lens' Post PostId
 postOriginalIdL = makeLens postOriginalId (\ t s -> s { postOriginalId = t })
 
-postPropsL :: Lens' Post Value
+postPropsL :: Lens' Post (HashMap String String)
 postPropsL = makeLens postProps (\ t s -> s { postProps = t })
 
 postRootIdL :: Lens' Post String
