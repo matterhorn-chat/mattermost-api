@@ -575,3 +575,52 @@ utcTimeToMilliseconds utc = truncate ((utcTimeToPOSIXSeconds utc)*1000)
 
 --
 
+data MinCommand
+  = MinCommand
+  { minComChannelId :: ChannelId
+  , minComCommand   :: String
+  , minComSuggest   :: Bool -- XXX: really?
+  } deriving (Read, Show, Eq)
+
+instance A.ToJSON MinCommand where
+  toJSON MinCommand { .. } = A.object
+    [ "channelId" .= minComChannelId
+    , "command"   .= minComCommand
+    , "suggest"   .=
+      if minComSuggest
+        then ("true" :: String)
+        else ("false" :: String)
+    ]
+
+--
+
+data Command
+  = Command
+  { commandId               :: CommandId
+  , commandToken            :: Token
+  , commandCreateAt         :: UTCTime
+  , commandUpdateAt         :: UTCTime
+  , commandDeleteAt         :: UTCTime
+  , commandCreatorId        :: UserId
+  , commandTeamId           :: TeamId
+  , commandTrigger          :: String
+  , commandMethod           :: String
+  , commandUsername         :: String
+  , commandIconURL          :: String
+  , commandAutoComplete     :: Bool
+  , commandAutoCompleteDesc :: String
+  , commandAutoCompleteHint :: String
+  , commandDisplayName      :: String
+  , commandDescription      :: String
+  , commandURL              :: String
+  } deriving (Read, Show, Eq)
+
+newtype CommandId = CmdI { unCmdI :: Id }
+  deriving (Read, Show, Eq, Ord, Hashable, ToJSON, ToJSONKey, FromJSONKey, FromJSON)
+
+instance IsId CommandId where
+  toId   = unCmdI
+  fromId = CmdI
+
+instance HasId Command CommandId where
+  getId = commandId

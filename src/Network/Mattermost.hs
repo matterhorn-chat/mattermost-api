@@ -21,6 +21,7 @@ module Network.Mattermost
 , Post(..)
 , PostId(..)
 , Posts(..)
+, MinCommand(..)
 -- Log-related types
 , Logger
 , LogEvent(..)
@@ -44,6 +45,7 @@ module Network.Mattermost
 , mmGetProfiles
 , mmGetInitialLoad
 , mmPost
+, mmExecute
 , mkPendingPost
 , idString
 , hoistE
@@ -271,6 +273,23 @@ mmPost cd token teamid post = do
   rsp <- mmPOST cd token uri post
   (val, r) <- mmGetJSONBody rsp
   runLogger cd "mmPost" $
+    HttpResponse 200 path (Just (val))
+  return r
+
+mmExecute :: ConnectionData
+          -> Token
+          -> TeamId
+          -> MinCommand
+          -> IO Value -- XXX: what to return here?
+mmExecute cd token teamid command = do
+  let path   = printf "/api/v3/teams/%s/commands/execute"
+                      (idString teamid)
+  uri <- mmPath path
+  runLogger cd "mmExecute" $
+    HttpRequest POST path (Just (toJSON command))
+  rsp <- mmPOST cd token uri command
+  (val, r) <- mmGetJSONBody rsp
+  runLogger cd "mmExecute" $
     HttpResponse 200 path (Just (val))
   return r
 
