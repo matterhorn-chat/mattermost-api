@@ -453,7 +453,7 @@ data Post
   , postOriginalId    :: PostId
   , postProps         :: HM.HashMap String String
   , postRootId        :: String
-  , postFilenames     :: A.Value
+  , postFilenames     :: [String]
   , postId            :: PostId
   , postType          :: Type
   , postMessage       :: String

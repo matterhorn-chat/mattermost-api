@@ -113,7 +113,6 @@ module Network.Mattermost.Lenses
 , wepPostL
 ) where
 
-import Data.Aeson (Value)
 import Data.HashMap.Strict (HashMap)
 import Data.Text (Text)
 import Data.Time.Clock (UTCTime)
@@ -386,7 +385,7 @@ postPropsL = makeLens postProps (\ t s -> s { postProps = t })
 postRootIdL :: Lens' Post String
 postRootIdL = makeLens postRootId (\ t s -> s { postRootId = t })
 
-postFilenamesL :: Lens' Post Value
+postFilenamesL :: Lens' Post [String]
 postFilenamesL = makeLens postFilenames (\ t s -> s { postFilenames = t })
 
 postIdL :: Lens' Post PostId
