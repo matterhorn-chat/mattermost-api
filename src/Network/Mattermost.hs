@@ -44,6 +44,7 @@ module Network.Mattermost
 , mmGetMe
 , mmGetProfiles
 , mmGetInitialLoad
+, mmSetChannelHeader
 , mmPost
 , mmExecute
 , mkPendingPost
@@ -343,6 +344,18 @@ mmWithRequest cd fnname token path action = do
 mmPOST :: ToJSON t => ConnectionData -> Token -> URI -> t -> IO Response_String
 mmPOST cd token path json =
   mmRawPOST cd token path (BL.toStrict (encode json))
+
+mmSetChannelHeader :: ConnectionData -> Token -> TeamId -> ChannelId -> String -> IO Channel
+mmSetChannelHeader cd token teamid chanid header = do
+  let path = printf "/api/v3/teams/%s/channels/update_header"
+                    (idString teamid)
+  uri <- mmPath path
+  let req = SetChannelHeader chanid header
+  runLogger cd "mmSetChannelHeader" $
+    HttpRequest POST path (Just (toJSON req))
+  rsp <- mmPOST cd token uri req
+  (_, r) <- mmGetJSONBody rsp
+  return r
 
 mmRawPOST :: ConnectionData -> Token -> URI -> B.ByteString -> IO Response_String
 mmRawPOST cd token path content = do

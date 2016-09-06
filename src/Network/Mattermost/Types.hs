@@ -115,6 +115,17 @@ instance A.ToJSON Login where
                       ]
 
 
+data SetChannelHeader = SetChannelHeader
+  { setChannelHeaderChanId :: ChannelId
+  , setChannelHeaderString :: String
+  }
+
+instance A.ToJSON SetChannelHeader where
+  toJSON (SetChannelHeader cId p) =
+      A.object ["channel_id" A..= cId
+               ,"channel_header" A..= p
+               ]
+
 -- | XXX: No idea what this is
 newtype Type = Type T.Text
   deriving (Read, Show, Ord, Eq)
