@@ -153,8 +153,8 @@ class HasId x y | x -> y where
 newtype Id = Id { unId :: Text }
   deriving (Read, Show, Eq, Ord, Hashable, ToJSON, ToJSONKey, FromJSONKey)
 
-idString :: IsId x => x -> String
-idString x = T.unpack (unId i)
+idString :: IsId x => x -> Text
+idString x = unId i
   where i = toId x
 
 instance A.FromJSON Id where
