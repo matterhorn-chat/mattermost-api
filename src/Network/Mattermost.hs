@@ -43,6 +43,7 @@ module Network.Mattermost
 , mmGetProfilesForDMList
 , mmGetMe
 , mmGetProfiles
+, mmGetStatuses
 , mmGetInitialLoad
 , mmSetChannelHeader
 , mmPost
@@ -258,6 +259,10 @@ mmGetProfiles :: ConnectionData -> Token
               -> TeamId -> IO (HashMap UserId UserProfile)
 mmGetProfiles cd token teamid = mmDoRequest cd "mmGetProfiles" token $
   printf "/api/v3/users/profiles/%s" (idString teamid)
+
+mmGetStatuses :: ConnectionData -> Token -> IO (HashMap UserId Text)
+mmGetStatuses cd token = mmDoRequest cd "mmGetStatuses" token $
+  printf "/api/v3/users/status"
 
 mmPost :: ConnectionData
        -> Token
