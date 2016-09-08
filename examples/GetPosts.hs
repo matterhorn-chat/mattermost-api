@@ -4,6 +4,7 @@
 module Main (main) where
 import           Text.Read ( readMaybe )
 import           Text.Printf ( printf )
+import           Data.Foldable ( toList )
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import           Text.Show.Pretty ( pPrint )
@@ -127,7 +128,7 @@ main = do
         when (channelName chan == optChannel opts) $ do
           posts <- mmGetPosts cd token (getId t) (getId chan) (optOffset opts) (optLimit opts)
           -- XXX: is the order really reversed?
-          forM_ (reverse (postsOrder posts)) $ \postId -> do
+          forM_ (reverse (toList (postsOrder posts))) $ \postId -> do
             -- this is just a toy program, so we don't care about
             -- this pattern match failure
             let Just p    = HM.lookup postId (postsPosts posts)

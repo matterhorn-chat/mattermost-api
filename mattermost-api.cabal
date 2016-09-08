@@ -42,6 +42,7 @@ library
                      , time
                      , unordered-containers
                      , hashable
+                     , containers
                      -- Only here to make debugging easier
                      , pretty-show
   hs-source-dirs:      src
