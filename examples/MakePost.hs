@@ -29,9 +29,9 @@ import           LocalConfig -- You will need to define a function:
 
 data Options
   = Options
-  { optChannel :: String
+  { optChannel :: T.Text
   , optVerbose :: Bool
-  , optMessage :: String
+  , optMessage :: T.Text
   } deriving (Read, Show)
 
 defaultOptions :: Options
@@ -45,7 +45,7 @@ options :: [ OptDescr (Options -> IO Options) ]
 options =
   [ Option "c" ["channel"]
       (ReqArg
-        (\arg opt -> return opt { optChannel = arg })
+        (\arg opt -> return opt { optChannel = T.pack arg })
         "CHANNEL")
       "Channel to fetch posts from"
   , Option "v" ["verbose"]
@@ -54,7 +54,7 @@ options =
       "Enable verbose output"
   , Option "m" ["message"]
       (ReqArg
-        (\arg opt -> return opt { optMessage = arg })
+        (\arg opt -> return opt { optMessage = T.pack arg })
         "MESSAGE")
       "message to send"
   , Option "h" ["help"]
@@ -90,7 +90,7 @@ main = do
   when (optVerbose opts) $ do
     pPrint i
   forM_ (initialLoadTeams i) $ \t -> do
-    when (teamName t == T.unpack (configTeam config)) $ do
+    when (teamName t == configTeam config) $ do
       userMap <- mmGetProfiles cd token (getId t)
       when (optVerbose opts) $ do
         pPrint userMap
@@ -99,7 +99,7 @@ main = do
         when (optVerbose opts) $ do
           pPrint chan
         when (channelName chan == optChannel opts) $ do
-          when (not (null (optMessage opts))) $ do
+          when (not (T.null (optMessage opts))) $ do
             pendingPost <- mkPendingPost (optMessage opts)
                                          (getId mmUser)
                                          (getId chan)

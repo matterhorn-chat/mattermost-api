@@ -79,6 +79,7 @@ import           Data.Aeson ( Value
                             , encode
                             , eitherDecode
                             )
+import           Data.Text (Text)
 import           Control.Arrow ( left )
 
 import           Network.Mattermost.Exceptions
@@ -345,7 +346,7 @@ mmPOST :: ToJSON t => ConnectionData -> Token -> URI -> t -> IO Response_String
 mmPOST cd token path json =
   mmRawPOST cd token path (BL.toStrict (encode json))
 
-mmSetChannelHeader :: ConnectionData -> Token -> TeamId -> ChannelId -> String -> IO Channel
+mmSetChannelHeader :: ConnectionData -> Token -> TeamId -> ChannelId -> Text -> IO Channel
 mmSetChannelHeader cd token teamid chanid header = do
   let path = printf "/api/v3/teams/%s/channels/update_header"
                     (idString teamid)

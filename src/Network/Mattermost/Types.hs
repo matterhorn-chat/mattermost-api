@@ -18,6 +18,7 @@ import           Data.Aeson.Types ( ToJSONKey
 import           Data.HashMap.Strict ( HashMap )
 import qualified Data.HashMap.Strict as HM
 import           Data.Ratio ( (%) )
+import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Time.Clock ( UTCTime, getCurrentTime )
 import           Data.Time.Clock.POSIX ( posixSecondsToUTCTime
@@ -104,8 +105,8 @@ getTokenString (Token s) = s
 
 data Login
   = Login
-  { username :: T.Text
-  , password :: T.Text
+  { username :: Text
+  , password :: Text
   }
 
 instance A.ToJSON Login where
@@ -117,7 +118,7 @@ instance A.ToJSON Login where
 
 data SetChannelHeader = SetChannelHeader
   { setChannelHeaderChanId :: ChannelId
-  , setChannelHeaderString :: String
+  , setChannelHeaderString :: Text
   }
 
 instance A.ToJSON SetChannelHeader where
@@ -127,7 +128,7 @@ instance A.ToJSON SetChannelHeader where
                ]
 
 -- | XXX: No idea what this is
-newtype Type = Type T.Text
+newtype Type = Type Text
   deriving (Read, Show, Ord, Eq)
 
 instance IsString Type where
@@ -149,7 +150,7 @@ class IsId x where
 class HasId x y | x -> y where
   getId :: x -> y
 
-newtype Id = Id { unId :: T.Text }
+newtype Id = Id { unId :: Text }
   deriving (Read, Show, Eq, Ord, Hashable, ToJSON, ToJSONKey, FromJSONKey)
 
 idString :: IsId x => x -> String
@@ -181,12 +182,12 @@ data Team
   , teamCreateAt        :: UTCTime
   , teamUpdateAt        :: UTCTime
   , teamDeleteAt        :: UTCTime
-  , teamDisplayName     :: String
-  , teamName            :: String
-  , teamEmail           :: String
+  , teamDisplayName     :: Text
+  , teamName            :: Text
+  , teamEmail           :: Text
   , teamType            :: Type
-  , teamCompanyName     :: String
-  , teamAllowedDomains  :: String
+  , teamCompanyName     :: Text
+  , teamAllowedDomains  :: Text
   , teamInviteId        :: Id -- XXX: What type of Id is this?
   , teamAllowOpenInvite :: Bool
   }
@@ -228,10 +229,10 @@ data Channel
   , channelDeleteAt      :: UTCTime
   , channelTeamId        :: TeamId
   , channelType          :: Type
-  , channelDisplayName   :: String
-  , channelName          :: String
-  , channelHeader        :: String
-  , channelPurpose       :: String
+  , channelDisplayName   :: Text
+  , channelName          :: Text
+  , channelHeader        :: Text
+  , channelPurpose       :: Text
   , channelLastPostAt    :: UTCTime
   , channelTotalMsgCount :: Int
   , channelExtraUpdateAt :: UTCTime
@@ -277,11 +278,11 @@ data ChannelData
   = ChannelData
   { channelDataChannelId    :: ChannelId
   , channelDataUserId       :: UserId
-  , channelDataRoles        :: String -- XXX: what goes here
+  , channelDataRoles        :: Text -- XXX: what goes here
   , channelDataLastViewedAt :: UTCTime
   , channelDataMsgCount     :: Int
   , channelDataMentionCount :: Int
-  , channelDataNotifyProps  :: HashMap String String
+  , channelDataNotifyProps  :: HashMap Text Text
   , channelDataLastUpdateAt :: UTCTime
   } deriving (Read, Show, Eq)
 
@@ -324,16 +325,16 @@ instance IsId UserId where
 
 data UserProfile
   = UserProfile
-  { userProfileEmail          :: String
-  , userProfileRoles          :: String
-  , userProfileFirstName      :: String
-  , userProfileAuthService    :: String
-  , userProfileLocale         :: String
-  , userProfileUsername       :: String
-  , userProfileAuthData       :: String
-  , userProfileLastName       :: String
+  { userProfileEmail          :: Text
+  , userProfileRoles          :: Text
+  , userProfileFirstName      :: Text
+  , userProfileAuthService    :: Text
+  , userProfileLocale         :: Text
+  , userProfileUsername       :: Text
+  , userProfileAuthData       :: Text
+  , userProfileLastName       :: Text
   , userProfileId             :: UserId
-  , userProfileNickname       :: String
+  , userProfileNickname       :: Text
   , userProfileDeleteAt       :: UTCTime
   , userProfileCreateAt       :: UTCTime
   } deriving (Read, Show, Eq, Ord)
@@ -384,19 +385,19 @@ data User
   , userCreateAt           :: UTCTime
   , userUpdateAt           :: UTCTime
   , userDeleteAt           :: UTCTime
-  , userUsername           :: String
-  , userAuthData           :: String
-  , userAuthService        :: String
-  , userEmail              :: String
+  , userUsername           :: Text
+  , userAuthData           :: Text
+  , userAuthService        :: Text
+  , userEmail              :: Text
   , userEmailVerified      :: Bool
-  , userNickname           :: String
-  , userFirstName          :: String
-  , userLastName           :: String
-  , userRoles              :: String -- XXX: what are the options?
-  , userNotifyProps        :: HashMap String String -- See NotifyProps type below
+  , userNickname           :: Text
+  , userFirstName          :: Text
+  , userLastName           :: Text
+  , userRoles              :: Text -- XXX: what are the options?
+  , userNotifyProps        :: HashMap Text Text -- See NotifyProps type below
   , userLastPasswordUpdate :: UTCTime
   , userLastPictureUpdate  :: Maybe UTCTime
-  , userLocale             :: String
+  , userLocale             :: Text
   } deriving (Read, Show, Eq)
 
 instance A.FromJSON User where
@@ -462,14 +463,14 @@ data Post
   = Post
   { postPendingPostId :: PostId
   , postOriginalId    :: PostId
-  , postProps         :: HM.HashMap String String
-  , postRootId        :: String
-  , postFilenames     :: [String]
+  , postProps         :: HM.HashMap Text Text
+  , postRootId        :: Text
+  , postFilenames     :: [Text]
   , postId            :: PostId
   , postType          :: Type
-  , postMessage       :: String
+  , postMessage       :: Text
   , postDeleteAt      :: UTCTime
-  , postHashtags      :: String
+  , postHashtags      :: Text
   , postUpdateAt      :: UTCTime
   , postUserId        :: UserId
   , postCreateAt      :: UTCTime
@@ -523,7 +524,7 @@ data PendingPost
   { pendingPostChannelId :: ChannelId
   , pendingPostCreateAt  :: UTCTime
   , pendingPostFilenames :: [FilePath]
-  , pendingPostMessage   :: String
+  , pendingPostMessage   :: Text
   , pendingPostId        :: PendingPostId
   , pendingPostUserId    :: UserId
   } deriving (Read, Show, Eq)
@@ -548,7 +549,7 @@ instance IsId PendingPostId where
 instance HasId PendingPost PendingPostId where
   getId = pendingPostId
 
-mkPendingPost :: String -> UserId -> ChannelId -> IO PendingPost
+mkPendingPost :: Text -> UserId -> ChannelId -> IO PendingPost
 mkPendingPost msg userid channelid = do
   now <- getCurrentTime
   let ms  = utcTimeToMilliseconds now :: Int
@@ -589,7 +590,7 @@ utcTimeToMilliseconds utc = truncate ((utcTimeToPOSIXSeconds utc)*1000)
 data MinCommand
   = MinCommand
   { minComChannelId :: ChannelId
-  , minComCommand   :: String
+  , minComCommand   :: Text
   , minComSuggest   :: Bool -- XXX: really?
   } deriving (Read, Show, Eq)
 
@@ -599,8 +600,8 @@ instance A.ToJSON MinCommand where
     , "command"   .= minComCommand
     , "suggest"   .=
       if minComSuggest
-        then ("true" :: String)
-        else ("false" :: String)
+        then ("true" :: Text)
+        else ("false" :: Text)
     ]
 
 --
@@ -614,16 +615,16 @@ data Command
   , commandDeleteAt         :: UTCTime
   , commandCreatorId        :: UserId
   , commandTeamId           :: TeamId
-  , commandTrigger          :: String
-  , commandMethod           :: String
-  , commandUsername         :: String
-  , commandIconURL          :: String
+  , commandTrigger          :: Text
+  , commandMethod           :: Text
+  , commandUsername         :: Text
+  , commandIconURL          :: Text
   , commandAutoComplete     :: Bool
-  , commandAutoCompleteDesc :: String
-  , commandAutoCompleteHint :: String
-  , commandDisplayName      :: String
-  , commandDescription      :: String
-  , commandURL              :: String
+  , commandAutoCompleteDesc :: Text
+  , commandAutoCompleteHint :: Text
+  , commandDisplayName      :: Text
+  , commandDescription      :: Text
+  , commandURL              :: Text
   } deriving (Read, Show, Eq)
 
 newtype CommandId = CmdI { unCmdI :: Id }

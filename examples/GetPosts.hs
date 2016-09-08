@@ -30,7 +30,7 @@ import           LocalConfig -- You will need to define a function:
 
 data Options
   = Options
-  { optChannel :: String
+  { optChannel :: T.Text
   , optVerbose :: Bool
   , optOffset  :: Int
   , optLimit   :: Int
@@ -50,7 +50,7 @@ options :: [ OptDescr (Options -> IO Options) ]
 options =
   [ Option "c" ["channel"]
       (ReqArg
-        (\arg opt -> return opt { optChannel = arg })
+        (\arg opt -> return opt { optChannel = T.pack arg })
         "CHANNEL")
       "Channel to fetch posts from"
   , Option "v" ["verbose"]
@@ -116,7 +116,7 @@ main = do
   when (optVerbose opts) $ do
     pPrint i
   forM_ (initialLoadTeams i) $ \t -> do
-    when (teamName t == T.unpack (configTeam config)) $ do
+    when (teamName t == configTeam config) $ do
       userMap <- mmGetProfiles cd token (getId t)
       when (optVerbose opts) $ do
         pPrint userMap

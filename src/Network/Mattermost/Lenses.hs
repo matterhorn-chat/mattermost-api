@@ -186,22 +186,22 @@ teamUpdateAtL = makeLens teamUpdateAt (\ t s -> s { teamUpdateAt = t })
 teamDeleteAtL :: Lens' Team UTCTime
 teamDeleteAtL = makeLens teamDeleteAt (\ t s -> s { teamDeleteAt = t })
 
-teamDisplayNameL :: Lens' Team String
+teamDisplayNameL :: Lens' Team Text
 teamDisplayNameL = makeLens teamDisplayName (\ t s -> s { teamDisplayName = t })
 
-teamNameL :: Lens' Team String
+teamNameL :: Lens' Team Text
 teamNameL = makeLens teamName (\ t s -> s { teamName = t })
 
-teamEmailL :: Lens' Team String
+teamEmailL :: Lens' Team Text
 teamEmailL = makeLens teamEmail (\ t s -> s { teamEmail = t })
 
 teamTypeL :: Lens' Team Type
 teamTypeL = makeLens teamType (\ t s -> s { teamType = t })
 
-teamCompanyNameL :: Lens' Team String
+teamCompanyNameL :: Lens' Team Text
 teamCompanyNameL = makeLens teamCompanyName (\ t s -> s { teamCompanyName = t })
 
-teamAllowedDomainsL :: Lens' Team String
+teamAllowedDomainsL :: Lens' Team Text
 teamAllowedDomainsL = makeLens teamAllowedDomains (\ t s -> s { teamAllowedDomains = t })
 
 teamInviteIdL :: Lens' Team Id
@@ -231,17 +231,17 @@ channelTeamIdL = makeLens channelTeamId (\ t s -> s { channelTeamId = t })
 channelTypeL :: Lens' Channel Type
 channelTypeL = makeLens channelType (\ t s -> s { channelType = t })
 
-channelDisplayNameL :: Lens' Channel String
+channelDisplayNameL :: Lens' Channel Text
 channelDisplayNameL =
   makeLens channelDisplayName (\ t s -> s { channelDisplayName = t })
 
-channelNameL :: Lens' Channel String
+channelNameL :: Lens' Channel Text
 channelNameL = makeLens channelName (\ t s -> s { channelName = t })
 
-channelHeaderL :: Lens' Channel String
+channelHeaderL :: Lens' Channel Text
 channelHeaderL = makeLens channelHeader (\ t s -> s { channelHeader = t })
 
-channelPurposeL :: Lens' Channel String
+channelPurposeL :: Lens' Channel Text
 channelPurposeL = makeLens channelPurpose (\ t s -> s { channelPurpose = t })
 
 channelLastPostAtL :: Lens' Channel UTCTime
@@ -268,7 +268,7 @@ channelDataChannelIdL = makeLens channelDataChannelId (\ t s -> s { channelDataC
 channelDataUserIdL :: Lens' ChannelData UserId
 channelDataUserIdL = makeLens channelDataUserId (\ t s -> s { channelDataUserId = t })
 
-channelDataRolesL :: Lens' ChannelData String
+channelDataRolesL :: Lens' ChannelData Text
 channelDataRolesL = makeLens channelDataRoles (\ t s -> s { channelDataRoles = t })
 
 channelDataLastViewedAtL :: Lens' ChannelData UTCTime
@@ -280,7 +280,7 @@ channelDataMsgCountL = makeLens channelDataMsgCount (\ t s -> s { channelDataMsg
 channelDataMentionCountL :: Lens' ChannelData Int
 channelDataMentionCountL = makeLens channelDataMentionCount (\ t s -> s { channelDataMentionCount = t })
 
-channelDataNotifyPropsL :: Lens' ChannelData (HashMap String String)
+channelDataNotifyPropsL :: Lens' ChannelData (HashMap Text Text)
 channelDataNotifyPropsL =
   makeLens channelDataNotifyProps (\ t s -> s { channelDataNotifyProps = t })
 
@@ -291,34 +291,34 @@ channelDataLastUpdateAtL =
 --
 
 
-userProfileEmailL :: Lens' UserProfile String
+userProfileEmailL :: Lens' UserProfile Text
 userProfileEmailL = makeLens userProfileEmail (\ t s -> s { userProfileEmail = t })
 
-userProfileRolesL :: Lens' UserProfile String
+userProfileRolesL :: Lens' UserProfile Text
 userProfileRolesL = makeLens userProfileRoles (\ t s -> s { userProfileRoles = t })
 
-userProfileFirstNameL :: Lens' UserProfile String
+userProfileFirstNameL :: Lens' UserProfile Text
 userProfileFirstNameL = makeLens userProfileFirstName (\ t s -> s { userProfileFirstName = t })
 
-userProfileAuthServiceL :: Lens' UserProfile String
+userProfileAuthServiceL :: Lens' UserProfile Text
 userProfileAuthServiceL = makeLens userProfileAuthService (\ t s -> s { userProfileAuthService = t })
 
-userProfileLocaleL :: Lens' UserProfile String
+userProfileLocaleL :: Lens' UserProfile Text
 userProfileLocaleL = makeLens userProfileLocale (\ t s -> s { userProfileLocale = t })
 
-userProfileUsernameL :: Lens' UserProfile String
+userProfileUsernameL :: Lens' UserProfile Text
 userProfileUsernameL = makeLens userProfileUsername (\ t s -> s { userProfileUsername = t })
 
-userProfileAuthDataL :: Lens' UserProfile String
+userProfileAuthDataL :: Lens' UserProfile Text
 userProfileAuthDataL = makeLens userProfileAuthData (\ t s -> s { userProfileAuthData = t })
 
-userProfileLastNameL :: Lens' UserProfile String
+userProfileLastNameL :: Lens' UserProfile Text
 userProfileLastNameL = makeLens userProfileLastName (\ t s -> s { userProfileLastName = t })
 
 userProfileIdL :: Lens' UserProfile UserId
 userProfileIdL = makeLens userProfileId (\ t s -> s { userProfileId = t })
 
-userProfileNicknameL :: Lens' UserProfile String
+userProfileNicknameL :: Lens' UserProfile Text
 userProfileNicknameL = makeLens userProfileNickname (\ t s -> s { userProfileNickname = t })
 
 userProfileDeleteAtL :: Lens' UserProfile UTCTime
@@ -342,34 +342,34 @@ userUpdateAtL = makeLens userUpdateAt (\ t s -> s { userUpdateAt = t })
 userDeleteAtL :: Lens' User UTCTime
 userDeleteAtL = makeLens userDeleteAt (\ t s -> s { userDeleteAt = t })
 
-userUsernameL :: Lens' User String
+userUsernameL :: Lens' User Text
 userUsernameL = makeLens userUsername (\ t s -> s { userUsername = t })
 
-userAuthDataL :: Lens' User String
+userAuthDataL :: Lens' User Text
 userAuthDataL = makeLens userAuthData (\ t s -> s { userAuthData = t })
 
-userAuthServiceL :: Lens' User String
+userAuthServiceL :: Lens' User Text
 userAuthServiceL = makeLens userAuthService (\ t s -> s { userAuthService = t })
 
-userEmailL :: Lens' User String
+userEmailL :: Lens' User Text
 userEmailL = makeLens userEmail (\ t s -> s { userEmail = t })
 
 userEmailVerifiedL :: Lens' User Bool
 userEmailVerifiedL = makeLens userEmailVerified (\ t s -> s { userEmailVerified = t })
 
-userNicknameL :: Lens' User String
+userNicknameL :: Lens' User Text
 userNicknameL = makeLens userNickname (\ t s -> s { userNickname = t })
 
-userFirstNameL :: Lens' User String
+userFirstNameL :: Lens' User Text
 userFirstNameL = makeLens userFirstName (\ t s -> s { userFirstName = t })
 
-userLastNameL :: Lens' User String
+userLastNameL :: Lens' User Text
 userLastNameL = makeLens userLastName (\ t s -> s { userLastName = t })
 
-userRolesL :: Lens' User String
+userRolesL :: Lens' User Text
 userRolesL = makeLens userRoles (\ t s -> s { userRoles = t })
 
-userNotifyPropsL :: Lens' User (HashMap String String)
+userNotifyPropsL :: Lens' User (HashMap Text Text)
 userNotifyPropsL = makeLens userNotifyProps (\ t s -> s { userNotifyProps = t })
 
 userLastPasswordUpdateL :: Lens' User UTCTime
@@ -378,7 +378,7 @@ userLastPasswordUpdateL = makeLens userLastPasswordUpdate (\ t s -> s { userLast
 userLastPictureUpdateL :: Lens' User (Maybe UTCTime)
 userLastPictureUpdateL = makeLens userLastPictureUpdate (\ t s -> s { userLastPictureUpdate = t })
 
-userLocaleL :: Lens' User String
+userLocaleL :: Lens' User Text
 userLocaleL = makeLens userLocale (\ t s -> s { userLocale = t })
 
 --
@@ -390,13 +390,13 @@ postPendingPostIdL = makeLens postPendingPostId (\ t s -> s { postPendingPostId 
 postOriginalIdL :: Lens' Post PostId
 postOriginalIdL = makeLens postOriginalId (\ t s -> s { postOriginalId = t })
 
-postPropsL :: Lens' Post (HashMap String String)
+postPropsL :: Lens' Post (HashMap Text Text)
 postPropsL = makeLens postProps (\ t s -> s { postProps = t })
 
-postRootIdL :: Lens' Post String
+postRootIdL :: Lens' Post Text
 postRootIdL = makeLens postRootId (\ t s -> s { postRootId = t })
 
-postFilenamesL :: Lens' Post [String]
+postFilenamesL :: Lens' Post [Text]
 postFilenamesL = makeLens postFilenames (\ t s -> s { postFilenames = t })
 
 postIdL :: Lens' Post PostId
@@ -405,13 +405,13 @@ postIdL = makeLens postId (\ t s -> s { postId = t })
 postTypeL :: Lens' Post Type
 postTypeL = makeLens postType (\ t s -> s { postType = t })
 
-postMessageL :: Lens' Post String
+postMessageL :: Lens' Post Text
 postMessageL = makeLens postMessage (\ t s -> s { postMessage = t })
 
 postDeleteAtL :: Lens' Post UTCTime
 postDeleteAtL = makeLens postDeleteAt (\ t s -> s { postDeleteAt = t })
 
-postHashtagsL :: Lens' Post String
+postHashtagsL :: Lens' Post Text
 postHashtagsL = makeLens postHashtags (\ t s -> s { postHashtags = t })
 
 postUpdateAtL :: Lens' Post UTCTime
@@ -440,7 +440,7 @@ pendingPostCreateAtL = makeLens pendingPostCreateAt (\ t s -> s { pendingPostCre
 pendingPostFilenamesL :: Lens' PendingPost [FilePath]
 pendingPostFilenamesL = makeLens pendingPostFilenames (\ t s -> s { pendingPostFilenames = t })
 
-pendingPostMessageL :: Lens' PendingPost String
+pendingPostMessageL :: Lens' PendingPost Text
 pendingPostMessageL = makeLens pendingPostMessage (\ t s -> s { pendingPostMessage = t })
 
 pendingPostIdL :: Lens' PendingPost PendingPostId

@@ -33,8 +33,10 @@ main = do
 
   i <- mmGetInitialLoad cd token
   forM_ (initialLoadTeams i) $ \t -> do
-    when (teamName t == T.unpack (configTeam config)) $ do
-      Channels chans _ <- mmGetChannels cd token (teamId t)
+    when (teamName t == configTeam config) $ do
+      Channels chans cm <- mmGetChannels cd token (teamId t)
       forM_ chans $ \chan -> do
         channel <- mmGetChannel cd token (teamId t) (channelId chan)
         pPrint channel
+        pPrint (cm HM.! getId channel)
+        putStrLn ""
