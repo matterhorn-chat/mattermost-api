@@ -4,14 +4,17 @@ module Network.Mattermost.Lenses
 (
   Lens'
 -- * Mattermost Types
+-- ** 'ConnectionData' Lenses
 , cdHostnameL
 , cdPortL
 , cdAutoCloseL
 , cdConnectionCtxL
 , cdTokenL
 , cdLoggerL
+-- ** 'Login' lenses
 , usernameL
 , passwordL
+-- ** 'Team' lenses
 , teamIdL
 , teamCreateAtL
 , teamUpdateAtL
@@ -24,6 +27,7 @@ module Network.Mattermost.Lenses
 , teamAllowedDomainsL
 , teamInviteIdL
 , teamAllowOpenInviteL
+-- ** 'Channel' lenses
 , channelIdL
 , channelCreateAtL
 , channelUpdateAtL
@@ -38,6 +42,7 @@ module Network.Mattermost.Lenses
 , channelTotalMsgCountL
 , channelExtraUpdateAtL
 , channelCreatorIdL
+-- ** 'ChannelData' lenses
 , channelDataChannelIdL
 , channelDataUserIdL
 , channelDataRolesL
@@ -46,6 +51,7 @@ module Network.Mattermost.Lenses
 , channelDataMentionCountL
 , channelDataNotifyPropsL
 , channelDataLastUpdateAtL
+-- ** 'UserProfile' lenses
 , userProfileEmailL
 , userProfileRolesL
 , userProfileFirstNameL
@@ -58,6 +64,7 @@ module Network.Mattermost.Lenses
 , userProfileNicknameL
 , userProfileDeleteAtL
 , userProfileCreateAtL
+-- ** 'User' lenses
 , userIdL
 , userCreateAtL
 , userUpdateAtL
@@ -75,6 +82,7 @@ module Network.Mattermost.Lenses
 , userLastPasswordUpdateL
 , userLastPictureUpdateL
 , userLocaleL
+-- ** 'Post' lenses
 , postPendingPostIdL
 , postOriginalIdL
 , postPropsL
@@ -90,22 +98,24 @@ module Network.Mattermost.Lenses
 , postCreateAtL
 , postParentIdL
 , postChannelIdL
+-- ** 'PendingPost' lenses
 , pendingPostChannelIdL
 , pendingPostCreateAtL
 , pendingPostFilenamesL
 , pendingPostMessageL
 , pendingPostIdL
 , pendingPostUserIdL
+-- ** 'Posts' lenses
 , postsPostsL
 , postsOrderL
 -- * Websocket Types
--- ** WebsocketEvent Lenses
+-- ** 'WebsocketEvent' lenses
 , weTeamIdL
 , weEventL
 , weUserIdL
 , weChannelIdL
 , weDataL
--- ** WEProps Lenses
+-- ** 'WEProps' lenses
 , wepChannelIdL
 , wepTeamIdL
 , wepSenderNameL
@@ -124,7 +134,7 @@ import Network.Mattermost.WebSocket.Types
 -- This is all we need to create a Lens: the type and a trivial
 -- @makeLens@ function:
 
--- This is the same type alias as in @Control.Lens@, and so can be used
+-- | This is the same type alias as in @Control.Lens@, and so can be used
 -- anywhere lenses are needed.
 type Lens' a b = forall f. Functor f => (b -> f b) -> (a -> f a)
 
