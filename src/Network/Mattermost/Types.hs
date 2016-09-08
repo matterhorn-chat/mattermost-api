@@ -18,6 +18,7 @@ import           Data.Aeson.Types ( ToJSONKey
 import           Data.HashMap.Strict ( HashMap )
 import qualified Data.HashMap.Strict as HM
 import           Data.Ratio ( (%) )
+import           Data.Sequence (Seq)
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Time.Clock ( UTCTime, getCurrentTime )
@@ -568,7 +569,7 @@ mkPendingPost msg userid channelid = do
 data Posts
   = Posts
   { postsPosts :: HM.HashMap PostId Post
-  , postsOrder :: [PostId]
+  , postsOrder :: Seq PostId
   } deriving (Read, Show, Eq)
 
 instance A.FromJSON Posts where

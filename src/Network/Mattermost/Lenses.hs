@@ -125,6 +125,7 @@ module Network.Mattermost.Lenses
 ) where
 
 import Data.HashMap.Strict (HashMap)
+import Data.Sequence (Seq)
 import Data.Text (Text)
 import Data.Time.Clock (UTCTime)
 import Network.Connection (ConnectionContext)
@@ -454,7 +455,7 @@ pendingPostUserIdL = makeLens pendingPostUserId (\ t s -> s { pendingPostUserId 
 postsPostsL :: Lens' Posts (HashMap PostId Post)
 postsPostsL = makeLens postsPosts (\ t s -> s { postsPosts = t })
 
-postsOrderL :: Lens' Posts [PostId]
+postsOrderL :: Lens' Posts (Seq PostId)
 postsOrderL = makeLens postsOrder (\ t s -> s { postsOrder = t })
 
 --
