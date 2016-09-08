@@ -397,7 +397,7 @@ postPropsL = makeLens postProps (\ t s -> s { postProps = t })
 postRootIdL :: Lens' Post Text
 postRootIdL = makeLens postRootId (\ t s -> s { postRootId = t })
 
-postFilenamesL :: Lens' Post [Text]
+postFilenamesL :: Lens' Post (Seq Text)
 postFilenamesL = makeLens postFilenames (\ t s -> s { postFilenames = t })
 
 postIdL :: Lens' Post PostId
@@ -438,7 +438,7 @@ pendingPostChannelIdL = makeLens pendingPostChannelId (\ t s -> s { pendingPostC
 pendingPostCreateAtL :: Lens' PendingPost UTCTime
 pendingPostCreateAtL = makeLens pendingPostCreateAt (\ t s -> s { pendingPostCreateAt = t })
 
-pendingPostFilenamesL :: Lens' PendingPost [FilePath]
+pendingPostFilenamesL :: Lens' PendingPost (Seq FilePath)
 pendingPostFilenamesL = makeLens pendingPostFilenames (\ t s -> s { pendingPostFilenames = t })
 
 pendingPostMessageL :: Lens' PendingPost Text

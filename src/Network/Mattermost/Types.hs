@@ -19,6 +19,7 @@ import           Data.HashMap.Strict ( HashMap )
 import qualified Data.HashMap.Strict as HM
 import           Data.Ratio ( (%) )
 import           Data.Sequence (Seq)
+import qualified Data.Sequence as S
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Time.Clock ( UTCTime, getCurrentTime )
@@ -306,7 +307,7 @@ instance A.FromJSON ChannelData where
 -- to be data about the members.
 --
 -- We refer to the extra meta data as ChannelData.
-data Channels = Channels [Channel] (HashMap ChannelId ChannelData)
+data Channels = Channels (Seq Channel) (HashMap ChannelId ChannelData)
   deriving (Read, Show, Eq)
 
 instance A.FromJSON Channels where
@@ -366,7 +367,7 @@ instance A.FromJSON UserProfile where
 data InitialLoad
   = InitialLoad
   { initialLoadUser :: User
-  , initialLoadTeams :: [Team]
+  , initialLoadTeams :: Seq Team
   } deriving (Eq, Show)
 
 instance A.FromJSON InitialLoad where
@@ -466,7 +467,7 @@ data Post
   , postOriginalId    :: PostId
   , postProps         :: HM.HashMap Text Text
   , postRootId        :: Text
-  , postFilenames     :: [Text]
+  , postFilenames     :: Seq Text
   , postId            :: PostId
   , postType          :: Type
   , postMessage       :: Text
@@ -524,7 +525,7 @@ data PendingPost
   = PendingPost
   { pendingPostChannelId :: ChannelId
   , pendingPostCreateAt  :: UTCTime
-  , pendingPostFilenames :: [FilePath]
+  , pendingPostFilenames :: Seq FilePath
   , pendingPostMessage   :: Text
   , pendingPostId        :: PendingPostId
   , pendingPostUserId    :: UserId
@@ -559,7 +560,7 @@ mkPendingPost msg userid channelid = do
     { pendingPostId        = PPI (Id pid)
     , pendingPostChannelId = channelid
     , pendingPostCreateAt  = now
-    , pendingPostFilenames = []
+    , pendingPostFilenames = S.empty
     , pendingPostMessage   = msg
     , pendingPostUserId    = userid
     }
