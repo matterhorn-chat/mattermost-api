@@ -121,6 +121,7 @@ module Network.Mattermost.Lenses
 , wepSenderNameL
 , wepChannelDisplayNameL
 , wepPostL
+, wepStatusL
 ) where
 
 import Data.HashMap.Strict (HashMap)
@@ -490,3 +491,6 @@ wepChannelDisplayNameL = makeLens wepChannelDisplayName
 
 wepPostL :: Lens' WEData (Maybe Post)
 wepPostL = makeLens wepPost (\ t s -> s { wepPost = t })
+
+wepStatusL :: Lens' WEData (Maybe Text)
+wepStatusL = makeLens wepStatus (\ t s -> s { wepStatus = t })

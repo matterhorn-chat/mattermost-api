@@ -132,6 +132,7 @@ data WEData = WEData
   , wepSenderName         :: Maybe Text
   , wepChannelDisplayName :: Maybe Text
   , wepPost               :: Maybe Post
+  , wepStatus             :: Maybe Text
   } deriving (Read, Show, Eq)
 
 instance FromJSON WEData where
@@ -144,6 +145,7 @@ instance FromJSON WEData where
     wepPost <- case wepPostRaw of
       Just str -> fromValueString str
       Nothing  -> return Nothing
+    wepStatus <- o .:? "status"
     return WEData { .. }
 
 instance ToJSON WEData where
