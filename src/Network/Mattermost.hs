@@ -33,6 +33,7 @@ module Network.Mattermost
 -- Functions
 , mkConnectionData
 , mmLogin
+, mmCreateDirect
 , mmGetTeams
 , mmGetChannels
 , mmGetChannel
@@ -74,6 +75,7 @@ import           Network.Stream as NS ( Stream(..) )
 import           Network.URI ( URI, parseRelativeReference )
 import           Network.HTTP.Stream ( simpleHTTP_ )
 import           Data.HashMap.Strict ( HashMap )
+import qualified Data.HashMap.Strict as HM
 import           Data.Aeson ( Value
                             , ToJSON(..)
                             , FromJSON
@@ -263,6 +265,24 @@ mmGetProfiles cd token teamid = mmDoRequest cd "mmGetProfiles" token $
 mmGetStatuses :: ConnectionData -> Token -> IO (HashMap UserId Text)
 mmGetStatuses cd token = mmDoRequest cd "mmGetStatuses" token $
   printf "/api/v3/users/status"
+
+-- POST /api/v3/teams/{}/create_direct with {"user_id": _}
+mmCreateDirect :: ConnectionData -> Token -> TeamId -> UserId -> IO Channel
+mmCreateDirect cd token teamid userid = do
+  let path = printf "/api/v3/teams/%s/channels/create_direct" (idString teamid)
+      payload = HM.fromList [("user_id" :: Text, userid)]
+  uri <- mmPath path
+  runLogger cd "mmCreateDirect" $
+    HttpRequest POST path (Just (toJSON payload))
+  rsp <- mmPOST cd token uri payload
+  (val, r) <- mmGetJSONBody rsp
+  runLogger cd "mmCreateDirect" $
+    HttpResponse 200 path (Just val)
+  return r
+
+-- GET /api/v3/teams/{}/channels/{}/extra_info with {"user_id": _}
+-- mmGetExtraInfo :: ConnectionData -> Token ->
+--   ChannelId -> UserId -> IO ExtraInfo
 
 mmPost :: ConnectionData
        -> Token
