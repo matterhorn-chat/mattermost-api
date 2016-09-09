@@ -17,6 +17,7 @@ module Network.Mattermost
 , Channel(..)
 , ChannelId(..)
 , Channels(..)
+, MinChannel(..)
 , UserProfile(..)
 , Post(..)
 , PostId(..)
