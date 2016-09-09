@@ -26,7 +26,7 @@ import           Data.Time.Clock ( UTCTime, getCurrentTime )
 import           Data.Time.Clock.POSIX ( posixSecondsToUTCTime
                                        , utcTimeToPOSIXSeconds )
 import           GHC.Exts ( IsString(..) )
-import           Network.Connection (ConnectionContext)
+import           Network.Connection (ConnectionContext, initConnectionContext)
 import           Network.HTTP.Base (RequestMethod)
 import           Network.HTTP.Headers (Header, HeaderName(..), mkHeader)
 
@@ -90,6 +90,11 @@ mkConnectionData host port ctx = ConnectionData
   , cdToken         = Nothing
   , cdLogger        = Nothing
   }
+
+initConnectionData :: Hostname -> Port -> IO ConnectionData
+initConnectionData host port = do
+  ctx <- initConnectionContext
+  return (mkConnectionData host port ctx)
 
 withLogger :: ConnectionData -> Logger -> ConnectionData
 withLogger cd logger = cd { cdLogger = Just logger }

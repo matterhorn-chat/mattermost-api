@@ -32,6 +32,7 @@ module Network.Mattermost
 , HasId(..)
 -- Functions
 , mkConnectionData
+, initConnectionData
 , mmLogin
 , mmCreateDirect
 , mmCreateChannel
