@@ -316,6 +316,22 @@ instance A.FromJSON Channels where
     chandata <- o .: "members"
     return $ Channels channels chandata
 
+data MinChannel = MinChannel
+  { minChannelName        :: Text
+  , minChannelDisplayName :: Text
+  , minChannelPurpose     :: Maybe Text
+  , minChannelHeader      :: Maybe Text
+  , minChannelType        :: Type
+  } deriving (Read, Eq, Show)
+
+instance A.ToJSON MinChannel where
+  toJSON MinChannel { .. }  = A.object $
+    [ "name"         .= minChannelName
+    , "display_name" .= minChannelDisplayName
+    , "type"         .= minChannelType
+    ] ++
+    [ "purpose" .= p | Just p <- [minChannelPurpose] ] ++
+    [ "header"  .= h | Just h <- [minChannelHeader] ]
 --
 
 newtype UserId = UI { unUI :: Id }

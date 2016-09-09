@@ -34,6 +34,8 @@ module Network.Mattermost
 , mkConnectionData
 , mmLogin
 , mmCreateDirect
+, mmCreateChannel
+, mmDeleteChannel
 , mmGetTeams
 , mmGetChannels
 , mmGetChannel
@@ -279,6 +281,31 @@ mmCreateDirect cd token teamid userid = do
   runLogger cd "mmCreateDirect" $
     HttpResponse 200 path (Just val)
   return r
+
+-- { name, display_name, purpose, header }
+mmCreateChannel :: ConnectionData -> Token -> TeamId -> MinChannel -> IO Channel
+mmCreateChannel cd token teamid payload = do
+  let path = printf "/api/v3/teams/%s/channels/create" (idString teamid)
+  uri <- mmPath path
+  runLogger cd "mmCreateChannel" $
+    HttpRequest POST path (Just (toJSON payload))
+  rsp <- mmPOST cd token uri payload
+  (val, r) <- mmGetJSONBody rsp
+  runLogger cd "mmCreateChannel" $
+    HttpResponse 200 path (Just val)
+  return r
+
+mmDeleteChannel :: ConnectionData -> Token -> TeamId -> ChannelId -> IO ()
+mmDeleteChannel cd token teamid chanid = do
+  let path = printf "/api/v3/teams/%s/channels/%s/delete"
+               (idString teamid) (idString chanid)
+  uri <- mmPath path
+  runLogger cd "mmDeleteChannel" $
+    HttpRequest POST path Nothing
+  _ <- mmRawPOST cd token uri ""
+  runLogger cd "mmDeleteChannel" $
+    HttpResponse 200 path Nothing
+  return ()
 
 -- GET /api/v3/teams/{}/channels/{}/extra_info with {"user_id": _}
 -- mmGetExtraInfo :: ConnectionData -> Token ->
