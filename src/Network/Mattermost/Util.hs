@@ -27,14 +27,20 @@ import           Network.Connection ( Connection
 
 import           Network.Mattermost.Types
 
+-- | This unwraps a 'Maybe' value, throwing a provided exception
+--   if the value is 'Nothing'.
 noteE :: Exception e => Maybe r -> e -> IO r
 noteE Nothing  e  = throwIO e
 noteE (Just r) _  = pure    r
 
+-- | This unwraps an 'Either' value, throwing the contained exception
+--   if the 'Either' was a 'Left' value.
 hoistE :: Exception e => Either e r -> IO r
 hoistE (Left e)  = throwIO e
 hoistE (Right r) = pure    r
 
+-- | This asserts that the provided 'Bool' is 'True', throwing a
+--   provided exception is the argument was 'False'.
 assertE :: Exception e => Bool -> e -> IO ()
 assertE True  _ = pure    ()
 assertE False e = throwIO e
