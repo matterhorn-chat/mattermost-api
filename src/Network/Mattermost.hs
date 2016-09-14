@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Network.Mattermost
-( -- Types
+( -- * Types
+  -- ** Mattermost-Related Types
   Login(..)
 , Token
 , Hostname
@@ -23,15 +24,15 @@ module Network.Mattermost
 , PostId(..)
 , Posts(..)
 , MinCommand(..)
--- Log-related types
+-- ** Log-related types
 , Logger
 , LogEvent(..)
 , LogEventType(..)
 , withLogger
 , noLogger
--- Typeclasses
+-- * Typeclasses
 , HasId(..)
--- Functions
+-- * HTTP API Functions
 , mkConnectionData
 , initConnectionData
 , mmLogin
