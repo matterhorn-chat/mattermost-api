@@ -32,6 +32,7 @@ library
   -- other-extensions:
   build-depends:       base >=4.4 && <5
                      , websockets
+                     , stm
                      , aeson >= 1.0.0.0
                      , connection
                      , bytestring
