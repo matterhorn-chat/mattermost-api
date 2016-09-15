@@ -321,6 +321,14 @@ instance A.FromJSON Channels where
     chandata <- o .: "members"
     return $ Channels channels chandata
 
+data MoreChannels = MoreChannels (Seq Channel)
+  deriving (Read, Show, Eq)
+
+instance A.FromJSON MoreChannels where
+  parseJSON = A.withObject "MoreChannels" $ \o -> do
+    channels <- o .: "channels"
+    return $ MoreChannels channels
+
 data MinChannel = MinChannel
   { minChannelName        :: Text
   , minChannelDisplayName :: Text

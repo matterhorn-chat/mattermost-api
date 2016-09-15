@@ -19,6 +19,7 @@ module Network.Mattermost
 , Channel(..)
 , ChannelId(..)
 , Channels(..)
+, MoreChannels(..)
 , MinChannel(..)
 , UserProfile(..)
 , Post(..)
@@ -41,8 +42,10 @@ module Network.Mattermost
 , mmCreateChannel
 , mmDeleteChannel
 , mmLeaveChannel
+, mmJoinChannel
 , mmGetTeams
 , mmGetChannels
+, mmGetMoreChannels
 , mmGetChannel
 , mmUpdateLastViewedAt
 , mmGetPosts
@@ -200,10 +203,17 @@ mmGetTeams :: ConnectionData -> Token -> IO (HashMap TeamId Team)
 mmGetTeams cd token =
   mmDoRequest cd "mmGetTeams" token "/api/v3/teams/all"
 
--- | Requires an authenticated user. Returns the full list of channels for a given team
+-- | Requires an authenticated user. Returns the full list of channels
+-- for a given team of which the user is a member
 mmGetChannels :: ConnectionData -> Token -> TeamId -> IO Channels
 mmGetChannels cd token teamid = mmDoRequest cd "mmGetChannels" token $
   printf "/api/v3/teams/%s/channels/" (idString teamid)
+
+-- | Requires an authenticated user. Returns the channels for a team of
+-- which the user is not already a member
+mmGetMoreChannels :: ConnectionData -> Token -> TeamId -> IO MoreChannels
+mmGetMoreChannels cd token teamid = mmDoRequest cd "mmGetMoreChannels" token $
+  printf "/api/v3/teams/%s/channels/more" (idString teamid)
 
 -- | Requires an authenticated user. Returns the details of a
 -- specific channel.
@@ -231,6 +241,23 @@ mmUpdateLastViewedAt cd token teamid chanid = do
   _ <- mmRawPOST cd token path ""
   runLogger cd "mmUpdateLastViewedAt" $
     HttpResponse 200 uri Nothing
+  return ()
+
+mmJoinChannel :: ConnectionData -> Token
+              -> TeamId
+              -> ChannelId
+              -> IO ()
+mmJoinChannel cd token teamid chanid = do
+  let path = printf "/api/v3/teams/%s/channels/%s/join"
+                   (idString teamid)
+                   (idString chanid)
+  uri <- mmPath path
+  runLogger cd "mmJoinChannel" $
+    HttpRequest POST path Nothing
+  rsp <- mmPOST cd token uri (""::Text)
+  (val, (_::Channel)) <- mmGetJSONBody rsp
+  runLogger cd "mmJoinChannel" $
+    HttpResponse 200 path (Just val)
   return ()
 
 mmLeaveChannel :: ConnectionData -> Token
