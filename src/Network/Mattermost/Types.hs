@@ -1,3 +1,4 @@
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -25,7 +26,6 @@ import qualified Data.Text as T
 import           Data.Time.Clock ( UTCTime, getCurrentTime )
 import           Data.Time.Clock.POSIX ( posixSecondsToUTCTime
                                        , utcTimeToPOSIXSeconds )
-import           GHC.Exts ( IsString(..) )
 import           Network.Connection (ConnectionContext, initConnectionContext)
 import           Network.HTTP.Base (RequestMethod)
 import           Network.HTTP.Headers (Header, HeaderName(..), mkHeader)
@@ -134,18 +134,24 @@ instance A.ToJSON SetChannelHeader where
                ,"channel_header" A..= p
                ]
 
--- | XXX: No idea what this is
-newtype Type = Type Text
+data Type = Ordinary
+          | Direct
+          | Private
+          | Unknown Text
   deriving (Read, Show, Ord, Eq)
 
-instance IsString Type where
-  fromString = Type . fromString
-
 instance A.FromJSON Type where
-  parseJSON = A.withText "Type" (pure . Type)
+  parseJSON = A.withText "Type" $ \t ->
+      return $ if | t == "O"  -> Ordinary
+                  | t == "D"  -> Direct
+                  | t == "P"  -> Private
+                  | otherwise -> Unknown t
 
 instance A.ToJSON Type where
-  toJSON (Type t) = A.toJSON t
+  toJSON Direct    = A.toJSON ("D"::Text)
+  toJSON Ordinary  = A.toJSON ("O"::Text)
+  toJSON Private   = A.toJSON ("P"::Text)
+  toJSON (Unknown t) = A.toJSON t
 
 --
 
