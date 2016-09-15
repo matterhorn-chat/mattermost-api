@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Network.Mattermost
@@ -39,6 +40,7 @@ module Network.Mattermost
 , mmCreateDirect
 , mmCreateChannel
 , mmDeleteChannel
+, mmLeaveChannel
 , mmGetTeams
 , mmGetChannels
 , mmGetChannel
@@ -229,6 +231,24 @@ mmUpdateLastViewedAt cd token teamid chanid = do
   _ <- mmRawPOST cd token path ""
   runLogger cd "mmUpdateLastViewedAt" $
     HttpResponse 200 uri Nothing
+  return ()
+
+mmLeaveChannel :: ConnectionData -> Token
+               -> TeamId
+               -> ChannelId
+               -> IO ()
+mmLeaveChannel cd token teamid chanid = do
+  let path = printf "/api/v3/teams/%s/channels/%s/leave"
+                   (idString teamid)
+                   (idString chanid)
+      payload = HM.fromList [("id" :: Text, chanid)]
+  uri <- mmPath path
+  runLogger cd "mmLeaveChannel" $
+    HttpRequest POST path (Just (toJSON payload))
+  rsp <- mmPOST cd token uri payload
+  (val, (_::HM.HashMap Text ChannelId)) <- mmGetJSONBody rsp
+  runLogger cd "mmCreateDirect" $
+    HttpResponse 200 path (Just val)
   return ()
 
 mmGetPosts :: ConnectionData -> Token
