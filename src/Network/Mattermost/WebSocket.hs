@@ -9,10 +9,10 @@ module Network.Mattermost.WebSocket
 , mmGetConnectionHealth
 ) where
 
-import           Control.Concurrent (forkIO, threadDelay)
+import           Control.Concurrent (ThreadId, forkIO, myThreadId, threadDelay)
 import qualified Control.Concurrent.STM.TChan as Chan
-import           Control.Exception (Exception, catch, throwIO)
-import           Control.Monad (forever, when)
+import           Control.Exception (Exception, catch, throwIO, throwTo)
+import           Control.Monad (forever)
 import           Control.Monad.STM (atomically)
 import qualified Data.ByteString.Char8 as B
 import           Data.ByteString.Lazy (toStrict)
@@ -52,8 +52,8 @@ instance Exception MMWebSocketTimeoutException where
 
 data PEvent = P UTCTime
 
-createPingPongTimeouts :: IORef NominalDiffTime -> Int -> IO (IO (), IO ())
-createPingPongTimeouts health n = do
+createPingPongTimeouts :: ThreadId -> IORef NominalDiffTime -> Int -> IO (IO (), IO ())
+createPingPongTimeouts pId health n = do
   pingChan <- Chan.newTChanIO
   pongChan <- Chan.newTChanIO
   let pingAction = do
@@ -66,11 +66,11 @@ createPingPongTimeouts health n = do
     P old <- atomically $ Chan.readTChan pingChan
     threadDelay (n * 1000 * 1000)
     b <- atomically $ Chan.isEmptyTChan pongChan
-    when b $ throwIO MMWebSocketTimeoutException
-    P new <- atomically $ Chan.readTChan pingChan
-    atomicWriteIORef health (new `diffUTCTime` old)
-    -- something with connection health?
-    return ()
+    if b
+      then throwTo pId MMWebSocketTimeoutException
+      else do
+        P new <- atomically $ Chan.readTChan pingChan
+        atomicWriteIORef health (new `diffUTCTime` old)
 
   return (pingAction, pongAction)
 
@@ -79,6 +79,15 @@ mmCloseWebSocket (MMWS c _) = WS.sendClose c B.empty
 
 mmGetConnectionHealth :: MMWebSocket -> IO NominalDiffTime
 mmGetConnectionHealth (MMWS _ h) = readIORef h
+
+pingThread :: IO () -> WS.Connection -> IO ()
+pingThread onPingAction conn = loop 0
+  where loop :: Int -> IO ()
+        loop n = do
+          threadDelay (10 * 1000 * 1000)
+          WS.sendPing conn (B.pack (show n))
+          onPingAction
+          loop (n+1)
 
 mmWithWebSocket :: ConnectionData
                 -> Token
@@ -89,22 +98,20 @@ mmWithWebSocket cd (Token tk) recv body = do
   con <- mkConnection cd
   stream <- connectionToStream con
   health <- newIORef 0
-  (onPing, onPong) <- createPingPongTimeouts health 8
+  myId <- myThreadId
+  (onPing, onPong) <- createPingPongTimeouts myId health 8
+  let action c = do
+        pId <- forkIO (pingThread onPing c `catch` cleanup)
+        mId <- forkIO $ flip catch cleanup $ forever $ (WS.receiveData c >>= recv)
+        body (MMWS c health) `catch` propagate [mId, pId]
   WS.runClientWithStream stream
                       (cdHostname cd)
                       "/api/v3/users/websocket"
                       WS.defaultConnectionOptions { WS.connectionOnPong = onPong }
                       [ ("Authorization", "Bearer " <> B.pack tk) ]
-                      (\ c -> action health c onPing `catch` cleanup)
-  where action health c onPing = do
-          _ <- forkIO (go onPing c 1)
-          _ <- forkIO $ forever (WS.receiveData c >>= recv)
-          body (MMWS c health)
-        go :: IO () -> WS.Connection -> Int -> IO ()
-        go onPing c n = do
-          threadDelay (10 * 1000 * 1000)
-          WS.sendPing c (B.pack (show n))
-          onPing
-          go onPing c (n + 1)
-        cleanup :: WS.ConnectionException -> IO ()
+                      (\ c -> action c)
+  where cleanup :: MMWebSocketTimeoutException -> IO ()
         cleanup _ = return ()
+        propagate ts e@MMWebSocketTimeoutException = do
+          sequence_ [ throwTo t e | t <- ts ]
+          throwIO e
