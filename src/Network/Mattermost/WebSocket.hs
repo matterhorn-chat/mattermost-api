@@ -11,7 +11,7 @@ module Network.Mattermost.WebSocket
 
 import           Control.Concurrent (ThreadId, forkIO, myThreadId, threadDelay)
 import qualified Control.Concurrent.STM.TChan as Chan
-import           Control.Exception (Exception, catch, throwIO, throwTo)
+import           Control.Exception (Exception, SomeException, catch, throwIO, throwTo)
 import           Control.Monad (forever)
 import           Control.Monad.STM (atomically)
 import qualified Data.ByteString.Char8 as B
@@ -110,8 +110,9 @@ mmWithWebSocket cd (Token tk) recv body = do
                       WS.defaultConnectionOptions { WS.connectionOnPong = onPong }
                       [ ("Authorization", "Bearer " <> B.pack tk) ]
                       (\ c -> action c)
-  where cleanup :: MMWebSocketTimeoutException -> IO ()
+  where cleanup :: SomeException -> IO ()
         cleanup _ = return ()
-        propagate ts e@MMWebSocketTimeoutException = do
+        propagate :: [ThreadId] -> SomeException -> IO ()
+        propagate ts e = do
           sequence_ [ throwTo t e | t <- ts ]
           throwIO e
