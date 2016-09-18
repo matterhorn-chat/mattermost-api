@@ -49,6 +49,7 @@ module Network.Mattermost
 , mmGetChannel
 , mmUpdateLastViewedAt
 , mmGetPosts
+, mmGetPostsAfter
 , mmGetUser
 , mmGetTeamMembers
 , mmGetProfilesForDMList
@@ -289,6 +290,22 @@ mmGetPosts cd token teamid chanid offset limit =
   printf "/api/v3/teams/%s/channels/%s/posts/page/%d/%d"
          (idString teamid)
          (idString chanid)
+         offset
+         limit
+
+mmGetPostsAfter :: ConnectionData -> Token
+                -> TeamId
+                -> ChannelId
+                -> PostId
+                -> Int -- offset in the backlog, 0 is most recent
+                -> Int -- try to fetch this many
+                -> IO Posts
+mmGetPostsAfter cd token teamid chanid postid offset limit =
+  mmDoRequest cd "mmGetPosts" token $
+  printf "/api/v3/teams/%s/channels/%s/posts/%s/before/%d/%d"
+         (idString teamid)
+         (idString chanid)
+         (idString postid)
          offset
          limit
 
