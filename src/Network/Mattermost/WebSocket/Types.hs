@@ -43,6 +43,7 @@ data WebsocketEventType
   | WMPreferenceChanged
   | WMEphemeralMessage
   | WMStatusChange
+  | WMHello
     deriving (Read, Show, Eq, Ord)
 
 instance FromJSON WebsocketEventType where
@@ -61,6 +62,7 @@ instance FromJSON WebsocketEventType where
     "preference_changed" -> return WMPreferenceChanged
     "ephemeral_message"  -> return WMEphemeralMessage
     "status_change"      -> return WMStatusChange
+    "hello"              -> return WMHello
     _                    -> fail ("Unknown websocket message: " ++ show s)
 
 instance ToJSON WebsocketEventType where
@@ -78,6 +80,7 @@ instance ToJSON WebsocketEventType where
   toJSON WMPreferenceChanged = "preference_changed"
   toJSON WMEphemeralMessage  = "ephemeral_message"
   toJSON WMStatusChange      = "status_change"
+  toJSON WMHello             = "hello"
 
 --
 
