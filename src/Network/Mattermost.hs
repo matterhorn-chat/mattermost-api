@@ -67,6 +67,9 @@ module Network.Mattermost
 , assertE
 ) where
 
+import           Control.Exception (throwIO)
+import           Control.Monad (when)
+import           Data.Monoid ((<>))
 import           Text.Printf ( printf )
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as BL
@@ -87,13 +90,13 @@ import           Network.URI ( URI, parseRelativeReference )
 import           Network.HTTP.Stream ( simpleHTTP_ )
 import           Data.HashMap.Strict ( HashMap )
 import qualified Data.HashMap.Strict as HM
-import           Data.Aeson ( Value
+import           Data.Aeson ( Value(..)
                             , ToJSON(..)
                             , FromJSON
                             , encode
                             , eitherDecode
                             )
-import           Data.Text (Text)
+import qualified Data.Text as T
 import           Control.Arrow ( left )
 
 import           Network.Mattermost.Exceptions
@@ -255,7 +258,7 @@ mmJoinChannel cd token teamid chanid = do
   uri <- mmPath path
   runLogger cd "mmJoinChannel" $
     HttpRequest POST path Nothing
-  rsp <- mmPOST cd token uri (""::Text)
+  rsp <- mmPOST cd token uri (""::T.Text)
   (val, (_::Channel)) <- mmGetJSONBody rsp
   runLogger cd "mmJoinChannel" $
     HttpResponse 200 path (Just val)
@@ -269,12 +272,12 @@ mmLeaveChannel cd token teamid chanid = do
   let path = printf "/api/v3/teams/%s/channels/%s/leave"
                    (idString teamid)
                    (idString chanid)
-      payload = HM.fromList [("id" :: Text, chanid)]
+      payload = HM.fromList [("id" :: T.Text, chanid)]
   uri <- mmPath path
   runLogger cd "mmLeaveChannel" $
     HttpRequest POST path (Just (toJSON payload))
   rsp <- mmPOST cd token uri payload
-  (val, (_::HM.HashMap Text ChannelId)) <- mmGetJSONBody rsp
+  (val, (_::HM.HashMap T.Text ChannelId)) <- mmGetJSONBody rsp
   runLogger cd "mmCreateDirect" $
     HttpResponse 200 path (Just val)
   return ()
@@ -331,7 +334,7 @@ mmGetProfiles :: ConnectionData -> Token
 mmGetProfiles cd token teamid = mmDoRequest cd "mmGetProfiles" token $
   printf "/api/v3/users/profiles/%s" (idString teamid)
 
-mmGetStatuses :: ConnectionData -> Token -> IO (HashMap UserId Text)
+mmGetStatuses :: ConnectionData -> Token -> IO (HashMap UserId T.Text)
 mmGetStatuses cd token = mmDoRequest cd "mmGetStatuses" token $
   printf "/api/v3/users/status"
 
@@ -339,7 +342,7 @@ mmGetStatuses cd token = mmDoRequest cd "mmGetStatuses" token $
 mmCreateDirect :: ConnectionData -> Token -> TeamId -> UserId -> IO Channel
 mmCreateDirect cd token teamid userid = do
   let path = printf "/api/v3/teams/%s/channels/create_direct" (idString teamid)
-      payload = HM.fromList [("user_id" :: Text, userid)]
+      payload = HM.fromList [("user_id" :: T.Text, userid)]
   uri <- mmPath path
   runLogger cd "mmCreateDirect" $
     HttpRequest POST path (Just (toJSON payload))
@@ -429,9 +432,7 @@ mmRequest cd token path = do
           }
     simpleHTTP_ con request
   rsp <- hoistE $ left ConnectionException rawRsp
-  assertE (rspCode rsp == (2,0,0))
-          (HTTPResponseException
-            ("mmRequest: expected 200 response but got: " ++ (show (rspCode rsp))))
+  assert200Response rsp
   return rsp
 
 -- This captures the most common pattern when making requests.
@@ -465,7 +466,7 @@ mmPOST :: ToJSON t => ConnectionData -> Token -> URI -> t -> IO Response_String
 mmPOST cd token path json =
   mmRawPOST cd token path (BL.toStrict (encode json))
 
-mmSetChannelHeader :: ConnectionData -> Token -> TeamId -> ChannelId -> Text -> IO Channel
+mmSetChannelHeader :: ConnectionData -> Token -> TeamId -> ChannelId -> T.Text -> IO Channel
 mmSetChannelHeader cd token teamid chanid header = do
   let path = printf "/api/v3/teams/%s/channels/update_header"
                     (idString teamid)
@@ -494,7 +495,17 @@ mmRawPOST cd token path content = do
           }
     simpleHTTP_ con request
   rsp <- hoistE $ left ConnectionException rawRsp
-  assertE (rspCode rsp == (2,0,0))
-          (HTTPResponseException
-            ("mmRequest: expected 200 response but got: " ++ (show (rspCode rsp))))
+  assert200Response rsp
   return rsp
+
+assert200Response :: Response_String -> IO ()
+assert200Response rsp =
+    when (rspCode rsp /= (2,0,0)) $
+        let httpExc = HTTPResponseException $ "mmRequest: expected 200 response, got " <>
+                                              (show $ rspCode rsp)
+        in case eitherDecode $ BL.pack $ rspBody rsp of
+            Right (Object o) ->
+                case HM.lookup "message" o of
+                    Just (String msg) -> throwIO $ MattermostServerError msg
+                    _ -> throwIO $ httpExc
+            _ -> throwIO $ httpExc

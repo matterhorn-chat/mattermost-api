@@ -7,8 +7,10 @@ module Network.Mattermost.Exceptions
 , HeaderNotFoundException(..)
 , HTTPResponseException(..)
 , ConnectionException(..)
+, MattermostServerError(..)
 ) where
 
+import qualified Data.Text as T
 import           Data.Typeable ( Typeable )
 import           Control.Exception ( Exception(..) )
 import           Network.Stream ( ConnError )
@@ -57,6 +59,13 @@ data HeaderNotFoundException = HeaderNotFoundException String
   deriving (Show, Typeable)
 
 instance Exception HeaderNotFoundException
+
+--
+
+data MattermostServerError = MattermostServerError T.Text
+  deriving (Show, Typeable)
+
+instance Exception MattermostServerError
 
 --
 
