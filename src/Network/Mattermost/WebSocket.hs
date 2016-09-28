@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 
 module Network.Mattermost.WebSocket
 ( MMWebSocket
@@ -19,6 +20,7 @@ import           Data.ByteString.Lazy (toStrict)
 import           Data.IORef
 import           Data.Monoid ((<>))
 import           Data.Time.Clock (NominalDiffTime, UTCTime, diffUTCTime, getCurrentTime)
+import           Data.Typeable ( Typeable )
 import           Network.Connection ( Connection
                                     , connectionClose
                                     , connectionGet
@@ -46,7 +48,7 @@ connectionToStream con = makeStream rd wr
 data MMWebSocket = MMWS WS.Connection (IORef NominalDiffTime)
 
 data MMWebSocketTimeoutException = MMWebSocketTimeoutException
-  deriving (Show)
+  deriving (Show, Typeable)
 
 instance Exception MMWebSocketTimeoutException where
 

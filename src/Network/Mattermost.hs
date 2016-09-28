@@ -67,6 +67,7 @@ module Network.Mattermost
 , assertE
 ) where
 
+import           Control.Applicative
 import           Control.Exception (throwIO)
 import           Control.Monad (when)
 import           Data.Monoid ((<>))

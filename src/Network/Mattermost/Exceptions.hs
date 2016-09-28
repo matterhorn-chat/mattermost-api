@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 module Network.Mattermost.Exceptions
 ( -- Exception Types
   LoginFailureException(..)

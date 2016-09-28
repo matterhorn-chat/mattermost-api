@@ -7,6 +7,7 @@
 
 module Network.Mattermost.Types where
 
+import           Control.Applicative
 import           Text.Printf ( printf )
 import           Data.Hashable ( Hashable )
 import qualified Data.Aeson as A

@@ -12,6 +12,7 @@ module Network.Mattermost.Util
 , connectionGetExact
 ) where
 
+import           Control.Applicative
 import           Data.Char ( toUpper )
 import qualified Data.ByteString.Char8 as B
 
