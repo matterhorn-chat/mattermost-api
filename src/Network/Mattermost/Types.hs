@@ -47,6 +47,8 @@ data LogEventType
   | HttpResponse Int String (Maybe A.Value)
   | WebSocketRequest A.Value
   | WebSocketResponse A.Value
+  | WebSocketPing
+  | WebSocketPong
     deriving (Eq, Show)
 
 runLogger :: ConnectionData -> String -> LogEventType -> IO ()

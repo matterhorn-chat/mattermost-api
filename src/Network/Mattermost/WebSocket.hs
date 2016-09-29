@@ -15,6 +15,7 @@ import qualified Control.Concurrent.STM.TChan as Chan
 import           Control.Exception (Exception, SomeException, catch, throwIO, throwTo)
 import           Control.Monad (forever)
 import           Control.Monad.STM (atomically)
+import           Data.Aeson (toJSON)
 import qualified Data.ByteString.Char8 as B
 import           Data.ByteString.Lazy (toStrict)
 import           Data.IORef
@@ -54,15 +55,21 @@ instance Exception MMWebSocketTimeoutException where
 
 data PEvent = P UTCTime
 
-createPingPongTimeouts :: ThreadId -> IORef NominalDiffTime -> Int -> IO (IO (), IO ())
-createPingPongTimeouts pId health n = do
+createPingPongTimeouts :: ThreadId
+                       -> IORef NominalDiffTime
+                       -> Int
+                       -> (LogEventType -> IO ())
+                       -> IO (IO (), IO ())
+createPingPongTimeouts pId health n doLog = do
   pingChan <- Chan.newTChanIO
   pongChan <- Chan.newTChanIO
   let pingAction = do
         now <- getCurrentTime
+        doLog WebSocketPing
         atomically $ Chan.writeTChan pingChan (P now)
   let pongAction = do
         now <- getCurrentTime
+        doLog WebSocketPong
         atomically $ Chan.writeTChan pongChan (P now)
   _  <- forkIO $ forever $ do
     P old <- atomically $ Chan.readTChan pingChan
@@ -101,10 +108,14 @@ mmWithWebSocket cd (Token tk) recv body = do
   stream <- connectionToStream con
   health <- newIORef 0
   myId <- myThreadId
-  (onPing, onPong) <- createPingPongTimeouts myId health 8
+  let doLog = runLogger cd "websocket"
+  (onPing, onPong) <- createPingPongTimeouts myId health 8 doLog
   let action c = do
         pId <- forkIO (pingThread onPing c `catch` cleanup)
-        mId <- forkIO $ flip catch cleanup $ forever $ (WS.receiveData c >>= recv)
+        mId <- forkIO $ flip catch cleanup $ forever $ do
+          p <- WS.receiveData c
+          doLog (WebSocketResponse (toJSON p))
+          recv p
         body (MMWS c health) `catch` propagate [mId, pId]
   WS.runClientWithStream stream
                       (cdHostname cd)

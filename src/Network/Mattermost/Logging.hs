@@ -67,6 +67,8 @@ mmLoggerInfo h LogEvent { logFunction = f, logEventType = e } = do
         info (HttpResponse n s _) = show n ++ " from " ++ s
         info (WebSocketRequest _) = "websocket request"
         info (WebSocketResponse _) = "websocket request"
+        info WebSocketPing = "websocket ping"
+        info WebSocketPong = "websocket pong"
 
 -- | 'mmLoggerInfoErr' prints request/response data without payloads
 --   to 'stderr'
