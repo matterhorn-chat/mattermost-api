@@ -16,7 +16,7 @@ module Network.Mattermost.Logging
 ) where
 
 import Data.Time.Clock (getCurrentTime)
-import System.IO (Handle, hPutStr, stderr)
+import System.IO (Handle, hFlush, hPutStr, stderr)
 
 import Network.Mattermost.Types
 
@@ -35,6 +35,7 @@ mmLoggerDebug h LogEvent { logFunction = f, logEventType = e } = do
   now <- getCurrentTime
   mapM_ (hPutStr h)
     [ "[", show now, "] ", f, ": ", show e, "\n" ]
+  hFlush h
 
 -- | 'mmLoggerDebugErr' prints the full data of every logging event
 --   to 'stderr'.
@@ -63,6 +64,7 @@ mmLoggerInfo h LogEvent { logFunction = f, logEventType = e } = do
   now <- getCurrentTime
   mapM_ (hPutStr h)
     [ "[", show now, "] ", f, ": ", info e, "\n" ]
+  hFlush h
   where info (HttpRequest m s _) = show m ++ " " ++ s
         info (HttpResponse n s _) = show n ++ " from " ++ s
         info (WebSocketRequest _) = "websocket request"
