@@ -59,7 +59,7 @@ createPingPongTimeouts :: ThreadId
                        -> IORef NominalDiffTime
                        -> Int
                        -> (LogEventType -> IO ())
-                       -> IO (IO (), IO ())
+                       -> IO (IO (), IO (), ThreadId)
 createPingPongTimeouts pId health n doLog = do
   pingChan <- Chan.newTChanIO
   pongChan <- Chan.newTChanIO
@@ -71,7 +71,7 @@ createPingPongTimeouts pId health n doLog = do
         now <- getCurrentTime
         doLog WebSocketPong
         atomically $ Chan.writeTChan pongChan (P now)
-  _  <- forkIO $ forever $ do
+  watchdogPId <- forkIO $ forever $ do
     P old <- atomically $ Chan.readTChan pingChan
     threadDelay (n * 1000 * 1000)
     b <- atomically $ Chan.isEmptyTChan pongChan
@@ -81,7 +81,7 @@ createPingPongTimeouts pId health n doLog = do
         P new <- atomically $ Chan.readTChan pingChan
         atomicWriteIORef health (new `diffUTCTime` old)
 
-  return (pingAction, pongAction)
+  return (pingAction, pongAction, watchdogPId)
 
 mmCloseWebSocket :: MMWebSocket -> IO ()
 mmCloseWebSocket (MMWS c _) = WS.sendClose c B.empty
@@ -109,14 +109,14 @@ mmWithWebSocket cd (Token tk) recv body = do
   health <- newIORef 0
   myId <- myThreadId
   let doLog = runLogger cd "websocket"
-  (onPing, onPong) <- createPingPongTimeouts myId health 8 doLog
+  (onPing, onPong, wId) <- createPingPongTimeouts myId health 8 doLog
   let action c = do
         pId <- forkIO (pingThread onPing c `catch` cleanup)
         mId <- forkIO $ flip catch cleanup $ forever $ do
           p <- WS.receiveData c
           doLog (WebSocketResponse (toJSON p))
           recv p
-        body (MMWS c health) `catch` propagate [mId, pId]
+        body (MMWS c health) `catch` propagate [mId, pId, wId]
   WS.runClientWithStream stream
                       (cdHostname cd)
                       "/api/v3/users/websocket"
