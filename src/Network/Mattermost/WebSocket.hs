@@ -78,7 +78,7 @@ createPingPongTimeouts pId health n doLog = do
     if b
       then throwTo pId MMWebSocketTimeoutException
       else do
-        P new <- atomically $ Chan.readTChan pingChan
+        P new <- atomically $ Chan.readTChan pongChan
         atomicWriteIORef health (new `diffUTCTime` old)
 
   return (pingAction, pongAction, watchdogPId)
