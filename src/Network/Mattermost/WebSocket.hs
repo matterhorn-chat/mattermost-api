@@ -11,7 +11,7 @@ module Network.Mattermost.WebSocket
 ) where
 
 import           Control.Concurrent (ThreadId, forkIO, myThreadId, threadDelay)
-import qualified Control.Concurrent.STM.TChan as Chan
+import qualified Control.Concurrent.STM.TQueue as Queue
 import           Control.Exception (Exception, SomeException, catch, throwIO, throwTo)
 import           Control.Monad (forever)
 import           Control.Monad.STM (atomically)
@@ -61,24 +61,24 @@ createPingPongTimeouts :: ThreadId
                        -> (LogEventType -> IO ())
                        -> IO (IO (), IO (), ThreadId)
 createPingPongTimeouts pId health n doLog = do
-  pingChan <- Chan.newTChanIO
-  pongChan <- Chan.newTChanIO
+  pingChan <- Queue.newTQueueIO
+  pongChan <- Queue.newTQueueIO
   let pingAction = do
         now <- getCurrentTime
         doLog WebSocketPing
-        atomically $ Chan.writeTChan pingChan (P now)
+        atomically $ Queue.writeTQueue pingChan (P now)
   let pongAction = do
         now <- getCurrentTime
         doLog WebSocketPong
-        atomically $ Chan.writeTChan pongChan (P now)
+        atomically $ Queue.writeTQueue pongChan (P now)
   watchdogPId <- forkIO $ forever $ do
-    P old <- atomically $ Chan.readTChan pingChan
+    P old <- atomically $ Queue.readTQueue pingChan
     threadDelay (n * 1000 * 1000)
-    b <- atomically $ Chan.isEmptyTChan pongChan
+    b <- atomically $ Queue.isEmptyTQueue pongChan
     if b
       then throwTo pId MMWebSocketTimeoutException
       else do
-        P new <- atomically $ Chan.readTChan pongChan
+        P new <- atomically $ Queue.readTQueue pongChan
         atomicWriteIORef health (new `diffUTCTime` old)
 
   return (pingAction, pongAction, watchdogPId)
