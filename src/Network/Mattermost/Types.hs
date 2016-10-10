@@ -492,6 +492,26 @@ instance A.FromJSON User where
 
 --
 
+data PostProps
+  = PostProps
+  { postPropsOverrideIconUrl  :: Maybe Text
+  , postPropsOverrideUsername :: Maybe Text
+  , postPropsAttachments      :: Maybe A.Object
+  } deriving (Read, Show, Eq)
+
+instance A.FromJSON PostProps where
+  parseJSON = A.withObject "Props" $ \v -> do
+    postPropsOverrideIconUrl  <- v .:? "override_icon_url"
+    postPropsOverrideUsername <- v .:? "override_username"
+    postPropsAttachments      <- v .:? "attachments"
+    return PostProps { .. }
+
+instance A.ToJSON PostProps where
+  toJSON PostProps { .. } = A.object $
+    [ "override_icon_url" .= v | Just v <- [postPropsOverrideIconUrl] ] ++
+    [ "override_username" .= v | Just v <- [postPropsOverrideUsername] ] ++
+    [ "attachments" .= v | Just v <- [postPropsAttachments] ]
+
 newtype PostId = PI { unPI :: Id }
   deriving (Read, Show, Eq, Ord, Hashable, ToJSON, ToJSONKey, FromJSONKey, FromJSON)
 
@@ -503,7 +523,7 @@ data Post
   = Post
   { postPendingPostId :: PostId
   , postOriginalId    :: PostId
-  , postProps         :: HM.HashMap Text Text
+  , postProps         :: PostProps
   , postRootId        :: Text
   , postFilenames     :: Seq Text
   , postId            :: PostId

@@ -98,6 +98,10 @@ module Network.Mattermost.Lenses
 , postCreateAtL
 , postParentIdL
 , postChannelIdL
+-- ** 'PostProps' lenses
+, postPropsOverrideIconUrlL
+, postPropsOverrideUsernameL
+, postPropsAttachmentsL
 -- ** 'PendingPost' lenses
 , pendingPostChannelIdL
 , pendingPostCreateAtL
@@ -124,6 +128,7 @@ module Network.Mattermost.Lenses
 , wepStatusL
 ) where
 
+import Data.Aeson (Object)
 import Data.HashMap.Strict (HashMap)
 import Data.Sequence (Seq)
 import Data.Text (Text)
@@ -384,6 +389,19 @@ userLocaleL = makeLens userLocale (\ t s -> s { userLocale = t })
 
 --
 
+postPropsOverrideIconUrlL  :: Lens' PostProps (Maybe Text)
+postPropsOverrideIconUrlL =
+  makeLens postPropsOverrideIconUrl (\ t s -> s { postPropsOverrideIconUrl = t })
+
+postPropsOverrideUsernameL :: Lens' PostProps (Maybe Text)
+postPropsOverrideUsernameL =
+  makeLens postPropsOverrideUsername (\ t s -> s { postPropsOverrideUsername = t })
+
+postPropsAttachmentsL :: Lens' PostProps (Maybe Object)
+postPropsAttachmentsL =
+  makeLens postPropsAttachments (\ t s -> s { postPropsAttachments = t })
+
+--
 
 postPendingPostIdL :: Lens' Post PostId
 postPendingPostIdL = makeLens postPendingPostId (\ t s -> s { postPendingPostId = t })
@@ -391,7 +409,7 @@ postPendingPostIdL = makeLens postPendingPostId (\ t s -> s { postPendingPostId 
 postOriginalIdL :: Lens' Post PostId
 postOriginalIdL = makeLens postOriginalId (\ t s -> s { postOriginalId = t })
 
-postPropsL :: Lens' Post (HashMap Text Text)
+postPropsL :: Lens' Post PostProps
 postPropsL = makeLens postProps (\ t s -> s { postProps = t })
 
 postRootIdL :: Lens' Post Text
