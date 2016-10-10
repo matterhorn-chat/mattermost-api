@@ -496,7 +496,7 @@ data PostProps
   = PostProps
   { postPropsOverrideIconUrl  :: Maybe Text
   , postPropsOverrideUsername :: Maybe Text
-  , postPropsAttachments      :: Maybe A.Object
+  , postPropsAttachments      :: Maybe A.Value
   } deriving (Read, Show, Eq)
 
 instance A.FromJSON PostProps where

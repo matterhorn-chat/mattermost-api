@@ -128,7 +128,7 @@ module Network.Mattermost.Lenses
 , wepStatusL
 ) where
 
-import Data.Aeson (Object)
+import Data.Aeson (Value)
 import Data.HashMap.Strict (HashMap)
 import Data.Sequence (Seq)
 import Data.Text (Text)
@@ -397,7 +397,7 @@ postPropsOverrideUsernameL :: Lens' PostProps (Maybe Text)
 postPropsOverrideUsernameL =
   makeLens postPropsOverrideUsername (\ t s -> s { postPropsOverrideUsername = t })
 
-postPropsAttachmentsL :: Lens' PostProps (Maybe Object)
+postPropsAttachmentsL :: Lens' PostProps (Maybe Value)
 postPropsAttachmentsL =
   makeLens postPropsAttachments (\ t s -> s { postPropsAttachments = t })
 
