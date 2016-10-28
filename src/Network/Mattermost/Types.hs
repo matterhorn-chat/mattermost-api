@@ -16,6 +16,7 @@ import           Data.Aeson.Types ( ToJSONKey
                                   , FromJSONKey
                                   , FromJSON
                                   , ToJSON
+                                  , Parser
                                   )
 import           Data.HashMap.Strict ( HashMap )
 import qualified Data.HashMap.Strict as HM
@@ -56,6 +57,8 @@ runLogger ConnectionData { cdLogger = Just l } n ev =
   l (LogEvent n ev)
 runLogger _ _ _ = return ()
 
+maybeFail :: Parser a -> Parser (Maybe a)
+maybeFail p = (Just <$> p) <|> (return Nothing)
 
 type Hostname = String
 type Port     = Int
@@ -174,7 +177,10 @@ idString x = unId i
   where i = toId x
 
 instance A.FromJSON Id where
-  parseJSON = A.withText "Id" (pure . Id)
+  parseJSON = A.withText "Id" $ \t ->
+      case T.null t of
+          False -> return $ Id t
+          True -> fail "Empty ID"
 
 instance IsId Id where
   toId   = id
@@ -243,7 +249,7 @@ data Channel
   , channelCreateAt      :: UTCTime
   , channelUpdateAt      :: UTCTime
   , channelDeleteAt      :: UTCTime
-  , channelTeamId        :: TeamId
+  , channelTeamId        :: Maybe TeamId
   , channelType          :: Type
   , channelDisplayName   :: Text
   , channelName          :: Text
@@ -252,7 +258,7 @@ data Channel
   , channelLastPostAt    :: UTCTime
   , channelTotalMsgCount :: Int
   , channelExtraUpdateAt :: UTCTime
-  , channelCreatorId     :: UserId
+  , channelCreatorId     :: Maybe UserId
   } deriving (Read, Show, Eq, Ord)
 
 instance HasId Channel ChannelId where
@@ -264,7 +270,7 @@ instance A.FromJSON Channel where
     channelCreateAt        <- millisecondsToUTCTime <$> v .: "create_at"
     channelUpdateAt        <- millisecondsToUTCTime <$> v .: "update_at"
     channelDeleteAt        <- millisecondsToUTCTime <$> v .: "delete_at"
-    channelTeamId          <- v .: "team_id"
+    channelTeamId          <- maybeFail (v .: "team_id")
     channelType            <- v .: "type"
     channelDisplayName     <- v .: "display_name"
     channelName            <- v .: "name"
@@ -273,7 +279,7 @@ instance A.FromJSON Channel where
     channelLastPostAt      <- millisecondsToUTCTime <$> v .: "last_post_at"
     channelTotalMsgCount   <- v .: "total_msg_count"
     channelExtraUpdateAt   <- millisecondsToUTCTime <$> v .: "extra_update_at"
-    channelCreatorId       <- v .: "creator_id"
+    channelCreatorId       <- maybeFail (v .: "creator_id")
     return Channel { .. }
 
 -- This type only exists so that we can strip off the
@@ -521,8 +527,8 @@ instance IsId PostId where
 
 data Post
   = Post
-  { postPendingPostId :: PostId
-  , postOriginalId    :: PostId
+  { postPendingPostId :: Maybe PostId
+  , postOriginalId    :: Maybe PostId
   , postProps         :: PostProps
   , postRootId        :: Text
   , postFilenames     :: Seq Text
@@ -534,7 +540,7 @@ data Post
   , postUpdateAt      :: UTCTime
   , postUserId        :: UserId
   , postCreateAt      :: UTCTime
-  , postParentId      :: PostId
+  , postParentId      :: Maybe PostId
   , postChannelId     :: ChannelId
   } deriving (Read, Show, Eq)
 
@@ -543,8 +549,8 @@ instance HasId Post PostId where
 
 instance A.FromJSON Post where
   parseJSON = A.withObject "Post" $ \v -> do
-    postPendingPostId <- v .: "pending_post_id"
-    postOriginalId    <- v .: "original_id"
+    postPendingPostId <- maybeFail (v .: "pending_post_id")
+    postOriginalId    <- maybeFail (v .: "original_id")
     postProps         <- v .: "props"
     postRootId        <- v .: "root_id"
     postFilenames     <- v .: "filenames"
@@ -556,7 +562,7 @@ instance A.FromJSON Post where
     postUpdateAt      <- millisecondsToUTCTime <$> v .: "update_at"
     postUserId        <- v .: "user_id"
     postCreateAt      <- millisecondsToUTCTime <$> v .: "create_at"
-    postParentId      <- v .: "parent_id"
+    postParentId      <- maybeFail (v .: "parent_id")
     postChannelId     <- v .: "channel_id"
     return Post { .. }
 

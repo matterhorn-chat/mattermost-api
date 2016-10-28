@@ -9,6 +9,7 @@ module Network.Mattermost.WebSocket.Types
 ) where
 
 import           Control.Exception ( throw )
+import           Control.Applicative ((<|>))
 import           Data.Aeson ( FromJSON(..)
                             , ToJSON(..)
                             , (.:)
@@ -96,19 +97,19 @@ fromValueString = A.withText "string-encoded json" $ \s -> do
 --
 
 data WebsocketEvent = WebsocketEvent
-  { weTeamId    :: TeamId
+  { weTeamId    :: Maybe TeamId
   , weEvent     :: WebsocketEventType
   , weUserId    :: UserId
-  , weChannelId :: ChannelId
+  , weChannelId :: Maybe ChannelId
   , weData      :: WEData
   } deriving (Read, Show, Eq)
 
 instance FromJSON WebsocketEvent where
   parseJSON = A.withObject "WebsocketEvent" $ \o -> do
-    weTeamId    <- o .:  "team_id"
+    weTeamId    <- (Just <$> (o .:  "team_id")) <|> return Nothing
     weEvent     <- o .:  "event"
     weUserId    <- o .:  "user_id"
-    weChannelId <- o .:  "channel_id"
+    weChannelId <- (Just <$> (o .:  "channel_id")) <|> return Nothing
     weData      <- o .:  "data"
     return WebsocketEvent { .. }
 

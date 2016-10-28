@@ -231,7 +231,7 @@ channelUpdateAtL = makeLens channelUpdateAt (\ t s -> s { channelUpdateAt = t })
 channelDeleteAtL :: Lens' Channel UTCTime
 channelDeleteAtL = makeLens channelDeleteAt (\ t s -> s { channelDeleteAt = t })
 
-channelTeamIdL :: Lens' Channel TeamId
+channelTeamIdL :: Lens' Channel (Maybe TeamId)
 channelTeamIdL = makeLens channelTeamId (\ t s -> s { channelTeamId = t })
 
 channelTypeL :: Lens' Channel Type
@@ -262,7 +262,7 @@ channelExtraUpdateAtL :: Lens' Channel UTCTime
 channelExtraUpdateAtL =
   makeLens channelExtraUpdateAt (\ t s -> s { channelExtraUpdateAt = t })
 
-channelCreatorIdL :: Lens' Channel UserId
+channelCreatorIdL :: Lens' Channel (Maybe UserId)
 channelCreatorIdL = makeLens channelCreatorId (\ t s -> s { channelCreatorId = t })
 
 --
@@ -403,10 +403,10 @@ postPropsAttachmentsL =
 
 --
 
-postPendingPostIdL :: Lens' Post PostId
+postPendingPostIdL :: Lens' Post (Maybe PostId)
 postPendingPostIdL = makeLens postPendingPostId (\ t s -> s { postPendingPostId = t })
 
-postOriginalIdL :: Lens' Post PostId
+postOriginalIdL :: Lens' Post (Maybe PostId)
 postOriginalIdL = makeLens postOriginalId (\ t s -> s { postOriginalId = t })
 
 postPropsL :: Lens' Post PostProps
@@ -442,7 +442,7 @@ postUserIdL = makeLens postUserId (\ t s -> s { postUserId = t })
 postCreateAtL :: Lens' Post UTCTime
 postCreateAtL = makeLens postCreateAt (\ t s -> s { postCreateAt = t })
 
-postParentIdL :: Lens' Post PostId
+postParentIdL :: Lens' Post (Maybe PostId)
 postParentIdL = makeLens postParentId (\ t s -> s { postParentId = t })
 
 postChannelIdL :: Lens' Post ChannelId
@@ -478,7 +478,7 @@ postsOrderL = makeLens postsOrder (\ t s -> s { postsOrder = t })
 
 --
 
-weTeamIdL :: Lens' WebsocketEvent TeamId
+weTeamIdL :: Lens' WebsocketEvent (Maybe TeamId)
 weTeamIdL = makeLens weTeamId (\ t s -> s { weTeamId = t })
 
 weEventL :: Lens' WebsocketEvent WebsocketEventType
@@ -487,7 +487,7 @@ weEventL = makeLens weEvent (\ t s -> s { weEvent = t })
 weUserIdL :: Lens' WebsocketEvent UserId
 weUserIdL = makeLens weUserId (\ t s -> s { weUserId = t })
 
-weChannelIdL :: Lens' WebsocketEvent ChannelId
+weChannelIdL :: Lens' WebsocketEvent (Maybe ChannelId)
 weChannelIdL = makeLens weChannelId (\ t s -> s { weChannelId = t })
 
 weDataL :: Lens' WebsocketEvent WEData
