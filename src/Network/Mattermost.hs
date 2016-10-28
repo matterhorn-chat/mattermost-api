@@ -48,6 +48,7 @@ module Network.Mattermost
 , mmGetMoreChannels
 , mmGetChannel
 , mmUpdateLastViewedAt
+, mmGetPost
 , mmGetPosts
 , mmGetPostsAfter
 , mmGetUser
@@ -296,6 +297,23 @@ mmGetPosts cd token teamid chanid offset limit =
          (idString chanid)
          offset
          limit
+
+mmGetPost :: ConnectionData -> Token
+          -> TeamId
+          -> ChannelId
+          -> PostId
+          -> IO Posts
+mmGetPost cd token teamid chanid postid = do
+  let path = printf "/api/v3/teams/%s/channels/%s/posts/%s/get"
+             (idString teamid)
+             (idString chanid)
+             (idString postid)
+  uri <- mmPath path
+  rsp <- mmRequest cd token uri
+  (raw, json) <- mmGetJSONBody rsp
+  runLogger cd "mmGetPost" $
+    HttpResponse 200 path (Just raw)
+  return json
 
 mmGetPostsAfter :: ConnectionData -> Token
                 -> TeamId
