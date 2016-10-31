@@ -59,6 +59,7 @@ module Network.Mattermost
 , mmGetStatuses
 , mmGetInitialLoad
 , mmSetChannelHeader
+, mmChannelAddUser
 , mmPost
 , mmExecute
 , mkPendingPost
@@ -95,6 +96,8 @@ import qualified Data.HashMap.Strict as HM
 import           Data.Aeson ( Value(..)
                             , ToJSON(..)
                             , FromJSON
+                            , object
+                            , (.=)
                             , encode
                             , eitherDecode
                             )
@@ -417,6 +420,26 @@ mmPost cd token teamid post = do
   (val, r) <- mmGetJSONBody rsp
   runLogger cd "mmPost" $
     HttpResponse 200 path (Just (val))
+  return r
+
+mmChannelAddUser :: ConnectionData
+                 -> Token
+                 -> TeamId
+                 -> ChannelId
+                 -> UserId
+                 -> IO ChannelData
+mmChannelAddUser cd token teamid chanId uId = do
+  let path = printf "/api/v3/teams/%s/channels/%s/add"
+                    (idString teamid)
+                    (idString chanId)
+      req = object ["user_id" .= uId]
+  uri <- mmPath path
+  runLogger cd "mmChannelAddUser" $
+    HttpRequest POST path (Just req)
+  rsp <- mmPOST cd token uri req
+  (val, r) <- mmGetJSONBody rsp
+  runLogger cd "mmChannelAddUser" $
+    HttpResponse 200 path (Just val)
   return r
 
 mmExecute :: ConnectionData
