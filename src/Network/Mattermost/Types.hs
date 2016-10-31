@@ -538,7 +538,7 @@ data Post
   , postDeleteAt      :: UTCTime
   , postHashtags      :: Text
   , postUpdateAt      :: UTCTime
-  , postUserId        :: UserId
+  , postUserId        :: Maybe UserId
   , postCreateAt      :: UTCTime
   , postParentId      :: Maybe PostId
   , postChannelId     :: ChannelId
@@ -560,7 +560,7 @@ instance A.FromJSON Post where
     postDeleteAt      <- millisecondsToUTCTime <$> v .: "delete_at"
     postHashtags      <- v .: "hashtags"
     postUpdateAt      <- millisecondsToUTCTime <$> v .: "update_at"
-    postUserId        <- v .: "user_id"
+    postUserId        <- maybeFail (v .: "user_id")
     postCreateAt      <- millisecondsToUTCTime <$> v .: "create_at"
     postParentId      <- maybeFail (v .: "parent_id")
     postChannelId     <- v .: "channel_id"

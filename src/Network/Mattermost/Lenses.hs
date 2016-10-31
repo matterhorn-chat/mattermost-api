@@ -436,7 +436,7 @@ postHashtagsL = makeLens postHashtags (\ t s -> s { postHashtags = t })
 postUpdateAtL :: Lens' Post UTCTime
 postUpdateAtL = makeLens postUpdateAt (\ t s -> s { postUpdateAt = t })
 
-postUserIdL :: Lens' Post UserId
+postUserIdL :: Lens' Post (Maybe UserId)
 postUserIdL = makeLens postUserId (\ t s -> s { postUserId = t })
 
 postCreateAtL :: Lens' Post UTCTime
