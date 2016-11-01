@@ -50,6 +50,8 @@ module Network.Mattermost
 , mmUpdateLastViewedAt
 , mmGetPost
 , mmGetPosts
+, mmGetPostsSince
+, mmGetPostsBefore
 , mmGetPostsAfter
 , mmGetUser
 , mmGetTeamMembers
@@ -76,6 +78,7 @@ import           Data.Monoid ((<>))
 import           Text.Printf ( printf )
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as BL
+import           Data.Time.Clock ( UTCTime )
 import           Network.Connection ( Connection
                                     , connectionGetLine
                                     , connectionPut
@@ -301,6 +304,19 @@ mmGetPosts cd token teamid chanid offset limit =
          offset
          limit
 
+mmGetPostsSince :: ConnectionData
+           -> Token
+           -> TeamId
+           -> ChannelId
+           -> UTCTime
+           -> IO Posts
+mmGetPostsSince cd token teamid chanid since =
+  mmDoRequest cd "mmGetPostsSince" token $
+  printf "/api/v3/teams/%s/channels/%s/posts/since/%d"
+         (idString teamid)
+         (idString chanid)
+         (utcTimeToMilliseconds since :: Int)
+
 mmGetPost :: ConnectionData -> Token
           -> TeamId
           -> ChannelId
@@ -326,6 +342,22 @@ mmGetPostsAfter :: ConnectionData -> Token
                 -> Int -- try to fetch this many
                 -> IO Posts
 mmGetPostsAfter cd token teamid chanid postid offset limit =
+  mmDoRequest cd "mmGetPosts" token $
+  printf "/api/v3/teams/%s/channels/%s/posts/%s/after/%d/%d"
+         (idString teamid)
+         (idString chanid)
+         (idString postid)
+         offset
+         limit
+
+mmGetPostsBefore :: ConnectionData -> Token
+                -> TeamId
+                -> ChannelId
+                -> PostId
+                -> Int -- offset in the backlog, 0 is most recent
+                -> Int -- try to fetch this many
+                -> IO Posts
+mmGetPostsBefore cd token teamid chanid postid offset limit =
   mmDoRequest cd "mmGetPosts" token $
   printf "/api/v3/teams/%s/channels/%s/posts/%s/before/%d/%d"
          (idString teamid)
