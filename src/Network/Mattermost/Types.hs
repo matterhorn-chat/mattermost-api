@@ -11,7 +11,7 @@ import           Control.Applicative
 import           Text.Printf ( printf )
 import           Data.Hashable ( Hashable )
 import qualified Data.Aeson as A
-import           Data.Aeson ( (.:), (.=), (.:?) )
+import           Data.Aeson ( (.:), (.=), (.:?), (.!=) )
 import           Data.Aeson.Types ( ToJSONKey
                                   , FromJSONKey
                                   , FromJSON
@@ -639,8 +639,8 @@ data Posts
 
 instance A.FromJSON Posts where
   parseJSON = A.withObject "Posts" $ \v -> do
-    postsPosts <- v .: "posts"
-    postsOrder <- v .: "order"
+    postsPosts <- v .:? "posts" .!= HM.empty
+    postsOrder <- v .:  "order"
     return Posts { .. }
 
 --
