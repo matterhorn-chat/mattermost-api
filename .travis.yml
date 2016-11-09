@@ -1,6 +1,8 @@
 # This file has been generated -- see https://github.com/hvr/multi-ghc-travis
 language: c
-sudo: false
+sudo: required
+services:
+  - docker
 
 cache:
   directories:
@@ -25,6 +27,9 @@ before_install:
  - export HAPPYVER=1.19.5
  - export ALEXVER=3.1.7
  - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:/opt/happy/$HAPPYVER/bin:/opt/alex/$ALEXVER/bin:$PATH
+ - docker pull mattermost/mattermost-preview
+ - docker run --name mattermost-preview -d --publish 8065:8065 mattermost/mattermost-preview
+ - docker ps -a
 
 install:
  - cabal --version
