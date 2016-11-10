@@ -132,7 +132,10 @@ main = do
             -- this is just a toy program, so we don't care about
             -- this pattern match failure
             let Just p    = HM.lookup postId (postsPosts posts)
-                Just user = HM.lookup (postUserId p) userMap
+                Just uId  = postUserId p
+                Just user = HM.lookup uId userMap
+            when (optVerbose opts) $ do
+               pPrint p
             let message = printf "%s: %s"
                                  (userProfileUsername user)
                                  (postMessage p)
