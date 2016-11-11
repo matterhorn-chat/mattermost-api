@@ -68,11 +68,13 @@ withConnection cd action =
 -- | Creates a connection from a 'ConnectionData' value, returning it. It
 --   is the user's responsibility to close this appropriately.
 mkConnection :: ConnectionData -> IO Connection
-mkConnection cd =
+mkConnection cd = do
   connectTo (cdConnectionCtx cd) $ ConnectionParams
     { connectionHostname  = cdHostname cd
     , connectionPort      = fromIntegral (cdPort cd)
-    , connectionUseSecure = Just (TLSSettingsSimple False False False)
+    , connectionUseSecure = if cdUseTLS cd
+                               then Just (TLSSettingsSimple False False False)
+                               else Nothing
     , connectionUseSocks  = Nothing
     }
 

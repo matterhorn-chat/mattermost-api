@@ -20,7 +20,6 @@ main = do
   let cd = mkConnectionData (T.unpack (configHostname config))
                             (fromIntegral (configPort config))
                             ctx
-
   let login = Login { username = configUsername config
                     , password = configPassword config
                     }
