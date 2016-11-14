@@ -498,11 +498,29 @@ instance A.FromJSON User where
 
 --
 
+data PostPropAttachment
+  = PostPropAttachment
+  { ppaColor :: Text
+  , ppaText  :: Text
+  } deriving (Read, Show, Eq)
+
+instance A.FromJSON PostPropAttachment where
+  parseJSON = A.withObject "Attachment" $ \v -> do
+    ppaColor <- v .: "color"
+    ppaText  <- v .: "text"
+    return PostPropAttachment { .. }
+
+instance A.ToJSON PostPropAttachment where
+  toJSON PostPropAttachment { .. } = A.object
+    [ "color" .= ppaColor
+    , "text"  .= ppaText
+    ]
+
 data PostProps
   = PostProps
   { postPropsOverrideIconUrl  :: Maybe Text
   , postPropsOverrideUsername :: Maybe Text
-  , postPropsAttachments      :: Maybe A.Value
+  , postPropsAttachments      :: Maybe (Seq PostPropAttachment) -- A.Value
   } deriving (Read, Show, Eq)
 
 instance A.FromJSON PostProps where

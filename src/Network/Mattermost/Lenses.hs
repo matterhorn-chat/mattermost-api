@@ -102,6 +102,8 @@ module Network.Mattermost.Lenses
 , postPropsOverrideIconUrlL
 , postPropsOverrideUsernameL
 , postPropsAttachmentsL
+, ppaColorL
+, ppaTextL
 -- ** 'PendingPost' lenses
 , pendingPostChannelIdL
 , pendingPostCreateAtL
@@ -128,7 +130,6 @@ module Network.Mattermost.Lenses
 , wepStatusL
 ) where
 
-import Data.Aeson (Value)
 import Data.HashMap.Strict (HashMap)
 import Data.Sequence (Seq)
 import Data.Text (Text)
@@ -397,9 +398,15 @@ postPropsOverrideUsernameL :: Lens' PostProps (Maybe Text)
 postPropsOverrideUsernameL =
   makeLens postPropsOverrideUsername (\ t s -> s { postPropsOverrideUsername = t })
 
-postPropsAttachmentsL :: Lens' PostProps (Maybe Value)
+postPropsAttachmentsL :: Lens' PostProps (Maybe (Seq PostPropAttachment))
 postPropsAttachmentsL =
   makeLens postPropsAttachments (\ t s -> s { postPropsAttachments = t })
+
+ppaColorL :: Lens' PostPropAttachment Text
+ppaColorL = makeLens ppaColor (\ t s -> s { ppaColor = t })
+
+ppaTextL :: Lens' PostPropAttachment Text
+ppaTextL = makeLens ppaText (\ t s -> s { ppaText = t })
 
 --
 
