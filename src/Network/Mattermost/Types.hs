@@ -85,8 +85,10 @@ data ConnectionData
   , cdConnectionCtx :: ConnectionContext
   , cdToken         :: Maybe Token
   , cdLogger        :: Maybe Logger
+  , cdUseTLS        :: Bool
   }
 
+-- | Creates a TLS connection to the server.
 mkConnectionData :: Hostname -> Port -> ConnectionContext -> ConnectionData
 mkConnectionData host port ctx = ConnectionData
   { cdHostname      = host
@@ -95,12 +97,30 @@ mkConnectionData host port ctx = ConnectionData
   , cdAutoClose     = Yes
   , cdToken         = Nothing
   , cdLogger        = Nothing
+  , cdUseTLS        = True
+  }
+
+-- | Plaintext HTTP instead of a TLS connection.
+mkConnectionDataInsecure :: Hostname -> Port -> ConnectionContext -> ConnectionData
+mkConnectionDataInsecure host port ctx = ConnectionData
+  { cdHostname      = host
+  , cdPort          = port
+  , cdConnectionCtx = ctx
+  , cdAutoClose     = Yes
+  , cdToken         = Nothing
+  , cdLogger        = Nothing
+  , cdUseTLS        = False
   }
 
 initConnectionData :: Hostname -> Port -> IO ConnectionData
 initConnectionData host port = do
   ctx <- initConnectionContext
   return (mkConnectionData host port ctx)
+
+initConnectionDataInsecure :: Hostname -> Port -> IO ConnectionData
+initConnectionDataInsecure host port = do
+  ctx <- initConnectionContext
+  return (mkConnectionDataInsecure host port ctx)
 
 withLogger :: ConnectionData -> Logger -> ConnectionData
 withLogger cd logger = cd { cdLogger = Just logger }
@@ -452,16 +472,16 @@ instance A.FromJSON User where
     userCreateAt           <- millisecondsToUTCTime <$> o .: "create_at"
     userUpdateAt           <- millisecondsToUTCTime <$> o .: "update_at"
     userDeleteAt           <- millisecondsToUTCTime <$> o .: "delete_at"
-    userUsername           <- o .: "username"
-    userAuthData           <- o .: "auth_data"
-    userAuthService        <- o .: "auth_service"
-    userEmail              <- o .: "email"
-    userEmailVerified      <- o .: "email_verified"
-    userNickname           <- o .: "nickname"
-    userFirstName          <- o .: "first_name"
-    userLastName           <- o .: "last_name"
-    userRoles              <- o .: "roles"
-    userNotifyProps        <- o .: "notify_props"
+    userUsername           <- o .:  "username"
+    userAuthData           <- o .:  "auth_data"
+    userAuthService        <- o .:  "auth_service"
+    userEmail              <- o .:  "email"
+    userEmailVerified      <- o .:? "email_verified" .!= False
+    userNickname           <- o .:  "nickname"
+    userFirstName          <- o .:  "first_name"
+    userLastName           <- o .:  "last_name"
+    userRoles              <- o .:  "roles"
+    userNotifyProps        <- o .:  "notify_props"
     userLastPasswordUpdate <- millisecondsToUTCTime <$> o .: "last_password_update"
     userLastPictureUpdate  <- (millisecondsToUTCTime <$>) <$> (o .:? "last_picture_update")
     userLocale             <- o .: "locale"

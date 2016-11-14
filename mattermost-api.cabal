@@ -151,3 +151,13 @@ executable mm-show-raw-events
                   , process
                   , unordered-containers
                   , pretty-show
+
+executable test-mm-api
+  ghc-options:   -Wall
+  default-language: Haskell2010
+  main-is:          test/Main.hs
+  build-depends:    base
+                  , mattermost-api
+                  , tasty
+                  , tasty-hunit
+                  , HUnit
