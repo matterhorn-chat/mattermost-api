@@ -740,3 +740,21 @@ instance IsId CommandId where
 
 instance HasId Command CommandId where
   getId = commandId
+
+--
+
+data UsersCreate
+  = UsersCreate
+  { usersCreateEmail          :: Text
+  , usersCreatePassword       :: Text
+  , usersCreateUsername       :: Text
+  , usersCreateAllowMarketing :: Bool
+  } deriving (Read, Show, Eq)
+
+instance A.ToJSON UsersCreate where
+  toJSON UsersCreate { .. } = A.object
+    [ "email"           .= usersCreateEmail
+    , "allow_marketing" .= usersCreateAllowMarketing
+    , "password"        .= usersCreatePassword
+    , "username"        .= usersCreateUsername
+    ]

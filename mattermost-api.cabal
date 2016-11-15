@@ -161,3 +161,5 @@ executable test-mm-api
                   , tasty
                   , tasty-hunit
                   , HUnit
+                  , text
+                  , pretty-show

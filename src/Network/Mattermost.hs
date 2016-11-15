@@ -22,6 +22,7 @@ module Network.Mattermost
 , MoreChannels(..)
 , MinChannel(..)
 , UserProfile(..)
+, UsersCreate(..)
 , Post(..)
 , PostId(..)
 , Posts(..)
@@ -37,6 +38,7 @@ module Network.Mattermost
 -- * HTTP API Functions
 , mkConnectionData
 , initConnectionData
+, initConnectionDataInsecure
 , mmLogin
 , mmCreateDirect
 , mmCreateChannel
@@ -62,6 +64,7 @@ module Network.Mattermost
 , mmGetInitialLoad
 , mmSetChannelHeader
 , mmChannelAddUser
+, mmUsersCreate
 , mmPost
 , mmExecute
 , mkPendingPost
@@ -488,6 +491,20 @@ mmExecute cd token teamid command = do
   rsp <- mmPOST cd token uri command
   (val, r) <- mmGetJSONBody rsp
   runLogger cd "mmExecute" $
+    HttpResponse 200 path (Just (val))
+  return r
+
+mmUsersCreate :: ConnectionData
+              -> UsersCreate
+              -> IO User
+mmUsersCreate cd usersCreate = do
+  let path = "/api/v3/users/create"
+  uri <- mmPath path
+  runLogger cd "mmUsersCreate" $
+    HttpRequest POST path (Just (toJSON usersCreate))
+  rsp <- mmUnauthenticatedHTTPPost cd uri usersCreate
+  (val, r) <- mmGetJSONBody rsp
+  runLogger cd "mmUsersCreate" $
     HttpResponse 200 path (Just (val))
   return r
 
