@@ -22,6 +22,6 @@ docker run  --name mattermost-preview -d --publish 8065:8065 \
 
 # It takes a while for the MM server to start accepting logins
 ./test/wait_for_mm.sh
-
+echo
 # Finally we are ready to run the test suite
 $TEST_RUNNER
