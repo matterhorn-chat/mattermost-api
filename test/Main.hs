@@ -42,34 +42,30 @@ testConfig = Config
 
 main :: IO ()
 main = defaultMain tests
-  `catch` \(SomeException e) -> do
-    print e
-    exitFailure
 
 tests :: TestTree
 tests = testCaseSteps "MM Tests" $ \step -> do
   step "Creating Admin account"
-  _token <- setup step `catch` \(SomeException e) -> do
-    print e
-    exitFailure
+  _token <- setup step
   return ()
 
 setup :: (String -> IO ()) -> IO Token
 setup prnt = do
-  cd' <- initConnectionDataInsecure (T.unpack (configHostname testConfig))
-                                    (fromIntegral (configPort testConfig))
+  cd <- initConnectionDataInsecure (T.unpack (configHostname testConfig))
+                                   (fromIntegral (configPort testConfig))
   let newAccount = UsersCreate { usersCreateEmail          = configEmail    testConfig
                                , usersCreatePassword       = configPassword testConfig
                                , usersCreateUsername       = configUsername testConfig
                                , usersCreateAllowMarketing = True
                                }
-      cd = cd' `withLogger` mmLoggerDebugErr
+      -- XXX: Use something like this if you want logging (useful when debugging)
+      -- cd = cd `withLogger` mmLoggerDebugErr
 
   newUser <- mmUsersCreate cd newAccount
   let login = Login { username = configUsername testConfig
                     , password = configPassword testConfig
                     }
-  prnt "New user created"
+  prnt "Admin user created"
   (token, mmUser) <- join (hoistE <$> mmLogin cd login)
-  prnt "Authenticated as new user"
+  prnt "Authenticated as admin user"
   return token
