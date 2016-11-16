@@ -11,7 +11,10 @@ import           Control.Exception
 
 import           System.Exit
 
-import           Text.Show.Pretty ( pPrint )
+import           Text.Show.Pretty ( ppShow )
+
+import           Test.Tasty
+import           Test.Tasty.HUnit
 
 import           Network.Mattermost
 import           Network.Mattermost.Logging
@@ -38,14 +41,21 @@ testConfig = Config
   }
 
 main :: IO ()
-main = do
-  _token <- setup `catch` \(SomeException e) -> do
+main = defaultMain tests
+  `catch` \(SomeException e) -> do
     print e
     exitFailure
-  exitSuccess
 
-setup :: IO Token
-setup = do
+tests :: TestTree
+tests = testCaseSteps "MM Tests" $ \step -> do
+  step "Creating Admin account"
+  _token <- setup step `catch` \(SomeException e) -> do
+    print e
+    exitFailure
+  return ()
+
+setup :: (String -> IO ()) -> IO Token
+setup prnt = do
   cd' <- initConnectionDataInsecure (T.unpack (configHostname testConfig))
                                     (fromIntegral (configPort testConfig))
   let newAccount = UsersCreate { usersCreateEmail          = configEmail    testConfig
@@ -59,9 +69,7 @@ setup = do
   let login = Login { username = configUsername testConfig
                     , password = configPassword testConfig
                     }
-  putStrLn "New user created:"
-  pPrint newUser
+  prnt "New user created"
   (token, mmUser) <- join (hoistE <$> mmLogin cd login)
-  putStrLn "Authenticated as:"
-  pPrint mmUser
+  prnt "Authenticated as new user"
   return token
