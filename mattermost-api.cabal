@@ -152,8 +152,9 @@ executable mm-show-raw-events
                   , unordered-containers
                   , pretty-show
 
-executable test-mm-api
-  ghc-options:   -Wall
+test-suite test-mm-api
+  type:             exitcode-stdio-1.0
+  ghc-options:      -Wall
   default-language: Haskell2010
   main-is:          test/Main.hs
   build-depends:    base
