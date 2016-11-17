@@ -20,7 +20,6 @@ module Network.Mattermost
 , Channel(..)
 , ChannelId(..)
 , Channels(..)
-, MoreChannels(..)
 , MinChannel(..)
 , UserProfile(..)
 , UsersCreate(..)
@@ -244,7 +243,7 @@ mmGetChannels cd token teamid = mmDoRequest cd "mmGetChannels" token $
 
 -- | Requires an authenticated user. Returns the channels for a team of
 -- which the user is not already a member
-mmGetMoreChannels :: ConnectionData -> Token -> TeamId -> IO MoreChannels
+mmGetMoreChannels :: ConnectionData -> Token -> TeamId -> IO Channels
 mmGetMoreChannels cd token teamid = mmDoRequest cd "mmGetMoreChannels" token $
   printf "/api/v3/teams/%s/channels/more" (idString teamid)
 

@@ -340,29 +340,7 @@ instance A.FromJSON ChannelData where
     channelDataLastUpdateAt <- millisecondsToUTCTime <$> o .: "last_update_at"
     return ChannelData { .. }
 
--- For reasons I cannot fathom, MM returns two thing here.
--- First they return the channels plus a lot of meta data about each
--- one. Second they give you a "members" field that has
--- additional data about the channels, none of which appears
--- to be data about the members.
---
--- We refer to the extra meta data as ChannelData.
-data Channels = Channels (Seq Channel) (HashMap ChannelId ChannelData)
-  deriving (Read, Show, Eq)
-
-instance A.FromJSON Channels where
-  parseJSON = A.withObject "Channels" $ \o -> do
-    channels <- o .: "channels"
-    chandata <- o .: "members"
-    return $ Channels channels chandata
-
-data MoreChannels = MoreChannels (Seq Channel)
-  deriving (Read, Show, Eq)
-
-instance A.FromJSON MoreChannels where
-  parseJSON = A.withObject "MoreChannels" $ \o -> do
-    channels <- o .: "channels"
-    return $ MoreChannels channels
+type Channels = Seq Channel
 
 data MinChannel = MinChannel
   { minChannelName        :: Text

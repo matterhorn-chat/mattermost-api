@@ -6,7 +6,10 @@ module Main (
 import           Data.Text (Text)
 import qualified Data.Text as T
 
+import           Control.Exception
 import           Control.Monad ( join )
+
+import           System.Exit
 
 import           Text.Show.Pretty ( ppShow )
 
@@ -18,11 +21,15 @@ import           Test.Tasty
 import           Test.Tasty.HUnit
 
 import           Network.Mattermost
+import           Network.Mattermost.Exceptions
 import           Network.Mattermost.Logging
 import           Network.Mattermost.Util
 
 main :: IO ()
-main = defaultMain tests
+main = defaultMain tests `catch` \(JSONDecodeException msg json) -> do
+  putStrLn $ "JSONDecodeException: " ++ msg
+  putStrLn json
+  exitFailure
 
 -- Users and other test configuration data
 
@@ -77,12 +84,27 @@ unitTests :: TestTree
 unitTests = testGroup "Units" [loginAsNormalUserTest
                               ,initialLoadTest
                               ,createChannelTest
+                              ,getChannelsTest
+                              ,leaveChannelTest
+                              ,joinChannelTest
                               ]
+
+-- This only exists because tasty will call `show` on the exception that we give
+-- it. If we directly output the exception first then we avoid an unnecessary
+-- level of quotation in the output. We still throw the exception though so that
+-- tasty reports the correct exception type. This results in some redundancy but
+-- we only see it when there are failures, so it seems acceptable.
+catchAndPrintJSONDecodeException :: IO a -> IO a
+catchAndPrintJSONDecodeException io = io
+  `catch` \e@(JSONDecodeException msg json) -> do
+  putStrLn $ "\nException: JSONDecodeException: " ++ msg
+  putStrLn json
+  throwIO e
 
 -- Test definitions
 
 setup :: TestTree
-setup = testCaseSteps "Setup" $ \prnt -> do
+setup = testCaseSteps "Setup" $ \prnt -> catchAndPrintJSONDecodeException $ do
   prnt "Creating connection"
   cd <- initConnectionDataInsecure (T.unpack (configHostname testConfig))
                                    (fromIntegral (configPort testConfig))
@@ -90,7 +112,7 @@ setup = testCaseSteps "Setup" $ \prnt -> do
   -- let cd = cd' `withLogger` mmLoggerDebugErr
 
   prnt "Creating Admin account"
-  adminUser <- createAdminAccount cd prnt
+  _adminUser <- createAdminAccount cd prnt
   prnt "Logging into Admin account"
   adminToken <- loginAdminAccount cd prnt
 
@@ -118,14 +140,15 @@ setup = testCaseSteps "Setup" $ \prnt -> do
   mmTeamAddUser cd adminToken (teamId testTeam) (userId testUser)
 
 loginAsNormalUserTest :: TestTree
-loginAsNormalUserTest = testCaseSteps "Logging to normal account" $ \prnt -> do
-  cd <- initConnectionDataInsecure (T.unpack (configHostname testConfig))
-                                   (fromIntegral (configPort testConfig))
-  userToken <- loginAccount cd testUserLogin prnt
-  return ()
+loginAsNormalUserTest = testCaseSteps "Logging to normal account" $ \prnt ->
+  catchAndPrintJSONDecodeException $ do
+    cd <- initConnectionDataInsecure (T.unpack (configHostname testConfig))
+                                     (fromIntegral (configPort testConfig))
+    _userToken <- loginAccount cd testUserLogin prnt
+    return ()
 
 initialLoadTest :: TestTree
-initialLoadTest = testCaseSteps "Initial Load" $ \prnt -> do
+initialLoadTest = testCaseSteps "Initial Load" $ \prnt -> catchAndPrintJSONDecodeException $ do
   cd <- initConnectionDataInsecure (T.unpack (configHostname testConfig))
                                    (fromIntegral (configPort testConfig))
   userToken   <- loginAccount cd testUserLogin prnt
@@ -134,7 +157,7 @@ initialLoadTest = testCaseSteps "Initial Load" $ \prnt -> do
   prnt (ppShow (fmap teamName (initialLoadTeams initialLoad)))
 
 createChannelTest :: TestTree
-createChannelTest = testCaseSteps "Create Channel" $ \prnt -> do
+createChannelTest = testCaseSteps "Create Channel" $ \prnt -> catchAndPrintJSONDecodeException $ do
   cd <- initConnectionDataInsecure (T.unpack (configHostname testConfig))
                                    (fromIntegral (configPort testConfig))
   userToken   <- loginAccount cd testUserLogin prnt
@@ -143,6 +166,45 @@ createChannelTest = testCaseSteps "Create Channel" $ \prnt -> do
   chan <- mmCreateChannel cd userToken (teamId team) testMinChannel
   prnt (ppShow chan)
   return ()
+
+getChannelsTest :: TestTree
+getChannelsTest = testCaseSteps "Get Channels" $ \prnt -> catchAndPrintJSONDecodeException $ do
+  cd <- initConnectionDataInsecure (T.unpack (configHostname testConfig))
+                                   (fromIntegral (configPort testConfig))
+  userToken   <- loginAccount cd testUserLogin prnt
+  initialLoad <- mmGetInitialLoad cd userToken
+  let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
+  chans <- mmGetChannels cd userToken (teamId team)
+  let chan Seq.:< _ = Seq.viewl chans
+  prnt (ppShow chan)
+
+leaveChannelTest :: TestTree
+leaveChannelTest = testCaseSteps "Leave Channel" $ \prnt -> catchAndPrintJSONDecodeException $ do
+  cd <- initConnectionDataInsecure (T.unpack (configHostname testConfig))
+                                   (fromIntegral (configPort testConfig))
+  userToken   <- loginAccount cd testUserLogin prnt
+  initialLoad <- mmGetInitialLoad cd userToken
+  let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
+  chans <- mmGetChannels cd userToken (teamId team)
+  prnt (ppShow chans)
+  let chan Seq.:< _ = Seq.viewl
+                        (Seq.filter (\c -> channelName c == minChannelName testMinChannel)
+                                    chans)
+  mmLeaveChannel cd userToken (teamId team) (channelId chan)
+
+joinChannelTest :: TestTree
+joinChannelTest = testCaseSteps "Join Channel" $ \prnt -> catchAndPrintJSONDecodeException $ do
+  cd <- initConnectionDataInsecure (T.unpack (configHostname testConfig))
+                                   (fromIntegral (configPort testConfig))
+  userToken   <- loginAccount cd testUserLogin prnt
+  initialLoad <- mmGetInitialLoad cd userToken
+  let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
+  chans <- mmGetMoreChannels cd userToken (teamId team)
+  prnt (ppShow chans)
+  let chan Seq.:< _ = Seq.viewl
+                        (Seq.filter (\c -> channelName c == minChannelName testMinChannel)
+                                    chans)
+  mmJoinChannel cd userToken (teamId team) (channelId chan)
 
 -- Wrapper functions used in test cases
 
