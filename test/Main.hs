@@ -52,6 +52,22 @@ testUserLogin = Login
   , password = "password"
   }
 
+testMinChannel :: MinChannel
+testMinChannel = MinChannel
+  { minChannelName        = "test-channel"
+  , minChannelDisplayName = "Test Channel"
+  , minChannelPurpose     = Just "A channel for test cases"
+  , minChannelHeader      = Just "Test Header"
+  , minChannelType        = Ordinary
+  }
+
+testTeamsCreate :: TeamsCreate
+testTeamsCreate = TeamsCreate
+  { teamsCreateDisplayName = "Test Team"
+  , teamsCreateName        = "testteam"
+  , teamsCreateType        = Ordinary
+  }
+
 -- Test groups
 
 tests :: TestTree
@@ -124,14 +140,7 @@ createChannelTest = testCaseSteps "Create Channel" $ \prnt -> do
   userToken   <- loginAccount cd testUserLogin prnt
   initialLoad <- mmGetInitialLoad cd userToken
   let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
-      minChan = MinChannel
-                { minChannelName        = "test-channel"
-                , minChannelDisplayName = "Test Channel"
-                , minChannelPurpose     = Just "A channel for test cases"
-                , minChannelHeader      = Just "Test Header"
-                , minChannelType        = Ordinary
-                }
-  chan <- mmCreateChannel cd userToken (teamId team) minChan
+  chan <- mmCreateChannel cd userToken (teamId team) testMinChannel
   prnt (ppShow chan)
   return ()
 
@@ -149,11 +158,7 @@ createAdminAccount cd prnt = do
 
 createTestTeam :: ConnectionData -> Token -> (String -> IO ()) -> IO Team
 createTestTeam cd token prnt = do
-  let newTeam = TeamsCreate { teamsCreateDisplayName = "Test Team"
-                            , teamsCreateName        = "testteam"
-                            , teamsCreateType        = Ordinary
-                            }
-  team <- mmCreateTeam cd token newTeam
+  team <- mmCreateTeam cd token testTeamsCreate
   prnt "Test team created"
   return team
 
