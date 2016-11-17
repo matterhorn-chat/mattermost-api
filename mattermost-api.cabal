@@ -165,4 +165,5 @@ test-suite test-mm-api
                   , text
                   , pretty-show
                   , unordered-containers
+                  , containers
                   , aeson

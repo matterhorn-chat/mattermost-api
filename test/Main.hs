@@ -12,6 +12,7 @@ import           Text.Show.Pretty ( ppShow )
 
 import           Data.Aeson
 import qualified Data.HashMap.Strict as HM
+import qualified Data.Sequence as Seq
 
 import           Test.Tasty
 import           Test.Tasty.HUnit
@@ -57,8 +58,9 @@ tests :: TestTree
 tests = testGroup "Tests" [setup,unitTests]
 
 unitTests :: TestTree
-unitTests = testGroup "Units" [createNormalUserTest
-                              ,loginAsNormalUserTest
+unitTests = testGroup "Units" [loginAsNormalUserTest
+                              ,initialLoadTest
+                              ,createChannelTest
                               ]
 
 -- Test definitions
@@ -77,7 +79,7 @@ setup = testCaseSteps "Setup" $ \prnt -> do
   adminToken <- loginAdminAccount cd prnt
 
   prnt "Creating test team"
-  _testTeam <- createTestTeam cd adminToken prnt
+  testTeam <- createTestTeam cd adminToken prnt
 
   prnt "Getting Config"
   config <- mmGetConfig cd adminToken
@@ -93,21 +95,44 @@ setup = testCaseSteps "Setup" $ \prnt -> do
                                            (Bool True) teamSettings)) oldConfig)
   mmSaveConfig cd adminToken newConfig
 
-createNormalUserTest :: TestTree
-createNormalUserTest = testCaseSteps "Creating normal account" $ \prnt -> do
-  cd <- initConnectionDataInsecure (T.unpack (configHostname testConfig))
-                                   (fromIntegral (configPort testConfig))
-  prnt "Logging into Admin account"
-  adminToken <- loginAdminAccount cd prnt
   prnt "Creating test account"
   testUser   <- createTestAccount cd adminToken prnt
-  return ()
+
+  prnt "Add test user to test team"
+  mmTeamAddUser cd adminToken (teamId testTeam) (userId testUser)
 
 loginAsNormalUserTest :: TestTree
 loginAsNormalUserTest = testCaseSteps "Logging to normal account" $ \prnt -> do
   cd <- initConnectionDataInsecure (T.unpack (configHostname testConfig))
                                    (fromIntegral (configPort testConfig))
   userToken <- loginAccount cd testUserLogin prnt
+  return ()
+
+initialLoadTest :: TestTree
+initialLoadTest = testCaseSteps "Initial Load" $ \prnt -> do
+  cd <- initConnectionDataInsecure (T.unpack (configHostname testConfig))
+                                   (fromIntegral (configPort testConfig))
+  userToken   <- loginAccount cd testUserLogin prnt
+  initialLoad <- mmGetInitialLoad cd userToken
+  -- print the team names
+  prnt (ppShow (fmap teamName (initialLoadTeams initialLoad)))
+
+createChannelTest :: TestTree
+createChannelTest = testCaseSteps "Create Channel" $ \prnt -> do
+  cd <- initConnectionDataInsecure (T.unpack (configHostname testConfig))
+                                   (fromIntegral (configPort testConfig))
+  userToken   <- loginAccount cd testUserLogin prnt
+  initialLoad <- mmGetInitialLoad cd userToken
+  let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
+      minChan = MinChannel
+                { minChannelName        = "test-channel"
+                , minChannelDisplayName = "Test Channel"
+                , minChannelPurpose     = Just "A channel for test cases"
+                , minChannelHeader      = Just "Test Header"
+                , minChannelType        = Ordinary
+                }
+  chan <- mmCreateChannel cd userToken (teamId team) minChan
+  prnt (ppShow chan)
   return ()
 
 -- Wrapper functions used in test cases

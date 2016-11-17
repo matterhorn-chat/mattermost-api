@@ -67,6 +67,7 @@ module Network.Mattermost
 , mmSaveConfig
 , mmSetChannelHeader
 , mmChannelAddUser
+, mmTeamAddUser
 , mmUsersCreate
 , mmUsersCreateWithToken
 , mmPost
@@ -513,6 +514,23 @@ mmChannelAddUser cd token teamid chanId uId = do
   runLogger cd "mmChannelAddUser" $
     HttpResponse 200 path (Just val)
   return r
+
+mmTeamAddUser :: ConnectionData
+              -> Token
+              -> TeamId
+              -> UserId
+              -> IO ()
+mmTeamAddUser cd token teamid uId = do
+  let path = printf "/api/v3/teams/%s/add_user_to_team"
+                    (idString teamid)
+      req  = object ["user_id" .= uId]
+  uri <- mmPath path
+  runLogger cd "mmTeamAddUser" $
+    HttpRequest POST path (Just req)
+  _ <- mmPOST cd token uri req
+  runLogger cd "mmTeamAddUSer" $
+    HttpResponse 200 path Nothing
+  return ()
 
 mmExecute :: ConnectionData
           -> Token
