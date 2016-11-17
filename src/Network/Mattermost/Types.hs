@@ -758,3 +758,19 @@ instance A.ToJSON UsersCreate where
     , "password"        .= usersCreatePassword
     , "username"        .= usersCreateUsername
     ]
+
+--
+
+data TeamsCreate
+  = TeamsCreate
+  { teamsCreateDisplayName :: Text
+  , teamsCreateName        :: Text
+  , teamsCreateType        :: Type
+  } deriving (Read, Show, Eq)
+
+instance A.ToJSON TeamsCreate where
+  toJSON TeamsCreate { .. } = A.object
+    [ "display_name" .= teamsCreateDisplayName
+    , "name"         .= teamsCreateName
+    , "type"         .= teamsCreateType
+    ]

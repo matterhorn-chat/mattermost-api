@@ -16,6 +16,7 @@ module Network.Mattermost
 , Team(..)
 , Type(..)
 , TeamId(..)
+, TeamsCreate(..)
 , Channel(..)
 , ChannelId(..)
 , Channels(..)
@@ -42,6 +43,7 @@ module Network.Mattermost
 , mmLogin
 , mmCreateDirect
 , mmCreateChannel
+, mmCreateTeam
 , mmDeleteChannel
 , mmLeaveChannel
 , mmJoinChannel
@@ -62,11 +64,14 @@ module Network.Mattermost
 , mmGetProfiles
 , mmGetStatuses
 , mmGetInitialLoad
+, mmSaveConfig
 , mmSetChannelHeader
 , mmChannelAddUser
 , mmUsersCreate
+, mmUsersCreateWithToken
 , mmPost
 , mmExecute
+, mmGetConfig -- Requires Admin access
 , mkPendingPost
 , idString
 , hoistE
@@ -217,6 +222,18 @@ mmGetInitialLoad cd token =
 mmGetTeams :: ConnectionData -> Token -> IO (HashMap TeamId Team)
 mmGetTeams cd token =
   mmDoRequest cd "mmGetTeams" token "/api/v3/teams/all"
+
+mmCreateTeam :: ConnectionData -> Token -> TeamsCreate -> IO Team
+mmCreateTeam cd token payload = do
+  let path = "/api/v3/teams/create"
+  uri <- mmPath path
+  runLogger cd "mmCreateTeam" $
+    HttpRequest POST path (Just (toJSON payload))
+  rsp <- mmPOST cd token uri payload
+  (val, r) <- mmGetJSONBody rsp
+  runLogger cd "mmCreateTeam" $
+    HttpResponse 200 path (Just val)
+  return r
 
 -- | Requires an authenticated user. Returns the full list of channels
 -- for a given team of which the user is a member
@@ -457,6 +474,26 @@ mmPost cd token teamid post = do
     HttpResponse 200 path (Just (val))
   return r
 
+mmGetConfig :: ConnectionData
+            -> Token
+            -> IO Value
+mmGetConfig cd token =
+  mmDoRequest cd "mmGetConfig" token "/api/v3/admin/config"
+
+mmSaveConfig :: ConnectionData
+             -> Token
+             -> Value
+             -> IO ()
+mmSaveConfig cd token config = do
+  let path = "/api/v3/admin/save_config"
+  uri <- mmPath path
+  runLogger cd "mmSaveConfig" $
+    HttpRequest POST path (Just config)
+  _ <- mmPOST cd token uri config
+  runLogger cd "mmSaveConfig" $
+    HttpResponse 200 path Nothing
+  return ()
+
 mmChannelAddUser :: ConnectionData
                  -> Token
                  -> TeamId
@@ -505,6 +542,21 @@ mmUsersCreate cd usersCreate = do
   rsp <- mmUnauthenticatedHTTPPost cd uri usersCreate
   (val, r) <- mmGetJSONBody rsp
   runLogger cd "mmUsersCreate" $
+    HttpResponse 200 path (Just (val))
+  return r
+
+mmUsersCreateWithToken :: ConnectionData
+                       -> Token
+                       -> UsersCreate
+                       -> IO User
+mmUsersCreateWithToken cd token usersCreate = do
+  let path = "/api/v3/users/create"
+  uri <- mmPath path
+  runLogger cd "mmUsersCreateWithToken" $
+    HttpRequest POST path (Just (toJSON usersCreate))
+  rsp <- mmPOST cd token uri usersCreate
+  (val, r) <- mmGetJSONBody rsp
+  runLogger cd "mmUsersCreateWithToken" $
     HttpResponse 200 path (Just (val))
   return r
 
