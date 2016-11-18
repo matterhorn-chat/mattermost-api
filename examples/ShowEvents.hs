@@ -100,8 +100,8 @@ main = do
         let [myTeam] = [ t | t <- initialLoadTeams i
                            , teamName t == T.unpack (configTeam config)
                            ]
-        Channels channels _ <- mmGetChannels cd token (getId myTeam)
-        users               <- mmGetProfiles cd token (getId myTeam)
+        channels <- mmGetChannels cd token (getId myTeam)
+        users    <- mmGetProfiles cd token (getId myTeam)
 
         let channelNameMap = HM.fromList [ (channelName c, c)
                                          | c <- channels

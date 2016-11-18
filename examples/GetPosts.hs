@@ -121,7 +121,7 @@ main = do
       userMap <- mmGetProfiles cd token (getId t)
       when (optVerbose opts) $ do
         pPrint userMap
-      Channels chans _md <- mmGetChannels cd token (getId t)
+      chans <- mmGetChannels cd token (getId t)
       forM_ chans $ \chan -> do
         when (optVerbose opts) $ do
           pPrint chan

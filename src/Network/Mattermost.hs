@@ -19,7 +19,7 @@ module Network.Mattermost
 , TeamsCreate(..)
 , Channel(..)
 , ChannelId(..)
-, Channels(..)
+, Channels
 , MinChannel(..)
 , UserProfile(..)
 , UsersCreate(..)
