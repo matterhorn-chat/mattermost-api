@@ -178,9 +178,9 @@ data WEBroadcast = WEBroadcast
 
 instance FromJSON WEBroadcast where
   parseJSON = A.withObject "WebSocketEvent Broadcast" $ \o -> do
-    webChannelId          <- o .:? "channel_id"
-    webTeamId             <- o .:? "team_id"
-    webUserId             <- o .:? "user_id"
+    webChannelId          <- (Just <$> (o .: "channel_id")) <|> return Nothing
+    webTeamId             <- (Just <$> (o .: "team_id")) <|> return Nothing
+    webUserId             <- (Just <$> (o .: "user_id")) <|> return Nothing
     return WEBroadcast { .. }
 
 instance ToJSON WEBroadcast where
