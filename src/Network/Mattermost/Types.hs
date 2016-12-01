@@ -342,6 +342,7 @@ instance A.FromJSON ChannelData where
     return ChannelData { .. }
 
 data ChannelWithData = ChannelWithData Channel ChannelData
+  deriving (Read, Show, Eq)
 
 instance A.FromJSON ChannelWithData where
   parseJSON (A.Object v) =
