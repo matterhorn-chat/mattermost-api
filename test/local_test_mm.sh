@@ -5,6 +5,7 @@ set -e
 HERE=$(cd `dirname $0`; pwd)
 TEST_PROGRAM=test-mm-api
 ROOT=$HERE/..
+CONTAINER=mattermost-preview
 
 # Note: [JED] You may need to change TEST_RUNNER depending on your environment.
 # As of writing this script `cabal new-build` doesn't have a `new-run` so I use
@@ -28,18 +29,24 @@ then
     exit 1
 fi
 
-# These first two docker commands are allowed to fail. For instance, on a first
-# run of this script.
-docker stop mattermost-preview
-docker rm   mattermost-preview
+# These first two docker commands are allowed to fail. For instance,
+# on a first run of this script. This check ensures that if they do
+# fail, we abort the script because the container exists AND stopping it
+# failed somehow.
+if docker ps | grep $CONTAINER >/dev/null
+then
+    docker stop $CONTAINER
+    docker rm   $CONTAINER
+fi
 
 # If this command fails we're in trouble.
-docker run  --name mattermost-preview -d --publish 8065:8065 \
-       mattermost/mattermost-preview                         \
+docker run  --name $CONTAINER -d --publish 8065:8065 \
+       mattermost/$CONTAINER                         \
        || die "Failed to start mattermost"
 
 # It takes a while for the MM server to start accepting logins
-./test/wait_for_mm.sh
+$HERE/wait_for_mm.sh
 echo
+
 # Finally we are ready to run the test suite
 $TEST_RUNNER
