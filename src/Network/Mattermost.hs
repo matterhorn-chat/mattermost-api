@@ -452,10 +452,6 @@ mmDeleteChannel cd token teamid chanid = do
     HttpResponse 200 path Nothing
   return ()
 
--- GET /api/v3/teams/{}/channels/{}/extra_info with {"user_id": _}
--- mmGetExtraInfo :: ConnectionData -> Token ->
---   ChannelId -> UserId -> IO ExtraInfo
-
 mmPost :: ConnectionData
        -> Token
        -> TeamId
