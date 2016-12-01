@@ -407,7 +407,7 @@ mmGetMe cd token = mmDoRequest cd "mmGetMe" token "/api/v3/users/me"
 mmGetProfiles :: ConnectionData -> Token
               -> TeamId -> IO (HashMap UserId UserProfile)
 mmGetProfiles cd token teamid = mmDoRequest cd "mmGetProfiles" token $
-  printf "/api/v3/teams/%s/users/%d/%d" (idString teamid) (10000::Int) (0::Int)
+  printf "/api/v3/teams/%s/users/%d/%d" (idString teamid) (0::Int) (10000::Int)
 
 mmGetStatuses :: ConnectionData -> Token -> IO (HashMap UserId T.Text)
 mmGetStatuses cd token = mmDoRequest cd "mmGetStatuses" token $
