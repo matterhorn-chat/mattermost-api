@@ -7,6 +7,11 @@ TEST_PROGRAM=test-mm-api
 ROOT=$HERE/..
 CONTAINER=mattermost-preview
 
+function error {
+    echo Error: $* >&2
+    exit 1
+}
+
 function docker_installed {
     which docker 2>/dev/null >/dev/null
 }
@@ -35,14 +40,12 @@ TEST_RUNNER=$(find $ROOT -name $TEST_PROGRAM -type f)
 
 if [ -z "$TEST_RUNNER" ]
 then
-    echo "Error: cannot find $TEST_PROGRAM in $ROOT, exiting"
-    exit 1
+    error "cannot find $TEST_PROGRAM in $ROOT, exiting"
 fi
 
 if ! docker_installed
 then
-    echo "Error: 'docker' not found in PATH, exiting"
-    exit 1
+    error "'docker' not found in PATH, exiting"
 fi
 
 cleanup_last_container
