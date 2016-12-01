@@ -102,6 +102,7 @@ data WebsocketEvent = WebsocketEvent
   , weUserId    :: Maybe UserId
   , weChannelId :: Maybe ChannelId
   , weData      :: WEData
+  , weBroadcast :: WEBroadcast
   } deriving (Read, Show, Eq)
 
 instance FromJSON WebsocketEvent where
@@ -110,7 +111,8 @@ instance FromJSON WebsocketEvent where
     weEvent     <- o .:  "event"
     weUserId    <- o .:?  "user_id"
     weChannelId <- (Just <$> (o .:  "channel_id")) <|> return Nothing
-    weData      <- o .:  "data"
+    weData      <- o .: "data"
+    weBroadcast <- o .: "broadcast"
     return WebsocketEvent { .. }
 
 instance ToJSON WebsocketEvent where
@@ -120,6 +122,7 @@ instance ToJSON WebsocketEvent where
     , "user_id"    .= weUserId
     , "channel_id" .= weChannelId
     , "data"       .= weData
+    , "broadcast"  .= weBroadcast
     ]
 
 instance WebSocketsData WebsocketEvent where
@@ -165,3 +168,23 @@ instance ToJSON WEData where
     ]
 
 --
+
+data WEBroadcast = WEBroadcast
+  { webChannelId :: Maybe ChannelId
+  , webUserId    :: Maybe UserId
+  , webTeamId    :: Maybe TeamId
+  } deriving (Read, Show, Eq)
+
+instance FromJSON WEBroadcast where
+  parseJSON = A.withObject "WebSocketEvent Broadcast" $ \o -> do
+    webChannelId          <- o .:? "channel_id"
+    webTeamId             <- o .:? "team_id"
+    webUserId             <- o .:? "user_id"
+    return WEBroadcast { .. }
+
+instance ToJSON WEBroadcast where
+  toJSON WEBroadcast { .. } = A.object
+    [ "channel_id"   .= webChannelId
+    , "team_id"      .= webTeamId
+    , "user_id"      .= webUserId
+    ]
