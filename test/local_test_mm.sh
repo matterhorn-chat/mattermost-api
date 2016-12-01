@@ -49,7 +49,6 @@ then
 fi
 
 cleanup_last_container
-trap cleanup_last_container EXIT
 
 # If this command fails we're in trouble.
 docker run  --name $CONTAINER -d --publish 8065:8065 mattermost/$CONTAINER
