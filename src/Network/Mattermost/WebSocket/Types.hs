@@ -134,6 +134,7 @@ data WEData = WEData
   { wepChannelId          :: Maybe ChannelId
   , wepTeamId             :: Maybe TeamId
   , wepSenderName         :: Maybe Text
+  , wepUserId             :: Maybe UserId
   , wepChannelDisplayName :: Maybe Text
   , wepPost               :: Maybe Post
   , wepStatus             :: Maybe Text
@@ -144,6 +145,7 @@ instance FromJSON WEData where
     wepChannelId          <- o .:? "channel_id"
     wepTeamId             <- o .:? "team_id"
     wepSenderName         <- o .:? "sender_name"
+    wepUserId             <- o .:? "user_id"
     wepChannelDisplayName <- o .:? "channel_name"
     wepPostRaw            <- o .:? "post"
     wepPost <- case wepPostRaw of
@@ -157,6 +159,7 @@ instance ToJSON WEData where
     [ "channel_id"   .= wepChannelId
     , "team_id"      .= wepTeamId
     , "sender_name"  .= wepSenderName
+    , "user_id"      .= wepUserId
     , "channel_name" .= wepChannelDisplayName
     , "post"         .= toValueString wepPost
     ]
