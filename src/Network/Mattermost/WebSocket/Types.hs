@@ -6,6 +6,7 @@ module Network.Mattermost.WebSocket.Types
 ( WebsocketEventType(..)
 , WebsocketEvent(..)
 , WEData(..)
+, WEBroadcast(..)
 ) where
 
 import           Control.Exception ( throw )
