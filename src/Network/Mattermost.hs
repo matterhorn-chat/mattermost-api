@@ -18,6 +18,7 @@ module Network.Mattermost
 , TeamId(..)
 , TeamsCreate(..)
 , Channel(..)
+, ChannelWithData(..)
 , ChannelId(..)
 , Channels
 , MinChannel(..)
@@ -252,12 +253,12 @@ mmGetMoreChannels cd token teamid = mmDoRequest cd "mmGetMoreChannels" token $
 mmGetChannel :: ConnectionData -> Token
              -> TeamId
              -> ChannelId
-             -> IO Channel
+             -> IO ChannelWithData
 mmGetChannel cd token teamid chanid = mmWithRequest cd "mmGetChannel" token
   (printf "/api/v3/teams/%s/channels/%s/"
           (idString teamid)
           (idString chanid))
-  (\(SC channel) -> return channel)
+  return
 
 mmUpdateLastViewedAt :: ConnectionData -> Token
                      -> TeamId

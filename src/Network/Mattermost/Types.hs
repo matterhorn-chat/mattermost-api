@@ -17,6 +17,7 @@ import           Data.Aeson.Types ( ToJSONKey
                                   , FromJSON
                                   , ToJSON
                                   , Parser
+                                  , typeMismatch
                                   )
 import           Data.HashMap.Strict ( HashMap )
 import qualified Data.HashMap.Strict as HM
@@ -339,6 +340,14 @@ instance A.FromJSON ChannelData where
     channelDataNotifyProps  <- o .: "notify_props"
     channelDataLastUpdateAt <- millisecondsToUTCTime <$> o .: "last_update_at"
     return ChannelData { .. }
+
+data ChannelWithData = ChannelWithData Channel ChannelData
+
+instance A.FromJSON ChannelWithData where
+  parseJSON (A.Object v) =
+      ChannelWithData <$> (v .: "channel")
+                      <*> (v .: "member")
+  parseJSON v = typeMismatch "Invalid channel/data pair " v
 
 type Channels = Seq Channel
 
