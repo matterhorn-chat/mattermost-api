@@ -592,7 +592,7 @@ mmRequest cd token path = do
           }
     simpleHTTP_ con request
   rsp <- hoistE $ left ConnectionException rawRsp
-  assert200Response rsp
+  assert200Response path rsp
   return rsp
 
 -- This captures the most common pattern when making requests.
@@ -655,17 +655,19 @@ mmRawPOST cd token path content = do
           }
     simpleHTTP_ con request
   rsp <- hoistE $ left ConnectionException rawRsp
-  assert200Response rsp
+  assert200Response path rsp
   return rsp
 
-assert200Response :: Response_String -> IO ()
-assert200Response rsp =
+assert200Response :: URI -> Response_String -> IO ()
+assert200Response path rsp =
     when (rspCode rsp /= (2,0,0)) $
         let httpExc = HTTPResponseException $ "mmRequest: expected 200 response, got " <>
                                               (show $ rspCode rsp)
         in case eitherDecode $ BL.pack $ rspBody rsp of
             Right (Object o) ->
                 case HM.lookup "message" o of
-                    Just (String msg) -> throwIO $ MattermostServerError msg
+                    Just (String msg) ->
+                        let newMsg = (T.pack $ "Error requesting " <> show path <> ": ") <> msg
+                        in throwIO $ MattermostServerError newMsg
                     _ -> throwIO $ httpExc
             _ -> throwIO $ httpExc
