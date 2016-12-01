@@ -491,7 +491,7 @@ weTeamIdL = makeLens weTeamId (\ t s -> s { weTeamId = t })
 weEventL :: Lens' WebsocketEvent WebsocketEventType
 weEventL = makeLens weEvent (\ t s -> s { weEvent = t })
 
-weUserIdL :: Lens' WebsocketEvent UserId
+weUserIdL :: Lens' WebsocketEvent (Maybe UserId)
 weUserIdL = makeLens weUserId (\ t s -> s { weUserId = t })
 
 weChannelIdL :: Lens' WebsocketEvent (Maybe ChannelId)

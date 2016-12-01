@@ -99,7 +99,7 @@ fromValueString = A.withText "string-encoded json" $ \s -> do
 data WebsocketEvent = WebsocketEvent
   { weTeamId    :: Maybe TeamId
   , weEvent     :: WebsocketEventType
-  , weUserId    :: UserId
+  , weUserId    :: Maybe UserId
   , weChannelId :: Maybe ChannelId
   , weData      :: WEData
   } deriving (Read, Show, Eq)
@@ -108,7 +108,7 @@ instance FromJSON WebsocketEvent where
   parseJSON = A.withObject "WebsocketEvent" $ \o -> do
     weTeamId    <- (Just <$> (o .:  "team_id")) <|> return Nothing
     weEvent     <- o .:  "event"
-    weUserId    <- o .:  "user_id"
+    weUserId    <- o .:?  "user_id"
     weChannelId <- (Just <$> (o .:  "channel_id")) <|> return Nothing
     weData      <- o .:  "data"
     return WebsocketEvent { .. }
