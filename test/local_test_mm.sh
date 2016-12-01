@@ -18,11 +18,6 @@ then
     exit 1
 fi
 
-die() {
-  echo $1
-  exit 1
-}
-
 if ! which docker 2>/dev/null >/dev/null
 then
     echo "Error: 'docker' not found in PATH, exiting"
@@ -40,9 +35,7 @@ then
 fi
 
 # If this command fails we're in trouble.
-docker run  --name $CONTAINER -d --publish 8065:8065 \
-       mattermost/$CONTAINER                         \
-       || die "Failed to start mattermost"
+docker run  --name $CONTAINER -d --publish 8065:8065 mattermost/$CONTAINER
 
 # It takes a while for the MM server to start accepting logins
 $HERE/wait_for_mm.sh
