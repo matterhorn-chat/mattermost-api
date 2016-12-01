@@ -556,7 +556,7 @@ data Post
   , postOriginalId    :: Maybe PostId
   , postProps         :: PostProps
   , postRootId        :: Text
-  , postFilenames     :: Seq Text
+  , postFileIds       :: Seq Text
   , postId            :: PostId
   , postType          :: Type
   , postMessage       :: Text
@@ -578,7 +578,7 @@ instance A.FromJSON Post where
     postOriginalId    <- maybeFail (v .: "original_id")
     postProps         <- v .: "props"
     postRootId        <- v .: "root_id"
-    postFilenames     <- v .: "filenames"
+    postFileIds       <- (v .: "fileIds") <|> (return mempty)
     postId            <- v .: "id"
     postType          <- v .: "type"
     postMessage       <- v .: "message"
@@ -597,7 +597,7 @@ instance A.ToJSON Post where
     , "original_id"     .= postOriginalId
     , "props"           .= postProps
     , "root_id"         .= postRootId
-    , "filenames"       .= postFilenames
+    , "fileIds"         .= postFileIds
     , "id"              .= postId
     , "type"            .= postType
     , "message"         .= postMessage

@@ -87,7 +87,7 @@ module Network.Mattermost.Lenses
 , postOriginalIdL
 , postPropsL
 , postRootIdL
-, postFilenamesL
+, postFileIdsL
 , postIdL
 , postTypeL
 , postMessageL
@@ -422,8 +422,8 @@ postPropsL = makeLens postProps (\ t s -> s { postProps = t })
 postRootIdL :: Lens' Post Text
 postRootIdL = makeLens postRootId (\ t s -> s { postRootId = t })
 
-postFilenamesL :: Lens' Post (Seq Text)
-postFilenamesL = makeLens postFilenames (\ t s -> s { postFilenames = t })
+postFileIdsL :: Lens' Post (Seq Text)
+postFileIdsL = makeLens postFileIds (\ t s -> s { postFileIds = t })
 
 postIdL :: Lens' Post PostId
 postIdL = makeLens postId (\ t s -> s { postId = t })
