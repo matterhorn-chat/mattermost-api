@@ -2,10 +2,20 @@
 
 set -e
 
+HERE=$(cd `dirname $0`; pwd)
+TEST_PROGRAM=test-mm-api
+ROOT=$HERE/..
+
 # Note: [JED] You may need to change TEST_RUNNER depending on your environment.
 # As of writing this script `cabal new-build` doesn't have a `new-run` so I use
 # the following find command to locate the test-mm-api executable. YMMV.
-TEST_RUNNER=$(find . -name test-mm-api -type f)
+TEST_RUNNER=$(find $ROOT -name $TEST_PROGRAM -type f)
+
+if [ -z "$TEST_RUNNER" ]
+then
+    echo "Error: cannot find $TEST_PROGRAM in $ROOT, exiting"
+    exit 1
+fi
 
 die() {
   echo $1
