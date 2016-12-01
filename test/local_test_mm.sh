@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -e
+
 # Note: [JED] You may need to change TEST_RUNNER depending on your environment.
 # As of writing this script `cabal new-build` doesn't have a `new-run` so I use
 # the following find command to locate the test-mm-api executable. YMMV.
