@@ -16,10 +16,10 @@ function container_present {
 }
 
 function cleanup_last_container {
-    # These first two docker commands are allowed to fail. For instance,
-    # on a first run of this script. This check ensures that if they
-    # do fail, we abort the script because the container exists AND
-    # stopping it failed somehow.
+    # This check ensures that we only attempt to stop and remove the
+    # container if it already exists. Any failure in these commands is
+    # thus not indicative of a missing image (say, on first run of this
+    # script on a fresh system).
     if container_present
     then
         docker stop $CONTAINER
