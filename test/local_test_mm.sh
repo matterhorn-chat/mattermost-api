@@ -10,6 +10,12 @@ die() {
   exit 1
 }
 
+if ! which docker 2>/dev/null >/dev/null
+then
+    echo "Error: 'docker' not found in PATH, exiting"
+    exit 1
+fi
+
 # These first two docker commands are allowed to fail. For instance, on a first
 # run of this script.
 docker stop mattermost-preview
