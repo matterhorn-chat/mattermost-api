@@ -41,6 +41,7 @@ data WebsocketEventType
   | WMNewUser
   | WMLeaveTeam
   | WMUserAdded
+  | WMUserUpdated
   | WMUserRemoved
   | WMPreferenceChanged
   | WMEphemeralMessage
@@ -60,6 +61,7 @@ instance FromJSON WebsocketEventType where
     "new_user"           -> return WMNewUser
     "leave_team"         -> return WMLeaveTeam
     "user_added"         -> return WMUserAdded
+    "user_updated"       -> return WMUserUpdated
     "user_removed"       -> return WMUserRemoved
     "preference_changed" -> return WMPreferenceChanged
     "ephemeral_message"  -> return WMEphemeralMessage
@@ -78,6 +80,7 @@ instance ToJSON WebsocketEventType where
   toJSON WMNewUser           = "new_user"
   toJSON WMLeaveTeam         = "leave_team"
   toJSON WMUserAdded         = "user_added"
+  toJSON WMUserUpdated       = "user_updated"
   toJSON WMUserRemoved       = "user_removed"
   toJSON WMPreferenceChanged = "preference_changed"
   toJSON WMEphemeralMessage  = "ephemeral_message"
@@ -139,6 +142,7 @@ data WEData = WEData
   , wepTeamId             :: Maybe TeamId
   , wepSenderName         :: Maybe Text
   , wepUserId             :: Maybe UserId
+  , wepUser               :: Maybe UserProfile
   , wepChannelDisplayName :: Maybe Text
   , wepPost               :: Maybe Post
   , wepStatus             :: Maybe Text
@@ -150,6 +154,7 @@ instance FromJSON WEData where
     wepTeamId             <- o .:? "team_id"
     wepSenderName         <- o .:? "sender_name"
     wepUserId             <- o .:? "user_id"
+    wepUser               <- o .:? "user"
     wepChannelDisplayName <- o .:? "channel_name"
     wepPostRaw            <- o .:? "post"
     wepPost <- case wepPostRaw of
