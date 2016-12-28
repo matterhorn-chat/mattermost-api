@@ -422,7 +422,7 @@ postPropsL = makeLens postProps (\ t s -> s { postProps = t })
 postRootIdL :: Lens' Post Text
 postRootIdL = makeLens postRootId (\ t s -> s { postRootId = t })
 
-postFileIdsL :: Lens' Post (Seq Text)
+postFileIdsL :: Lens' Post (Seq FileId)
 postFileIdsL = makeLens postFileIds (\ t s -> s { postFileIds = t })
 
 postIdL :: Lens' Post PostId

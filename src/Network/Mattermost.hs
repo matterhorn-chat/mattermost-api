@@ -26,6 +26,8 @@ module Network.Mattermost
 , UsersCreate(..)
 , Post(..)
 , PostId(..)
+, FileId(..)
+, urlForFile
 , Posts(..)
 , MinCommand(..)
 -- ** Log-related types

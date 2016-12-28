@@ -21,6 +21,7 @@ import           Data.Aeson.Types ( ToJSONKey
                                   )
 import           Data.HashMap.Strict ( HashMap )
 import qualified Data.HashMap.Strict as HM
+import           Data.Monoid ( (<>), mempty )
 import           Data.Ratio ( (%) )
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as S
@@ -551,13 +552,24 @@ instance IsId PostId where
   toId   = unPI
   fromId = PI
 
+newtype FileId = FI { unFI :: Id }
+  deriving (Read, Show, Eq, Ord, Hashable, ToJSON, ToJSONKey, FromJSONKey, FromJSON)
+
+instance IsId FileId where
+  toId = unFI
+  fromId = FI
+
+urlForFile :: FileId -> Text
+urlForFile fId =
+  "/api/v3/files/" <> idString fId <> "/get"
+
 data Post
   = Post
   { postPendingPostId :: Maybe PostId
   , postOriginalId    :: Maybe PostId
   , postProps         :: PostProps
   , postRootId        :: Text
-  , postFileIds       :: Seq Text
+  , postFileIds       :: Seq FileId
   , postId            :: PostId
   , postType          :: Type
   , postMessage       :: Text
@@ -579,7 +591,7 @@ instance A.FromJSON Post where
     postOriginalId    <- maybeFail (v .: "original_id")
     postProps         <- v .: "props"
     postRootId        <- v .: "root_id"
-    postFileIds       <- (v .: "fileIds") <|> (return mempty)
+    postFileIds       <- (v .: "file_ids") <|> (return mempty)
     postId            <- v .: "id"
     postType          <- v .: "type"
     postMessage       <- v .: "message"
@@ -598,7 +610,7 @@ instance A.ToJSON Post where
     , "original_id"     .= postOriginalId
     , "props"           .= postProps
     , "root_id"         .= postRootId
-    , "fileIds"         .= postFileIds
+    , "file_ids"        .= postFileIds
     , "id"              .= postId
     , "type"            .= postType
     , "message"         .= postMessage
