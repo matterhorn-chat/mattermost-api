@@ -28,6 +28,7 @@ library
                        Network.Mattermost.Util
                        Network.Mattermost.WebSocket
                        Network.Mattermost.WebSocket.Types
+                       Network.Mattermost.Version
   other-modules:       Network.Mattermost.Types
   -- other-extensions:
   build-depends:       base >=4.4 && <5
@@ -44,6 +45,7 @@ library
                      , unordered-containers
                      , hashable
                      , containers
+                     , gitrev
                      -- Only here to make debugging easier
                      , pretty-show
   hs-source-dirs:      src
