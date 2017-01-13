@@ -10,4 +10,4 @@ mmApiVersion :: String
 mmApiVersion
   | $(gitHash) == ("UNKNOWN" :: String) = "mattermost-api " ++ showVersion version
   | otherwise = "mattermost-api " ++ showVersion version ++ " (" ++
-                $(gitBranch) ++ "@" ++ $(gitHash) ++ ")"
+                $(gitBranch) ++ "@" ++ take 7 $(gitHash) ++ ")"
