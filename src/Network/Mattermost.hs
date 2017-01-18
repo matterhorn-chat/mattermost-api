@@ -27,6 +27,7 @@ module Network.Mattermost
 , Post(..)
 , PostId(..)
 , FileId(..)
+, Reaction(..)
 , urlForFile
 , Posts(..)
 , MinCommand(..)
@@ -59,6 +60,8 @@ module Network.Mattermost
 , mmGetPostsSince
 , mmGetPostsBefore
 , mmGetPostsAfter
+, mmGetReactionsForPost
+, mmGetFileInfo
 , mmGetUser
 , mmGetTeamMembers
 , mmGetProfilesForDMList
@@ -389,6 +392,13 @@ mmGetPostsBefore cd token teamid chanid postid offset limit =
          offset
          limit
 
+mmGetFileInfo :: ConnectionData -> Token
+              -> FileId
+              -> IO FileInfo
+mmGetFileInfo cd token fileId =
+  mmDoRequest cd "mmGetFileInfo" token $
+  printf "/api/v3/files/%s/get_info" (idString fileId)
+
 mmGetUser :: ConnectionData -> Token -> UserId -> IO User
 mmGetUser cd token userid = mmDoRequest cd "mmGetUser" token $
   printf "/api/v3/users/%s/get" (idString userid)
@@ -575,6 +585,19 @@ mmUsersCreateWithToken cd token usersCreate = do
   runLogger cd "mmUsersCreateWithToken" $
     HttpResponse 200 path (Just (val))
   return r
+
+mmGetReactionsForPost :: ConnectionData
+                      -> Token
+                      -> TeamId
+                      -> ChannelId
+                      -> PostId
+                      -> IO [Reaction]
+mmGetReactionsForPost cd token tId cId pId = do
+  let path = printf "/api/v3/teams/%s/channels/%s/posts/%s/reactions"
+                    (idString tId)
+                    (idString cId)
+                    (idString pId)
+  mmDoRequest cd "mmGetReactionsForPost" token path
 
 -- | This is for making a generic authenticated request.
 mmRequest :: ConnectionData -> Token -> URI -> IO Response_String

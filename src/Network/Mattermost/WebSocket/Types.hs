@@ -10,7 +10,7 @@ module Network.Mattermost.WebSocket.Types
 ) where
 
 import           Control.Exception ( throw )
-import           Control.Applicative ((<|>))
+import           Control.Applicative ((<$>), (<|>))
 import           Data.Aeson ( FromJSON(..)
                             , ToJSON(..)
                             , (.:)
@@ -47,6 +47,9 @@ data WebsocketEventType
   | WMEphemeralMessage
   | WMStatusChange
   | WMHello
+  | WMUpdateTeam
+  | WMReactionAdded
+  | WMReactionRemoved
     deriving (Read, Show, Eq, Ord)
 
 instance FromJSON WebsocketEventType where
@@ -67,6 +70,9 @@ instance FromJSON WebsocketEventType where
     "ephemeral_message"  -> return WMEphemeralMessage
     "status_change"      -> return WMStatusChange
     "hello"              -> return WMHello
+    "update_team"        -> return WMUpdateTeam
+    "reaction_added"     -> return WMReactionAdded
+    "reaction_removed"   -> return WMReactionRemoved
     _                    -> fail ("Unknown websocket message: " ++ show s)
 
 instance ToJSON WebsocketEventType where
@@ -86,6 +92,9 @@ instance ToJSON WebsocketEventType where
   toJSON WMEphemeralMessage  = "ephemeral_message"
   toJSON WMStatusChange      = "status_change"
   toJSON WMHello             = "hello"
+  toJSON WMUpdateTeam        = "update_team"
+  toJSON WMReactionAdded     = "reaction_added"
+  toJSON WMReactionRemoved   = "reaction_removed"
 
 --
 
@@ -146,6 +155,7 @@ data WEData = WEData
   , wepChannelDisplayName :: Maybe Text
   , wepPost               :: Maybe Post
   , wepStatus             :: Maybe Text
+  , wepReaction           :: Maybe Reaction
   } deriving (Read, Show, Eq)
 
 instance FromJSON WEData where
@@ -161,6 +171,10 @@ instance FromJSON WEData where
       Just str -> fromValueString str
       Nothing  -> return Nothing
     wepStatus <- o .:? "status"
+    wepReactionRaw <- o .:? "reaction"
+    wepReaction <- case wepReactionRaw of
+      Just str -> fromValueString str
+      Nothing  -> return Nothing
     return WEData { .. }
 
 instance ToJSON WEData where
@@ -171,6 +185,7 @@ instance ToJSON WEData where
     , "user_id"      .= wepUserId
     , "channel_name" .= wepChannelDisplayName
     , "post"         .= toValueString wepPost
+    , "reaction"     .= wepReaction
     ]
 
 --

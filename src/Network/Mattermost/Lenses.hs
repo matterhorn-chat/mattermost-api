@@ -98,6 +98,7 @@ module Network.Mattermost.Lenses
 , postCreateAtL
 , postParentIdL
 , postChannelIdL
+, postHasReactionsL
 -- ** 'PostProps' lenses
 , postPropsOverrideIconUrlL
 , postPropsOverrideUsernameL
@@ -114,6 +115,11 @@ module Network.Mattermost.Lenses
 -- ** 'Posts' lenses
 , postsPostsL
 , postsOrderL
+-- ** 'Reaction' lenses
+, reactionUserIdL
+, reactionPostIdL
+, reactionEmojiNameL
+, reactionCreateAtL
 -- * Websocket Types
 -- ** 'WebsocketEvent' lenses
 , weTeamIdL
@@ -121,13 +127,18 @@ module Network.Mattermost.Lenses
 , weUserIdL
 , weChannelIdL
 , weDataL
--- ** 'WEProps' lenses
+, weBroadcastL
+-- ** 'WEData' lenses
 , wepChannelIdL
 , wepTeamIdL
 , wepSenderNameL
 , wepChannelDisplayNameL
 , wepPostL
 , wepStatusL
+-- ** 'WEBroadcast' lenses
+, webChannelIdL
+, webTeamIdL
+, webUserIdL
 ) where
 
 import Data.HashMap.Strict (HashMap)
@@ -455,6 +466,9 @@ postParentIdL = makeLens postParentId (\ t s -> s { postParentId = t })
 postChannelIdL :: Lens' Post ChannelId
 postChannelIdL = makeLens postChannelId (\ t s -> s { postChannelId = t })
 
+postHasReactionsL :: Lens' Post Bool
+postHasReactionsL = makeLens postHasReactions (\ t s -> s { postHasReactions = t })
+
 --
 
 pendingPostChannelIdL :: Lens' PendingPost ChannelId
@@ -485,6 +499,20 @@ postsOrderL = makeLens postsOrder (\ t s -> s { postsOrder = t })
 
 --
 
+reactionUserIdL :: Lens' Reaction UserId
+reactionUserIdL = makeLens reactionUserId (\ t s -> s { reactionUserId = t })
+
+reactionPostIdL :: Lens' Reaction PostId
+reactionPostIdL = makeLens reactionPostId (\ t s -> s { reactionPostId = t })
+
+reactionEmojiNameL :: Lens' Reaction Text
+reactionEmojiNameL = makeLens reactionEmojiName (\ t s -> s { reactionEmojiName = t })
+
+reactionCreateAtL :: Lens' Reaction UTCTime
+reactionCreateAtL = makeLens reactionCreateAt (\ t s -> s { reactionCreateAt = t })
+
+--
+
 weTeamIdL :: Lens' WebsocketEvent (Maybe TeamId)
 weTeamIdL = makeLens weTeamId (\ t s -> s { weTeamId = t })
 
@@ -500,6 +528,9 @@ weChannelIdL = makeLens weChannelId (\ t s -> s { weChannelId = t })
 weDataL :: Lens' WebsocketEvent WEData
 weDataL = makeLens weData (\ t s -> s { weData = t })
 
+weBroadcastL :: Lens' WebsocketEvent WEBroadcast
+weBroadcastL = makeLens weBroadcast (\ t s -> s { weBroadcast = t })
+
 --
 
 wepChannelIdL :: Lens' WEData (Maybe ChannelId)
@@ -514,9 +545,19 @@ wepSenderNameL = makeLens wepSenderName (\ t s -> s { wepSenderName = t })
 wepChannelDisplayNameL :: Lens' WEData (Maybe Text)
 wepChannelDisplayNameL = makeLens wepChannelDisplayName
                                   (\ t s -> s { wepChannelDisplayName = t })
-
 wepPostL :: Lens' WEData (Maybe Post)
 wepPostL = makeLens wepPost (\ t s -> s { wepPost = t })
 
 wepStatusL :: Lens' WEData (Maybe Text)
 wepStatusL = makeLens wepStatus (\ t s -> s { wepStatus = t })
+
+--
+
+webChannelIdL :: Lens' WEBroadcast (Maybe ChannelId)
+webChannelIdL = makeLens webChannelId (\ t s -> s { webChannelId = t })
+
+webUserIdL :: Lens' WEBroadcast (Maybe UserId)
+webUserIdL = makeLens webUserId (\ t s -> s { webUserId = t })
+
+webTeamIdL :: Lens' WEBroadcast (Maybe TeamId)
+webTeamIdL = makeLens webTeamId (\ t s -> s { webTeamId = t })

@@ -580,6 +580,7 @@ data Post
   , postCreateAt      :: UTCTime
   , postParentId      :: Maybe PostId
   , postChannelId     :: ChannelId
+  , postHasReactions  :: Bool
   } deriving (Read, Show, Eq)
 
 instance HasId Post PostId where
@@ -602,6 +603,7 @@ instance A.FromJSON Post where
     postCreateAt      <- millisecondsToUTCTime <$> v .: "create_at"
     postParentId      <- maybeFail (v .: "parent_id")
     postChannelId     <- v .: "channel_id"
+    postHasReactions  <- (v .: "has_reactions") <|> (return False)
     return Post { .. }
 
 instance A.ToJSON Post where
@@ -621,6 +623,7 @@ instance A.ToJSON Post where
     , "create_at"       .= postCreateAt
     , "parent_id"       .= postParentId
     , "channel_id"      .= postChannelId
+    , "has_reactions"   .= postHasReactions
     ]
 
 data PendingPost
@@ -636,7 +639,7 @@ data PendingPost
 instance A.ToJSON PendingPost where
   toJSON post = A.object
     [ "channel_id"      .= pendingPostChannelId post
-    , "create_at"       .= utcTimeToMilliseconds (pendingPostCreateAt  post)
+    , "create_at"       .= utcTimeToMilliseconds (pendingPostCreateAt post)
     , "filenames"       .= pendingPostFilenames post
     , "message"         .= pendingPostMessage   post
     , "pending_post_id" .= pendingPostId        post
@@ -666,6 +669,40 @@ mkPendingPost msg userid channelid = do
     , pendingPostMessage   = msg
     , pendingPostUserId    = userid
     }
+
+data FileInfo
+  = FileInfo
+  { fileInfoId         :: FileId
+  , fileInfoUserId     :: UserId
+  , fileInfoPostId     :: Maybe PostId
+  , fileInfoCreateAt   :: UTCTime
+  , fileInfoUpdateAt   :: UTCTime
+  , fileInfoDeleteAt   :: UTCTime
+  , fileInfoName       :: Text
+  , fileInfoExtension  :: Text
+  , fileInfoSize       :: Int
+  , fileInfoMimeType   :: Text
+  , fileInfoWidth      :: Maybe Int
+  , fileInfoHeight     :: Maybe Int
+  , fileInfoHasPreview :: Bool
+  } deriving (Read, Show, Eq)
+
+instance FromJSON FileInfo where
+  parseJSON = A.withObject "file_info" $ \o -> do
+    fileInfoId         <- o .: "id"
+    fileInfoUserId     <- o .: "user_id"
+    fileInfoPostId     <- o .: "post_id"
+    fileInfoCreateAt   <- o .: "create_at"
+    fileInfoUpdateAt   <- o .: "update_at"
+    fileInfoDeleteAt   <- o .: "delete_at"
+    fileInfoName       <- o .: "name"
+    fileInfoExtension  <- o .: "extension"
+    fileInfoSize       <- o .: "size"
+    fileInfoMimeType   <- o .: "mime_type"
+    fileInfoWidth      <- o .: "width"
+    fileInfoHeight     <- o .: "height"
+    fileInfoHasPreview <- (o .: "has_preview_image") <|> pure False
+    return FileInfo { .. }
 
 --
 
@@ -773,4 +810,30 @@ instance A.ToJSON TeamsCreate where
     [ "display_name" .= teamsCreateDisplayName
     , "name"         .= teamsCreateName
     , "type"         .= teamsCreateType
+    ]
+
+--
+
+data Reaction
+  = Reaction
+  { reactionUserId    :: UserId
+  , reactionPostId    :: PostId
+  , reactionEmojiName :: Text
+  , reactionCreateAt  :: UTCTime
+  } deriving (Read, Show, Eq)
+
+instance A.FromJSON Reaction where
+  parseJSON = A.withObject "Reaction" $ \v -> do
+    reactionUserId    <- v .: "user_id"
+    reactionPostId    <- v .: "post_id"
+    reactionEmojiName <- v .: "emoji_name"
+    reactionCreateAt  <- millisecondsToUTCTime <$> v .: "create_at"
+    return Reaction { .. }
+
+instance A.ToJSON Reaction where
+  toJSON Reaction {.. } = A.object
+    [ "user_id"    .= reactionUserId
+    , "post_id"    .= reactionPostId
+    , "emoji_name" .= reactionEmojiName
+    , "create_at"  .= utcTimeToMilliseconds reactionCreateAt
     ]
