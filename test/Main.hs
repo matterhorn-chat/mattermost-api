@@ -5,6 +5,7 @@ module Main (
 
 import           Data.Text (Text)
 import qualified Data.Text as T
+import           Data.Monoid ((<>))
 
 import           Control.Exception
 import           Control.Monad ( join, void )
@@ -97,8 +98,8 @@ unitTests = testGroup "Units"
 -- exception though so that tasty reports the correct exception type.
 -- This results in some redundancy but we only see it when there are
 -- failures, so it seems acceptable.
-catchAndPrintJSONDecodeException :: IO a -> IO a
-catchAndPrintJSONDecodeException io = io
+reportJSONExceptions :: IO a -> IO a
+reportJSONExceptions io = io
   `catch` \e@(JSONDecodeException msg badJson) -> do
   putStrLn $ "\nException: JSONDecodeException: " ++ msg
   putStrLn badJson
@@ -107,7 +108,7 @@ catchAndPrintJSONDecodeException io = io
 -- Test definitions
 
 setup :: TestTree
-setup = testCaseSteps "Setup" $ \prnt -> catchAndPrintJSONDecodeException $ do
+setup = testCaseSteps "Setup" $ \prnt -> reportJSONExceptions $ do
   prnt "Creating connection"
   cd <- initConnectionDataInsecure (T.unpack (configHostname testConfig))
                                    (fromIntegral (configPort testConfig))
@@ -144,14 +145,14 @@ setup = testCaseSteps "Setup" $ \prnt -> catchAndPrintJSONDecodeException $ do
 
 loginAsNormalUserTest :: TestTree
 loginAsNormalUserTest = testCaseSteps "Logging to normal account" $ \prnt ->
-  catchAndPrintJSONDecodeException $ do
+  reportJSONExceptions $ do
     cd <- initConnectionDataInsecure (T.unpack (configHostname testConfig))
                                      (fromIntegral (configPort testConfig))
     _userToken <- loginAccount cd testUserLogin prnt
     return ()
 
 initialLoadTest :: TestTree
-initialLoadTest = testCaseSteps "Initial Load" $ \prnt -> catchAndPrintJSONDecodeException $ do
+initialLoadTest = testCaseSteps "Initial Load" $ \prnt -> reportJSONExceptions $ do
   cd <- initConnectionDataInsecure (T.unpack (configHostname testConfig))
                                    (fromIntegral (configPort testConfig))
   userToken   <- loginAccount cd testUserLogin prnt
@@ -160,7 +161,7 @@ initialLoadTest = testCaseSteps "Initial Load" $ \prnt -> catchAndPrintJSONDecod
   prnt (ppShow (fmap teamName (initialLoadTeams initialLoad)))
 
 createChannelTest :: TestTree
-createChannelTest = testCaseSteps "Create Channel" $ \prnt -> catchAndPrintJSONDecodeException $ do
+createChannelTest = testCaseSteps "Create Channel" $ \prnt -> reportJSONExceptions $ do
   cd <- initConnectionDataInsecure (T.unpack (configHostname testConfig))
                                    (fromIntegral (configPort testConfig))
   userToken   <- loginAccount cd testUserLogin prnt
@@ -171,7 +172,7 @@ createChannelTest = testCaseSteps "Create Channel" $ \prnt -> catchAndPrintJSOND
   return ()
 
 getChannelsTest :: TestTree
-getChannelsTest = testCaseSteps "Get Channels" $ \prnt -> catchAndPrintJSONDecodeException $ do
+getChannelsTest = testCaseSteps "Get Channels" $ \prnt -> reportJSONExceptions $ do
   cd <- initConnectionDataInsecure (T.unpack (configHostname testConfig))
                                    (fromIntegral (configPort testConfig))
   userToken   <- loginAccount cd testUserLogin prnt
@@ -182,7 +183,7 @@ getChannelsTest = testCaseSteps "Get Channels" $ \prnt -> catchAndPrintJSONDecod
   prnt (ppShow chan)
 
 leaveChannelTest :: TestTree
-leaveChannelTest = testCaseSteps "Leave Channel" $ \prnt -> catchAndPrintJSONDecodeException $ do
+leaveChannelTest = testCaseSteps "Leave Channel" $ \prnt -> reportJSONExceptions $ do
   cd <- initConnectionDataInsecure (T.unpack (configHostname testConfig))
                                    (fromIntegral (configPort testConfig))
   userToken   <- loginAccount cd testUserLogin prnt
@@ -196,7 +197,7 @@ leaveChannelTest = testCaseSteps "Leave Channel" $ \prnt -> catchAndPrintJSONDec
   mmLeaveChannel cd userToken (teamId team) (channelId chan)
 
 joinChannelTest :: TestTree
-joinChannelTest = testCaseSteps "Join Channel" $ \prnt -> catchAndPrintJSONDecodeException $ do
+joinChannelTest = testCaseSteps "Join Channel" $ \prnt -> reportJSONExceptions $ do
   cd <- initConnectionDataInsecure (T.unpack (configHostname testConfig))
                                    (fromIntegral (configPort testConfig))
   userToken   <- loginAccount cd testUserLogin prnt
