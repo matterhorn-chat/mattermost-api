@@ -8,7 +8,7 @@ import qualified Data.Text as T
 import           Data.Monoid ((<>))
 
 import           Control.Exception
-import           Control.Monad ( join, void )
+import           Control.Monad ( join, void, when )
 
 import           System.Exit
 
@@ -23,6 +23,12 @@ import           Test.Tasty.HUnit
 
 import           Network.Mattermost
 import           Network.Mattermost.Exceptions
+
+debug :: Bool
+debug = False
+
+whenDebug :: IO () -> IO ()
+whenDebug = when debug
 
 main :: IO ()
 main = defaultMain tests `catch` \(JSONDecodeException msg badJson) -> do
@@ -109,25 +115,25 @@ reportJSONExceptions io = io
 
 setup :: TestTree
 setup = testCaseSteps "Setup" $ \prnt -> reportJSONExceptions $ do
-  prnt "Creating connection"
+  whenDebug $ prnt "Creating connection"
   cd <- initConnectionDataInsecure (T.unpack (configHostname testConfig))
                                    (fromIntegral (configPort testConfig))
   -- XXX: Use something like this if you want logging (useful when debugging)
   -- let cd = cd' `withLogger` mmLoggerDebugErr
 
-  prnt "Creating Admin account"
+  whenDebug $ prnt "Creating Admin account"
   _adminUser <- createAdminAccount cd prnt
-  prnt "Logging into Admin account"
+  whenDebug $ prnt "Logging into Admin account"
   adminToken <- loginAdminAccount cd prnt
 
-  prnt "Creating test team"
+  whenDebug $ prnt "Creating test team"
   testTeam <- createTestTeam cd adminToken prnt
 
-  prnt "Getting Config"
+  whenDebug $ prnt "Getting Config"
   config <- mmGetConfig cd adminToken
-  -- prnt (ppShow config)
+  whenDebug $ prnt (ppShow config)
 
-  prnt "Saving Config"
+  whenDebug $ prnt "Saving Config"
   -- Enable open team so that the admin can create
   -- new users.
   let Object oldConfig    = config
@@ -137,10 +143,10 @@ setup = testCaseSteps "Setup" $ \prnt -> reportJSONExceptions $ do
                                            (Bool True) teamSettings)) oldConfig)
   mmSaveConfig cd adminToken newConfig
 
-  prnt "Creating test account"
+  whenDebug $ prnt "Creating test account"
   testUser   <- createTestAccount cd adminToken prnt
 
-  prnt "Add test user to test team"
+  whenDebug $ prnt "Add test user to test team"
   mmTeamAddUser cd adminToken (teamId testTeam) (userId testUser)
 
 loginAsNormalUserTest :: TestTree
@@ -158,7 +164,7 @@ initialLoadTest = testCaseSteps "Initial Load" $ \prnt -> reportJSONExceptions $
   userToken   <- loginAccount cd testUserLogin prnt
   initialLoad <- mmGetInitialLoad cd userToken
   -- print the team names
-  prnt (ppShow (fmap teamName (initialLoadTeams initialLoad)))
+  whenDebug $ prnt (ppShow (fmap teamName (initialLoadTeams initialLoad)))
 
 createChannelTest :: TestTree
 createChannelTest = testCaseSteps "Create Channel" $ \prnt -> reportJSONExceptions $ do
@@ -168,8 +174,7 @@ createChannelTest = testCaseSteps "Create Channel" $ \prnt -> reportJSONExceptio
   initialLoad <- mmGetInitialLoad cd userToken
   let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
   chan <- mmCreateChannel cd userToken (teamId team) testMinChannel
-  prnt (ppShow chan)
-  return ()
+  whenDebug $ prnt (ppShow chan)
 
 getChannelsTest :: TestTree
 getChannelsTest = testCaseSteps "Get Channels" $ \prnt -> reportJSONExceptions $ do
@@ -180,7 +185,7 @@ getChannelsTest = testCaseSteps "Get Channels" $ \prnt -> reportJSONExceptions $
   let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
   chans <- mmGetChannels cd userToken (teamId team)
   let chan Seq.:< _ = Seq.viewl chans
-  prnt (ppShow chan)
+  whenDebug $ prnt (ppShow chan)
 
 findChannel :: Channels -> Text -> Channel
 findChannel chans name =
@@ -197,7 +202,7 @@ leaveChannelTest = testCaseSteps "Leave Channel" $ \prnt -> reportJSONExceptions
   initialLoad <- mmGetInitialLoad cd userToken
   let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
   chans <- mmGetChannels cd userToken (teamId team)
-  prnt (ppShow chans)
+  whenDebug $ prnt (ppShow chans)
   let chan = findChannel chans $ minChannelName testMinChannel
   mmLeaveChannel cd userToken (teamId team) (channelId chan)
 
@@ -209,7 +214,7 @@ joinChannelTest = testCaseSteps "Join Channel" $ \prnt -> reportJSONExceptions $
   initialLoad <- mmGetInitialLoad cd userToken
   let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
   chans <- mmGetMoreChannels cd userToken (teamId team)
-  prnt (ppShow chans)
+  whenDebug $ prnt (ppShow chans)
   let chan = findChannel chans $ minChannelName testMinChannel
   mmJoinChannel cd userToken (teamId team) (channelId chan)
 
@@ -234,18 +239,18 @@ testAccount =
 createAdminAccount :: ConnectionData -> (String -> IO ()) -> IO ()
 createAdminAccount cd prnt = do
   void $ mmUsersCreate cd adminAccount
-  prnt "Admin Account created"
+  whenDebug $ prnt "Admin Account created"
 
 createTestTeam :: ConnectionData -> Token -> (String -> IO ()) -> IO Team
 createTestTeam cd token prnt = do
   team <- mmCreateTeam cd token testTeamsCreate
-  prnt "Test team created"
+  whenDebug $ prnt "Test team created"
   return team
 
 createTestAccount :: ConnectionData -> Token -> (String -> IO ()) -> IO User
 createTestAccount cd token prnt = do
   newUser <- mmUsersCreateWithToken cd token testAccount
-  prnt "Test Account created"
+  whenDebug $ prnt "Test Account created"
   return newUser
 
 loginAdminAccount :: ConnectionData -> (String -> IO ()) -> IO Token
@@ -258,5 +263,5 @@ loginAdminAccount cd = loginAccount cd admin
 loginAccount :: ConnectionData -> Login -> (String -> IO ()) -> IO Token
 loginAccount cd login prnt = do
   (token, _mmUser) <- join (hoistE <$> mmLogin cd login)
-  prnt $ "Authenticated as " ++ T.unpack (username login)
+  whenDebug $ prnt $ "Authenticated as " ++ T.unpack (username login)
   return token
