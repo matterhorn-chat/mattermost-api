@@ -7,7 +7,7 @@ import           Data.Text (Text)
 import qualified Data.Text as T
 
 import           Control.Exception
-import           Control.Monad ( join )
+import           Control.Monad ( join, void )
 
 import           System.Exit
 
@@ -22,13 +22,11 @@ import           Test.Tasty.HUnit
 
 import           Network.Mattermost
 import           Network.Mattermost.Exceptions
-import           Network.Mattermost.Logging
-import           Network.Mattermost.Util
 
 main :: IO ()
-main = defaultMain tests `catch` \(JSONDecodeException msg json) -> do
+main = defaultMain tests `catch` \(JSONDecodeException msg badJson) -> do
   putStrLn $ "JSONDecodeException: " ++ msg
-  putStrLn json
+  putStrLn badJson
   exitFailure
 
 -- Users and other test configuration data
@@ -100,9 +98,9 @@ unitTests = testGroup "Units"
 -- we only see it when there are failures, so it seems acceptable.
 catchAndPrintJSONDecodeException :: IO a -> IO a
 catchAndPrintJSONDecodeException io = io
-  `catch` \e@(JSONDecodeException msg json) -> do
+  `catch` \e@(JSONDecodeException msg badJson) -> do
   putStrLn $ "\nException: JSONDecodeException: " ++ msg
-  putStrLn json
+  putStrLn badJson
   throwIO e
 
 -- Test definitions
@@ -248,6 +246,6 @@ loginAdminAccount cd = loginAccount cd admin
 
 loginAccount :: ConnectionData -> Login -> (String -> IO ()) -> IO Token
 loginAccount cd login prnt = do
-  (token, mmUser) <- join (hoistE <$> mmLogin cd login)
+  (token, _mmUser) <- join (hoistE <$> mmLogin cd login)
   prnt $ "Authenticated as " ++ T.unpack (username login)
   return token
