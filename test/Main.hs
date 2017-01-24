@@ -210,14 +210,25 @@ joinChannelTest = testCaseSteps "Join Channel" $ \prnt -> catchAndPrintJSONDecod
 
 -- Wrapper functions used in test cases
 
+adminAccount :: UsersCreate
+adminAccount =
+    UsersCreate { usersCreateEmail          = configEmail    testConfig
+                , usersCreatePassword       = configPassword testConfig
+                , usersCreateUsername       = configUsername testConfig
+                , usersCreateAllowMarketing = True
+                }
+
+testAccount :: UsersCreate
+testAccount =
+    UsersCreate { usersCreateEmail          = "test-user@example.com"
+                , usersCreatePassword       = password testUserLogin
+                , usersCreateUsername       = username testUserLogin
+                , usersCreateAllowMarketing = False
+                }
+
 createAdminAccount :: ConnectionData -> (String -> IO ()) -> IO ()
 createAdminAccount cd prnt = do
-  let newAccount = UsersCreate { usersCreateEmail          = configEmail    testConfig
-                               , usersCreatePassword       = configPassword testConfig
-                               , usersCreateUsername       = configUsername testConfig
-                               , usersCreateAllowMarketing = True
-                               }
-  newUser <- mmUsersCreate cd newAccount
+  void $ mmUsersCreate cd adminAccount
   prnt "Admin Account created"
 
 createTestTeam :: ConnectionData -> Token -> (String -> IO ()) -> IO Team
@@ -228,12 +239,7 @@ createTestTeam cd token prnt = do
 
 createTestAccount :: ConnectionData -> Token -> (String -> IO ()) -> IO User
 createTestAccount cd token prnt = do
-  let newAccount = UsersCreate { usersCreateEmail          = "test-user@example.com"
-                               , usersCreatePassword       = password testUserLogin
-                               , usersCreateUsername       = username testUserLogin
-                               , usersCreateAllowMarketing = False
-                               }
-  newUser <- mmUsersCreateWithToken cd token newAccount
+  newUser <- mmUsersCreateWithToken cd token testAccount
   prnt "Test Account created"
   return newUser
 
