@@ -182,6 +182,13 @@ getChannelsTest = testCaseSteps "Get Channels" $ \prnt -> reportJSONExceptions $
   let chan Seq.:< _ = Seq.viewl chans
   prnt (ppShow chan)
 
+findChannel :: Channels -> Text -> Channel
+findChannel chans name =
+    let result = Seq.viewl (Seq.filter (\c -> channelName c == name) chans)
+    in case result of
+        chan Seq.:< _ -> chan
+        _ -> error $ "Expected to find channel by name " <> show name
+
 leaveChannelTest :: TestTree
 leaveChannelTest = testCaseSteps "Leave Channel" $ \prnt -> reportJSONExceptions $ do
   cd <- initConnectionDataInsecure (T.unpack (configHostname testConfig))
@@ -191,9 +198,7 @@ leaveChannelTest = testCaseSteps "Leave Channel" $ \prnt -> reportJSONExceptions
   let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
   chans <- mmGetChannels cd userToken (teamId team)
   prnt (ppShow chans)
-  let chan Seq.:< _ = Seq.viewl
-                        (Seq.filter (\c -> channelName c == minChannelName testMinChannel)
-                                    chans)
+  let chan = findChannel chans $ minChannelName testMinChannel
   mmLeaveChannel cd userToken (teamId team) (channelId chan)
 
 joinChannelTest :: TestTree
@@ -205,9 +210,7 @@ joinChannelTest = testCaseSteps "Join Channel" $ \prnt -> reportJSONExceptions $
   let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
   chans <- mmGetMoreChannels cd userToken (teamId team)
   prnt (ppShow chans)
-  let chan Seq.:< _ = Seq.viewl
-                        (Seq.filter (\c -> channelName c == minChannelName testMinChannel)
-                                    chans)
+  let chan = findChannel chans $ minChannelName testMinChannel
   mmJoinChannel cd userToken (teamId team) (channelId chan)
 
 -- Wrapper functions used in test cases
