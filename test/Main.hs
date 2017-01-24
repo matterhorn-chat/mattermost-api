@@ -91,11 +91,12 @@ unitTests = testGroup "Units"
     , joinChannelTest
     ]
 
--- This only exists because tasty will call `show` on the exception that we give
--- it. If we directly output the exception first then we avoid an unnecessary
--- level of quotation in the output. We still throw the exception though so that
--- tasty reports the correct exception type. This results in some redundancy but
--- we only see it when there are failures, so it seems acceptable.
+-- This only exists because tasty will call `show` on the exception that
+-- we give it. If we directly output the exception first then we avoid
+-- an unnecessary level of quotation in the output. We still throw the
+-- exception though so that tasty reports the correct exception type.
+-- This results in some redundancy but we only see it when there are
+-- failures, so it seems acceptable.
 catchAndPrintJSONDecodeException :: IO a -> IO a
 catchAndPrintJSONDecodeException io = io
   `catch` \e@(JSONDecodeException msg badJson) -> do
