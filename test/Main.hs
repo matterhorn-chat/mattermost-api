@@ -78,16 +78,20 @@ testTeamsCreate = TeamsCreate
 -- Test groups
 
 tests :: TestTree
-tests = testGroup "Tests" [setup,unitTests]
+tests = testGroup "Tests"
+    [ setup
+    , unitTests
+    ]
 
 unitTests :: TestTree
-unitTests = testGroup "Units" [loginAsNormalUserTest
-                              ,initialLoadTest
-                              ,createChannelTest
-                              ,getChannelsTest
-                              ,leaveChannelTest
-                              ,joinChannelTest
-                              ]
+unitTests = testGroup "Units"
+    [ loginAsNormalUserTest
+    , initialLoadTest
+    , createChannelTest
+    , getChannelsTest
+    , leaveChannelTest
+    , joinChannelTest
+    ]
 
 -- This only exists because tasty will call `show` on the exception that we give
 -- it. If we directly output the exception first then we avoid an unnecessary

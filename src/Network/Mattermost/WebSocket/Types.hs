@@ -10,7 +10,7 @@ module Network.Mattermost.WebSocket.Types
 ) where
 
 import           Control.Exception ( throw )
-import           Control.Applicative ((<$>), (<|>))
+import           Control.Applicative ((<|>))
 import           Data.Aeson ( FromJSON(..)
                             , ToJSON(..)
                             , (.:)

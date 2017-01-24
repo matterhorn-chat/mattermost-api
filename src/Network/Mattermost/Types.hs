@@ -21,7 +21,7 @@ import           Data.Aeson.Types ( ToJSONKey
                                   )
 import           Data.HashMap.Strict ( HashMap )
 import qualified Data.HashMap.Strict as HM
-import           Data.Monoid ( (<>), mempty )
+import           Data.Monoid ( (<>) )
 import           Data.Ratio ( (%) )
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as S
