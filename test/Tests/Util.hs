@@ -4,6 +4,7 @@ module Tests.Util
   , whenDebug
   , createAdminAccount
   , loginAccount
+  , loginAdminAccount
   )
 where
 
@@ -53,3 +54,10 @@ loginAccount cd login prnt = do
   (token, _mmUser) <- join (hoistE <$> mmLogin cd login)
   whenDebug $ prnt $ "Authenticated as " ++ T.unpack (username login)
   return token
+
+loginAdminAccount :: Config -> ConnectionData -> (String -> IO ()) -> IO Token
+loginAdminAccount cfg cd = loginAccount cd admin
+  where
+  admin = Login { username = configUsername cfg
+                , password = configPassword cfg
+                }

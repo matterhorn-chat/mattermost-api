@@ -221,10 +221,3 @@ createTestAccount cd token prnt = do
   newUser <- mmUsersCreateWithToken cd token testAccount
   whenDebug $ prnt "Test Account created"
   return newUser
-
-loginAdminAccount :: Config -> ConnectionData -> (String -> IO ()) -> IO Token
-loginAdminAccount cfg cd = loginAccount cd admin
-  where
-  admin = Login { username = configUsername cfg
-                , password = configPassword cfg
-                }
