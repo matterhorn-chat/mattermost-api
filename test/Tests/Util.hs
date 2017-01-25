@@ -1,15 +1,24 @@
 module Tests.Util
   ( reportJSONExceptions
   , adminAccount
+  , whenDebug
+  , createAdminAccount
   )
 where
 
+import Control.Monad (void, when)
 import qualified Control.Exception as E
 
 import Network.Mattermost
 import Network.Mattermost.Exceptions
 
 import Tests.Types
+
+debug :: Bool
+debug = False
+
+whenDebug :: IO () -> IO ()
+whenDebug = when debug
 
 -- This only exists because tasty will call `show` on the exception that
 -- we give it. If we directly output the exception first then we avoid
@@ -31,3 +40,8 @@ adminAccount cfg =
                 , usersCreateUsername       = configUsername cfg
                 , usersCreateAllowMarketing = True
                 }
+
+createAdminAccount :: Config -> ConnectionData -> (String -> IO ()) -> IO ()
+createAdminAccount cfg cd prnt = do
+  void $ mmUsersCreate cd $ adminAccount cfg
+  whenDebug $ prnt "Admin Account created"

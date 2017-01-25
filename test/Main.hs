@@ -8,7 +8,7 @@ import qualified Data.Text as T
 import           Data.Monoid ((<>))
 
 import           Control.Exception
-import           Control.Monad ( join, void, when )
+import           Control.Monad (join)
 
 import           System.Exit
 
@@ -26,12 +26,6 @@ import           Network.Mattermost.Exceptions
 
 import           Tests.Util
 import           Tests.Types
-
-debug :: Bool
-debug = False
-
-whenDebug :: IO () -> IO ()
-whenDebug = when debug
 
 main :: IO ()
 main = defaultMain tests `catch` \(JSONDecodeException msg badJson) -> do
@@ -217,11 +211,6 @@ joinChannelTest = testCaseSteps "Join Channel" $ \prnt -> reportJSONExceptions $
   mmJoinChannel cd userToken (teamId team) (channelId chan)
 
 -- Wrapper functions used in test cases
-
-createAdminAccount :: Config -> ConnectionData -> (String -> IO ()) -> IO ()
-createAdminAccount cfg cd prnt = do
-  void $ mmUsersCreate cd $ adminAccount cfg
-  whenDebug $ prnt "Admin Account created"
 
 createTestTeam :: ConnectionData -> Token -> (String -> IO ()) -> IO Team
 createTestTeam cd token prnt = do
