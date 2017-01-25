@@ -80,6 +80,14 @@ testTeamsCreate = TeamsCreate
   , teamsCreateType        = Ordinary
   }
 
+testAccount :: UsersCreate
+testAccount =
+    UsersCreate { usersCreateEmail          = "test-user@example.com"
+                , usersCreatePassword       = password testUserLogin
+                , usersCreateUsername       = username testUserLogin
+                , usersCreateAllowMarketing = False
+                }
+
 -- Test groups
 
 tests :: TestTree
@@ -234,14 +242,6 @@ adminAccount cfg =
                 , usersCreatePassword       = configPassword cfg
                 , usersCreateUsername       = configUsername cfg
                 , usersCreateAllowMarketing = True
-                }
-
-testAccount :: UsersCreate
-testAccount =
-    UsersCreate { usersCreateEmail          = "test-user@example.com"
-                , usersCreatePassword       = password testUserLogin
-                , usersCreateUsername       = username testUserLogin
-                , usersCreateAllowMarketing = False
                 }
 
 createAdminAccount :: Config -> ConnectionData -> (String -> IO ()) -> IO ()
