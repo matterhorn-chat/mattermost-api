@@ -17,7 +17,7 @@ function docker_installed {
 }
 
 function container_present {
-    docker ps | grep $CONTAINER >/dev/null
+    docker ps --all | grep $CONTAINER >/dev/null
 }
 
 function cleanup_last_container {
