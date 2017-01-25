@@ -4,11 +4,9 @@ module Main (
 ) where
 
 import           Data.Text (Text)
-import qualified Data.Text as T
 import           Data.Monoid ((<>))
 
 import           Control.Exception
-import           Control.Monad (join)
 
 import           System.Exit
 
@@ -230,9 +228,3 @@ loginAdminAccount cfg cd = loginAccount cd admin
   admin = Login { username = configUsername cfg
                 , password = configPassword cfg
                 }
-
-loginAccount :: ConnectionData -> Login -> (String -> IO ()) -> IO Token
-loginAccount cd login prnt = do
-  (token, _mmUser) <- join (hoistE <$> mmLogin cd login)
-  whenDebug $ prnt $ "Authenticated as " ++ T.unpack (username login)
-  return token

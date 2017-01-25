@@ -3,11 +3,13 @@ module Tests.Util
   , adminAccount
   , whenDebug
   , createAdminAccount
+  , loginAccount
   )
 where
 
-import Control.Monad (void, when)
+import Control.Monad (void, when, join)
 import qualified Control.Exception as E
+import qualified Data.Text as T
 
 import Network.Mattermost
 import Network.Mattermost.Exceptions
@@ -45,3 +47,9 @@ createAdminAccount :: Config -> ConnectionData -> (String -> IO ()) -> IO ()
 createAdminAccount cfg cd prnt = do
   void $ mmUsersCreate cd $ adminAccount cfg
   whenDebug $ prnt "Admin Account created"
+
+loginAccount :: ConnectionData -> Login -> (String -> IO ()) -> IO Token
+loginAccount cd login prnt = do
+  (token, _mmUser) <- join (hoistE <$> mmLogin cd login)
+  whenDebug $ prnt $ "Authenticated as " ++ T.unpack (username login)
+  return token
