@@ -14,7 +14,6 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.Sequence as Seq
 
 import           Test.Tasty
-import           Test.Tasty.HUnit
 
 import           Network.Mattermost
 import           Network.Mattermost.Exceptions
@@ -93,27 +92,20 @@ unitTests = testGroup "Units"
 -- Test definitions
 
 setup :: TestTree
-setup = testCaseSteps "Setup" $ \prnt -> reportJSONExceptions $ do
-  whenDebug $ prnt "Creating connection"
-  let cfg = testConfig
+setup = mmTestCase "Setup" testConfig $ do
+  createAdminAccount
 
-  cd <- connectFromConfig cfg
-  -- XXX: Use something like this if you want logging (useful when debugging)
-  -- let cd = cd' `withLogger` mmLoggerDebugErr
+  print_ "Logging into Admin account"
+  loginAdminAccount
 
-  whenDebug $ prnt "Creating Admin account"
-  _adminUser <- createAdminAccount cfg cd prnt
-  whenDebug $ prnt "Logging into Admin account"
-  adminToken <- loginAdminAccount cfg cd prnt
+  print_ "Creating test team"
+  testTeam <- createTeam testTeamsCreate
 
-  whenDebug $ prnt "Creating test team"
-  testTeam <- createTeam cd adminToken testTeamsCreate prnt
+  print_ "Getting Config"
+  config <- getConfig
+  print_ (ppShow config)
 
-  whenDebug $ prnt "Getting Config"
-  config <- mmGetConfig cd adminToken
-  whenDebug $ prnt (ppShow config)
-
-  whenDebug $ prnt "Saving Config"
+  print_ "Saving Config"
   -- Enable open team so that the admin can create
   -- new users.
   let Object oldConfig    = config
@@ -121,72 +113,62 @@ setup = testCaseSteps "Setup" $ \prnt -> reportJSONExceptions $ do
       newConfig           = Object (HM.insert "TeamSettings"
                                    (Object (HM.insert "EnableOpenServer"
                                            (Bool True) teamSettings)) oldConfig)
-  mmSaveConfig cd adminToken newConfig
+  saveConfig newConfig
 
-  whenDebug $ prnt "Creating test account"
-  testUser   <- createAccount cd adminToken testAccount prnt
+  print_ "Creating test account"
+  testUser <- createAccount testAccount
 
-  whenDebug $ prnt "Add test user to test team"
-  mmTeamAddUser cd adminToken (teamId testTeam) (userId testUser)
+  print_ "Add test user to test team"
+  teamAddUser testTeam testUser
 
 loginAsNormalUserTest :: TestTree
-loginAsNormalUserTest = testCaseSteps "Logging to normal account" $ \prnt ->
-  reportJSONExceptions $ do
-    let cfg = testConfig
-    cd <- connectFromConfig cfg
-    _userToken <- loginAccount cd testUserLogin prnt
-    return ()
+loginAsNormalUserTest = mmTestCase "Logging to normal account" testConfig $ do
+  loginAccount testUserLogin
 
 initialLoadTest :: TestTree
-initialLoadTest = testCaseSteps "Initial Load" $ \prnt -> reportJSONExceptions $ do
-  let cfg = testConfig
-  cd <- connectFromConfig cfg
-  userToken   <- loginAccount cd testUserLogin prnt
-  initialLoad <- mmGetInitialLoad cd userToken
+initialLoadTest = mmTestCase "Initial Load" testConfig $ do
+  loginAccount testUserLogin
+  initialLoad <- getInitialLoad
   -- print the team names
-  whenDebug $ prnt (ppShow (fmap teamName (initialLoadTeams initialLoad)))
+  print_ (ppShow (fmap teamName (initialLoadTeams initialLoad)))
 
 createChannelTest :: TestTree
-createChannelTest = testCaseSteps "Create Channel" $ \prnt -> reportJSONExceptions $ do
-  let cfg = testConfig
-  cd <- connectFromConfig cfg
-  userToken   <- loginAccount cd testUserLogin prnt
-  initialLoad <- mmGetInitialLoad cd userToken
+createChannelTest = mmTestCase "Create Channel" testConfig $ do
+  loginAccount testUserLogin
+  initialLoad <- getInitialLoad
   let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
-  chan <- mmCreateChannel cd userToken (teamId team) testMinChannel
-  whenDebug $ prnt (ppShow chan)
+  chan <- createChannel team testMinChannel
+  print_ (ppShow chan)
 
 getChannelsTest :: TestTree
-getChannelsTest = testCaseSteps "Get Channels" $ \prnt -> reportJSONExceptions $ do
-  let cfg = testConfig
-  cd <- connectFromConfig cfg
-  userToken   <- loginAccount cd testUserLogin prnt
-  initialLoad <- mmGetInitialLoad cd userToken
+getChannelsTest = mmTestCase "Get Channels" testConfig $ do
+  loginAccount testUserLogin
+  initialLoad <- getInitialLoad
   let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
-  chans <- mmGetChannels cd userToken (teamId team)
+  chans <- getChannels team
+
   let chan Seq.:< _ = Seq.viewl chans
-  whenDebug $ prnt (ppShow chan)
+  print_ (ppShow chan)
 
 leaveChannelTest :: TestTree
-leaveChannelTest = testCaseSteps "Leave Channel" $ \prnt -> reportJSONExceptions $ do
-  let cfg = testConfig
-  cd <- connectFromConfig cfg
-  userToken   <- loginAccount cd testUserLogin prnt
-  initialLoad <- mmGetInitialLoad cd userToken
+leaveChannelTest = mmTestCase "Leave Channel" testConfig $ do
+  loginAccount testUserLogin
+  initialLoad <- getInitialLoad
   let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
-  chans <- mmGetChannels cd userToken (teamId team)
-  whenDebug $ prnt (ppShow chans)
+  chans <- getChannels team
+  print_ (ppShow chans)
+
   let chan = findChannel chans $ minChannelName testMinChannel
-  mmLeaveChannel cd userToken (teamId team) (channelId chan)
+  leaveChannel team chan
 
 joinChannelTest :: TestTree
-joinChannelTest = testCaseSteps "Join Channel" $ \prnt -> reportJSONExceptions $ do
-  let cfg = testConfig
-  cd <- connectFromConfig cfg
-  userToken   <- loginAccount cd testUserLogin prnt
-  initialLoad <- mmGetInitialLoad cd userToken
+joinChannelTest = mmTestCase "Join Channel" testConfig $ do
+  loginAccount testUserLogin
+  initialLoad <- getInitialLoad
+
   let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
-  chans <- mmGetMoreChannels cd userToken (teamId team)
-  whenDebug $ prnt (ppShow chans)
+  chans <- getMoreChannels team
+  print_ (ppShow chans)
+
   let chan = findChannel chans $ minChannelName testMinChannel
-  mmJoinChannel cd userToken (teamId team) (channelId chan)
+  joinChannel team chan
