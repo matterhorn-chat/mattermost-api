@@ -7,12 +7,14 @@ module Tests.Util
   , loginAdminAccount
   , createAccount
   , createTeam
+  , findChannel
   )
 where
 
 import Control.Monad (void, when, join)
 import qualified Control.Exception as E
 import Data.Monoid ((<>))
+import qualified Data.Sequence as Seq
 import qualified Data.Text as T
 
 import Network.Mattermost
@@ -78,3 +80,10 @@ createTeam cd token tc prnt = do
   whenDebug $
     prnt $ "Team created: " <> (T.unpack $ teamsCreateName tc)
   return team
+
+findChannel :: Channels -> T.Text -> Channel
+findChannel chans name =
+    let result = Seq.viewl (Seq.filter (\c -> channelName c == name) chans)
+    in case result of
+        chan Seq.:< _ -> chan
+        _ -> error $ "Expected to find channel by name " <> show name

@@ -3,9 +3,6 @@ module Main (
   main
 ) where
 
-import           Data.Text (Text)
-import           Data.Monoid ((<>))
-
 import           Control.Exception
 
 import           System.Exit
@@ -174,13 +171,6 @@ getChannelsTest = testCaseSteps "Get Channels" $ \prnt -> reportJSONExceptions $
   chans <- mmGetChannels cd userToken (teamId team)
   let chan Seq.:< _ = Seq.viewl chans
   whenDebug $ prnt (ppShow chan)
-
-findChannel :: Channels -> Text -> Channel
-findChannel chans name =
-    let result = Seq.viewl (Seq.filter (\c -> channelName c == name) chans)
-    in case result of
-        chan Seq.:< _ -> chan
-        _ -> error $ "Expected to find channel by name " <> show name
 
 leaveChannelTest :: TestTree
 leaveChannelTest = testCaseSteps "Leave Channel" $ \prnt -> reportJSONExceptions $ do
