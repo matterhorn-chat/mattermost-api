@@ -5,11 +5,13 @@ module Tests.Util
   , createAdminAccount
   , loginAccount
   , loginAdminAccount
+  , createAccount
   )
 where
 
 import Control.Monad (void, when, join)
 import qualified Control.Exception as E
+import Data.Monoid ((<>))
 import qualified Data.Text as T
 
 import Network.Mattermost
@@ -61,3 +63,10 @@ loginAdminAccount cfg cd = loginAccount cd admin
   admin = Login { username = configUsername cfg
                 , password = configPassword cfg
                 }
+
+createAccount :: ConnectionData -> Token -> UsersCreate -> (String -> IO ()) -> IO User
+createAccount cd token account prnt = do
+  newUser <- mmUsersCreateWithToken cd token account
+  whenDebug $
+    prnt $ "account created for " <> (T.unpack $ usersCreateUsername account)
+  return newUser

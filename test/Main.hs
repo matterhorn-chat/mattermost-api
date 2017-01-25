@@ -128,7 +128,7 @@ setup = testCaseSteps "Setup" $ \prnt -> reportJSONExceptions $ do
   mmSaveConfig cd adminToken newConfig
 
   whenDebug $ prnt "Creating test account"
-  testUser   <- createTestAccount cd adminToken prnt
+  testUser   <- createAccount cd adminToken testAccount prnt
 
   whenDebug $ prnt "Add test user to test team"
   mmTeamAddUser cd adminToken (teamId testTeam) (userId testUser)
@@ -215,9 +215,3 @@ createTestTeam cd token prnt = do
   team <- mmCreateTeam cd token testTeamsCreate
   whenDebug $ prnt "Test team created"
   return team
-
-createTestAccount :: ConnectionData -> Token -> (String -> IO ()) -> IO User
-createTestAccount cd token prnt = do
-  newUser <- mmUsersCreateWithToken cd token testAccount
-  whenDebug $ prnt "Test Account created"
-  return newUser
