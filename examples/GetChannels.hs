@@ -20,7 +20,7 @@ main :: IO ()
 main = do
   config <- getConfig -- see LocalConfig import
   ctx    <- initConnectionContext
-  let cd = mkConnectionData (T.unpack (configHostname config))
+  let cd = mkConnectionData (configHostname config)
                             (fromIntegral (configPort config)) ctx
 
   let login = Login { username = configUsername config
