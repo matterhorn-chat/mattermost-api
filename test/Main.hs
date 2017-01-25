@@ -96,6 +96,8 @@ tests = testGroup "Tests"
     , unitTests
     ]
 
+-- Note that the order of the tests matters as each may have side
+-- effects on which subsequent tests depend.
 unitTests :: TestTree
 unitTests = testGroup "Units"
     [ loginAsNormalUserTest
