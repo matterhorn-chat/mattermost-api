@@ -116,7 +116,7 @@ reportJSONExceptions io = io
 setup :: TestTree
 setup = testCaseSteps "Setup" $ \prnt -> reportJSONExceptions $ do
   whenDebug $ prnt "Creating connection"
-  cd <- initConnectionDataInsecure (T.unpack (configHostname testConfig))
+  cd <- initConnectionDataInsecure (configHostname testConfig)
                                    (fromIntegral (configPort testConfig))
   -- XXX: Use something like this if you want logging (useful when debugging)
   -- let cd = cd' `withLogger` mmLoggerDebugErr
@@ -152,14 +152,14 @@ setup = testCaseSteps "Setup" $ \prnt -> reportJSONExceptions $ do
 loginAsNormalUserTest :: TestTree
 loginAsNormalUserTest = testCaseSteps "Logging to normal account" $ \prnt ->
   reportJSONExceptions $ do
-    cd <- initConnectionDataInsecure (T.unpack (configHostname testConfig))
+    cd <- initConnectionDataInsecure (configHostname testConfig)
                                      (fromIntegral (configPort testConfig))
     _userToken <- loginAccount cd testUserLogin prnt
     return ()
 
 initialLoadTest :: TestTree
 initialLoadTest = testCaseSteps "Initial Load" $ \prnt -> reportJSONExceptions $ do
-  cd <- initConnectionDataInsecure (T.unpack (configHostname testConfig))
+  cd <- initConnectionDataInsecure (configHostname testConfig)
                                    (fromIntegral (configPort testConfig))
   userToken   <- loginAccount cd testUserLogin prnt
   initialLoad <- mmGetInitialLoad cd userToken
@@ -168,7 +168,7 @@ initialLoadTest = testCaseSteps "Initial Load" $ \prnt -> reportJSONExceptions $
 
 createChannelTest :: TestTree
 createChannelTest = testCaseSteps "Create Channel" $ \prnt -> reportJSONExceptions $ do
-  cd <- initConnectionDataInsecure (T.unpack (configHostname testConfig))
+  cd <- initConnectionDataInsecure (configHostname testConfig)
                                    (fromIntegral (configPort testConfig))
   userToken   <- loginAccount cd testUserLogin prnt
   initialLoad <- mmGetInitialLoad cd userToken
@@ -178,7 +178,7 @@ createChannelTest = testCaseSteps "Create Channel" $ \prnt -> reportJSONExceptio
 
 getChannelsTest :: TestTree
 getChannelsTest = testCaseSteps "Get Channels" $ \prnt -> reportJSONExceptions $ do
-  cd <- initConnectionDataInsecure (T.unpack (configHostname testConfig))
+  cd <- initConnectionDataInsecure (configHostname testConfig)
                                    (fromIntegral (configPort testConfig))
   userToken   <- loginAccount cd testUserLogin prnt
   initialLoad <- mmGetInitialLoad cd userToken
@@ -196,7 +196,7 @@ findChannel chans name =
 
 leaveChannelTest :: TestTree
 leaveChannelTest = testCaseSteps "Leave Channel" $ \prnt -> reportJSONExceptions $ do
-  cd <- initConnectionDataInsecure (T.unpack (configHostname testConfig))
+  cd <- initConnectionDataInsecure (configHostname testConfig)
                                    (fromIntegral (configPort testConfig))
   userToken   <- loginAccount cd testUserLogin prnt
   initialLoad <- mmGetInitialLoad cd userToken
@@ -208,7 +208,7 @@ leaveChannelTest = testCaseSteps "Leave Channel" $ \prnt -> reportJSONExceptions
 
 joinChannelTest :: TestTree
 joinChannelTest = testCaseSteps "Join Channel" $ \prnt -> reportJSONExceptions $ do
-  cd <- initConnectionDataInsecure (T.unpack (configHostname testConfig))
+  cd <- initConnectionDataInsecure (configHostname testConfig)
                                    (fromIntegral (configPort testConfig))
   userToken   <- loginAccount cd testUserLogin prnt
   initialLoad <- mmGetInitialLoad cd userToken

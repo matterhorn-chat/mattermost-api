@@ -20,6 +20,7 @@ import qualified Data.ByteString.Char8 as B
 import           Data.ByteString.Lazy (toStrict)
 import           Data.IORef
 import           Data.Monoid ((<>))
+import qualified Data.Text as T
 import           Data.Time.Clock (NominalDiffTime, UTCTime, diffUTCTime, getCurrentTime)
 import           Data.Typeable ( Typeable )
 import           Network.Connection ( Connection
@@ -118,7 +119,7 @@ mmWithWebSocket cd (Token tk) recv body = do
           recv p
         body (MMWS c health) `catch` propagate [mId, pId, wId]
   WS.runClientWithStream stream
-                      (cdHostname cd)
+                      (T.unpack $ cdHostname cd)
                       "/api/v3/users/websocket"
                       WS.defaultConnectionOptions { WS.connectionOnPong = onPong }
                       [ ("Authorization", "Bearer " <> B.pack tk) ]

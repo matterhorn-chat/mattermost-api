@@ -189,7 +189,7 @@ mmUnauthenticatedHTTPPost cd path json = do
         request       = Request
           { rqURI     = path
           , rqMethod  = POST
-          , rqHeaders = [ mkHeader HdrHost          (cdHostname cd)
+          , rqHeaders = [ mkHeader HdrHost          (T.unpack $ cdHostname cd)
                         , mkHeader HdrUserAgent     defaultUserAgent
                         , mkHeader HdrContentType   "application/json"
                         , mkHeader HdrContentLength (show contentLength)
@@ -606,7 +606,7 @@ mmRequest cd token path = do
           { rqURI     = path
           , rqMethod  = GET
           , rqHeaders = [ mkHeader HdrAuthorization ("Bearer " ++ getTokenString token)
-                        , mkHeader HdrHost          (cdHostname cd)
+                        , mkHeader HdrHost          (T.unpack $ cdHostname cd)
                         , mkHeader HdrUserAgent     defaultUserAgent
                         ] ++ autoCloseToHeader (cdAutoClose cd)
           , rqBody    = ""
@@ -667,7 +667,7 @@ mmRawPOST cd token path content = do
           { rqURI     = path
           , rqMethod  = POST
           , rqHeaders = [ mkHeader HdrAuthorization ("Bearer " ++ getTokenString token)
-                        , mkHeader HdrHost          (cdHostname cd)
+                        , mkHeader HdrHost          (T.unpack $ cdHostname cd)
                         , mkHeader HdrUserAgent     defaultUserAgent
                         , mkHeader HdrContentType   "application/json"
                         , mkHeader HdrContentLength (show contentLength)

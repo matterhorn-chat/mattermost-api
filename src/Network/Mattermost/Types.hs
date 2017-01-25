@@ -62,7 +62,7 @@ runLogger _ _ _ = return ()
 maybeFail :: Parser a -> Parser (Maybe a)
 maybeFail p = (Just <$> p) <|> (return Nothing)
 
-type Hostname = String
+type Hostname = Text
 type Port     = Int
 
 -- For now we don't support or expose the ability to reuse connections,

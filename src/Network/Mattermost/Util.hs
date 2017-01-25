@@ -14,6 +14,7 @@ module Network.Mattermost.Util
 
 import           Data.Char ( toUpper )
 import qualified Data.ByteString.Char8 as B
+import qualified Data.Text as T
 
 import           Control.Exception ( Exception
                                    , throwIO
@@ -69,7 +70,7 @@ withConnection cd action =
 mkConnection :: ConnectionData -> IO Connection
 mkConnection cd = do
   connectTo (cdConnectionCtx cd) $ ConnectionParams
-    { connectionHostname  = cdHostname cd
+    { connectionHostname  = T.unpack $ cdHostname cd
     , connectionPort      = fromIntegral (cdPort cd)
     , connectionUseSecure = if cdUseTLS cd
                                then Just (TLSSettingsSimple False False False)
