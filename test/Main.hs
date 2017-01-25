@@ -111,7 +111,7 @@ setup = testCaseSteps "Setup" $ \prnt -> reportJSONExceptions $ do
   adminToken <- loginAdminAccount cfg cd prnt
 
   whenDebug $ prnt "Creating test team"
-  testTeam <- createTestTeam cd adminToken prnt
+  testTeam <- createTeam cd adminToken testTeamsCreate prnt
 
   whenDebug $ prnt "Getting Config"
   config <- mmGetConfig cd adminToken
@@ -207,11 +207,3 @@ joinChannelTest = testCaseSteps "Join Channel" $ \prnt -> reportJSONExceptions $
   whenDebug $ prnt (ppShow chans)
   let chan = findChannel chans $ minChannelName testMinChannel
   mmJoinChannel cd userToken (teamId team) (channelId chan)
-
--- Wrapper functions used in test cases
-
-createTestTeam :: ConnectionData -> Token -> (String -> IO ()) -> IO Team
-createTestTeam cd token prnt = do
-  team <- mmCreateTeam cd token testTeamsCreate
-  whenDebug $ prnt "Test team created"
-  return team

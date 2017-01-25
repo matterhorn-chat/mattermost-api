@@ -6,6 +6,7 @@ module Tests.Util
   , loginAccount
   , loginAdminAccount
   , createAccount
+  , createTeam
   )
 where
 
@@ -70,3 +71,10 @@ createAccount cd token account prnt = do
   whenDebug $
     prnt $ "account created for " <> (T.unpack $ usersCreateUsername account)
   return newUser
+
+createTeam :: ConnectionData -> Token -> TeamsCreate -> (String -> IO ()) -> IO Team
+createTeam cd token tc prnt = do
+  team <- mmCreateTeam cd token tc
+  whenDebug $
+    prnt $ "Team created: " <> (T.unpack $ teamsCreateName tc)
+  return team
