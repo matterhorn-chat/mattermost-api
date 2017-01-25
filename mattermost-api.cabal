@@ -159,7 +159,8 @@ test-suite test-mm-api
   type:             exitcode-stdio-1.0
   ghc-options:      -Wall
   default-language: Haskell2010
-  main-is:          test/Main.hs
+  hs-source-dirs:   test
+  main-is:          Main.hs
   build-depends:    base
                   , mattermost-api
                   , tasty
