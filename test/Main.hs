@@ -116,15 +116,17 @@ reportJSONExceptions io = io
 setup :: TestTree
 setup = testCaseSteps "Setup" $ \prnt -> reportJSONExceptions $ do
   whenDebug $ prnt "Creating connection"
-  cd <- initConnectionDataInsecure (configHostname testConfig)
-                                   (fromIntegral (configPort testConfig))
+  let cfg = testConfig
+
+  cd <- initConnectionDataInsecure (configHostname cfg)
+                                   (fromIntegral (configPort cfg))
   -- XXX: Use something like this if you want logging (useful when debugging)
   -- let cd = cd' `withLogger` mmLoggerDebugErr
 
   whenDebug $ prnt "Creating Admin account"
-  _adminUser <- createAdminAccount cd prnt
+  _adminUser <- createAdminAccount cfg cd prnt
   whenDebug $ prnt "Logging into Admin account"
-  adminToken <- loginAdminAccount cd prnt
+  adminToken <- loginAdminAccount cfg cd prnt
 
   whenDebug $ prnt "Creating test team"
   testTeam <- createTestTeam cd adminToken prnt
@@ -152,15 +154,17 @@ setup = testCaseSteps "Setup" $ \prnt -> reportJSONExceptions $ do
 loginAsNormalUserTest :: TestTree
 loginAsNormalUserTest = testCaseSteps "Logging to normal account" $ \prnt ->
   reportJSONExceptions $ do
-    cd <- initConnectionDataInsecure (configHostname testConfig)
-                                     (fromIntegral (configPort testConfig))
+    let cfg = testConfig
+    cd <- initConnectionDataInsecure (configHostname cfg)
+                                     (fromIntegral (configPort cfg))
     _userToken <- loginAccount cd testUserLogin prnt
     return ()
 
 initialLoadTest :: TestTree
 initialLoadTest = testCaseSteps "Initial Load" $ \prnt -> reportJSONExceptions $ do
-  cd <- initConnectionDataInsecure (configHostname testConfig)
-                                   (fromIntegral (configPort testConfig))
+  let cfg = testConfig
+  cd <- initConnectionDataInsecure (configHostname cfg)
+                                   (fromIntegral (configPort cfg))
   userToken   <- loginAccount cd testUserLogin prnt
   initialLoad <- mmGetInitialLoad cd userToken
   -- print the team names
@@ -168,8 +172,9 @@ initialLoadTest = testCaseSteps "Initial Load" $ \prnt -> reportJSONExceptions $
 
 createChannelTest :: TestTree
 createChannelTest = testCaseSteps "Create Channel" $ \prnt -> reportJSONExceptions $ do
-  cd <- initConnectionDataInsecure (configHostname testConfig)
-                                   (fromIntegral (configPort testConfig))
+  let cfg = testConfig
+  cd <- initConnectionDataInsecure (configHostname cfg)
+                                   (fromIntegral (configPort cfg))
   userToken   <- loginAccount cd testUserLogin prnt
   initialLoad <- mmGetInitialLoad cd userToken
   let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
@@ -178,8 +183,9 @@ createChannelTest = testCaseSteps "Create Channel" $ \prnt -> reportJSONExceptio
 
 getChannelsTest :: TestTree
 getChannelsTest = testCaseSteps "Get Channels" $ \prnt -> reportJSONExceptions $ do
-  cd <- initConnectionDataInsecure (configHostname testConfig)
-                                   (fromIntegral (configPort testConfig))
+  let cfg = testConfig
+  cd <- initConnectionDataInsecure (configHostname cfg)
+                                   (fromIntegral (configPort cfg))
   userToken   <- loginAccount cd testUserLogin prnt
   initialLoad <- mmGetInitialLoad cd userToken
   let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
@@ -196,8 +202,9 @@ findChannel chans name =
 
 leaveChannelTest :: TestTree
 leaveChannelTest = testCaseSteps "Leave Channel" $ \prnt -> reportJSONExceptions $ do
-  cd <- initConnectionDataInsecure (configHostname testConfig)
-                                   (fromIntegral (configPort testConfig))
+  let cfg = testConfig
+  cd <- initConnectionDataInsecure (configHostname cfg)
+                                   (fromIntegral (configPort cfg))
   userToken   <- loginAccount cd testUserLogin prnt
   initialLoad <- mmGetInitialLoad cd userToken
   let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
@@ -208,8 +215,9 @@ leaveChannelTest = testCaseSteps "Leave Channel" $ \prnt -> reportJSONExceptions
 
 joinChannelTest :: TestTree
 joinChannelTest = testCaseSteps "Join Channel" $ \prnt -> reportJSONExceptions $ do
-  cd <- initConnectionDataInsecure (configHostname testConfig)
-                                   (fromIntegral (configPort testConfig))
+  let cfg = testConfig
+  cd <- initConnectionDataInsecure (configHostname cfg)
+                                   (fromIntegral (configPort cfg))
   userToken   <- loginAccount cd testUserLogin prnt
   initialLoad <- mmGetInitialLoad cd userToken
   let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
@@ -220,11 +228,11 @@ joinChannelTest = testCaseSteps "Join Channel" $ \prnt -> reportJSONExceptions $
 
 -- Wrapper functions used in test cases
 
-adminAccount :: UsersCreate
-adminAccount =
-    UsersCreate { usersCreateEmail          = configEmail    testConfig
-                , usersCreatePassword       = configPassword testConfig
-                , usersCreateUsername       = configUsername testConfig
+adminAccount :: Config -> UsersCreate
+adminAccount cfg =
+    UsersCreate { usersCreateEmail          = configEmail    cfg
+                , usersCreatePassword       = configPassword cfg
+                , usersCreateUsername       = configUsername cfg
                 , usersCreateAllowMarketing = True
                 }
 
@@ -236,9 +244,9 @@ testAccount =
                 , usersCreateAllowMarketing = False
                 }
 
-createAdminAccount :: ConnectionData -> (String -> IO ()) -> IO ()
-createAdminAccount cd prnt = do
-  void $ mmUsersCreate cd adminAccount
+createAdminAccount :: Config -> ConnectionData -> (String -> IO ()) -> IO ()
+createAdminAccount cfg cd prnt = do
+  void $ mmUsersCreate cd $ adminAccount cfg
   whenDebug $ prnt "Admin Account created"
 
 createTestTeam :: ConnectionData -> Token -> (String -> IO ()) -> IO Team
@@ -253,11 +261,11 @@ createTestAccount cd token prnt = do
   whenDebug $ prnt "Test Account created"
   return newUser
 
-loginAdminAccount :: ConnectionData -> (String -> IO ()) -> IO Token
-loginAdminAccount cd = loginAccount cd admin
+loginAdminAccount :: Config -> ConnectionData -> (String -> IO ()) -> IO Token
+loginAdminAccount cfg cd = loginAccount cd admin
   where
-  admin = Login { username = configUsername testConfig
-                , password = configPassword testConfig
+  admin = Login { username = configUsername cfg
+                , password = configPassword cfg
                 }
 
 loginAccount :: ConnectionData -> Login -> (String -> IO ()) -> IO Token
