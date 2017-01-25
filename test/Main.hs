@@ -97,8 +97,7 @@ setup = testCaseSteps "Setup" $ \prnt -> reportJSONExceptions $ do
   whenDebug $ prnt "Creating connection"
   let cfg = testConfig
 
-  cd <- initConnectionDataInsecure (configHostname cfg)
-                                   (fromIntegral (configPort cfg))
+  cd <- connectFromConfig cfg
   -- XXX: Use something like this if you want logging (useful when debugging)
   -- let cd = cd' `withLogger` mmLoggerDebugErr
 
@@ -134,16 +133,14 @@ loginAsNormalUserTest :: TestTree
 loginAsNormalUserTest = testCaseSteps "Logging to normal account" $ \prnt ->
   reportJSONExceptions $ do
     let cfg = testConfig
-    cd <- initConnectionDataInsecure (configHostname cfg)
-                                     (fromIntegral (configPort cfg))
+    cd <- connectFromConfig cfg
     _userToken <- loginAccount cd testUserLogin prnt
     return ()
 
 initialLoadTest :: TestTree
 initialLoadTest = testCaseSteps "Initial Load" $ \prnt -> reportJSONExceptions $ do
   let cfg = testConfig
-  cd <- initConnectionDataInsecure (configHostname cfg)
-                                   (fromIntegral (configPort cfg))
+  cd <- connectFromConfig cfg
   userToken   <- loginAccount cd testUserLogin prnt
   initialLoad <- mmGetInitialLoad cd userToken
   -- print the team names
@@ -152,8 +149,7 @@ initialLoadTest = testCaseSteps "Initial Load" $ \prnt -> reportJSONExceptions $
 createChannelTest :: TestTree
 createChannelTest = testCaseSteps "Create Channel" $ \prnt -> reportJSONExceptions $ do
   let cfg = testConfig
-  cd <- initConnectionDataInsecure (configHostname cfg)
-                                   (fromIntegral (configPort cfg))
+  cd <- connectFromConfig cfg
   userToken   <- loginAccount cd testUserLogin prnt
   initialLoad <- mmGetInitialLoad cd userToken
   let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
@@ -163,8 +159,7 @@ createChannelTest = testCaseSteps "Create Channel" $ \prnt -> reportJSONExceptio
 getChannelsTest :: TestTree
 getChannelsTest = testCaseSteps "Get Channels" $ \prnt -> reportJSONExceptions $ do
   let cfg = testConfig
-  cd <- initConnectionDataInsecure (configHostname cfg)
-                                   (fromIntegral (configPort cfg))
+  cd <- connectFromConfig cfg
   userToken   <- loginAccount cd testUserLogin prnt
   initialLoad <- mmGetInitialLoad cd userToken
   let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
@@ -175,8 +170,7 @@ getChannelsTest = testCaseSteps "Get Channels" $ \prnt -> reportJSONExceptions $
 leaveChannelTest :: TestTree
 leaveChannelTest = testCaseSteps "Leave Channel" $ \prnt -> reportJSONExceptions $ do
   let cfg = testConfig
-  cd <- initConnectionDataInsecure (configHostname cfg)
-                                   (fromIntegral (configPort cfg))
+  cd <- connectFromConfig cfg
   userToken   <- loginAccount cd testUserLogin prnt
   initialLoad <- mmGetInitialLoad cd userToken
   let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
@@ -188,8 +182,7 @@ leaveChannelTest = testCaseSteps "Leave Channel" $ \prnt -> reportJSONExceptions
 joinChannelTest :: TestTree
 joinChannelTest = testCaseSteps "Join Channel" $ \prnt -> reportJSONExceptions $ do
   let cfg = testConfig
-  cd <- initConnectionDataInsecure (configHostname cfg)
-                                   (fromIntegral (configPort cfg))
+  cd <- connectFromConfig cfg
   userToken   <- loginAccount cd testUserLogin prnt
   initialLoad <- mmGetInitialLoad cd userToken
   let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)

@@ -8,6 +8,7 @@ module Tests.Util
   , createAccount
   , createTeam
   , findChannel
+  , connectFromConfig
   )
 where
 
@@ -87,3 +88,8 @@ findChannel chans name =
     in case result of
         chan Seq.:< _ -> chan
         _ -> error $ "Expected to find channel by name " <> show name
+
+connectFromConfig :: Config -> IO ConnectionData
+connectFromConfig cfg =
+  initConnectionDataInsecure (configHostname cfg)
+                             (fromIntegral (configPort cfg))
