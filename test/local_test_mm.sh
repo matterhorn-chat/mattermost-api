@@ -7,9 +7,35 @@ TEST_PROGRAM=test-mm-api
 ROOT=$HERE/..
 CONTAINER=mattermost-preview
 
+LOGFILE=$(mktemp)
+echo $LOGFILE
+
+function cleanup_log {
+    status=$?
+    if [ $? != 0 ]
+    then
+        echo "Log:"
+        cat $LOGFILE
+    fi
+
+    rm $LOGFILE
+}
+
+function logged {
+    $* 2>>$LOGFILE >>$LOGFILE
+}
+
+trap cleanup_log EXIT
+
 function error {
     echo Error: $* >&2
+    echo Error: $* >>$LOGFILE
     exit 1
+}
+
+function notice {
+    echo $*
+    echo $* >>$LOGFILE
 }
 
 function docker_installed {
@@ -27,8 +53,8 @@ function cleanup_last_container {
     # script on a fresh system).
     if container_present
     then
-        docker stop $CONTAINER
-        docker rm   $CONTAINER
+        logged docker stop $CONTAINER
+        logged docker rm   $CONTAINER
     fi
 }
 
@@ -48,14 +74,16 @@ then
     error "'docker' not found in PATH, exiting"
 fi
 
+notice "Cleaning up preexisting MatterMost container"
 cleanup_last_container
 
 # If this command fails we're in trouble.
-docker run  --name $CONTAINER -d --publish 8065:8065 mattermost/$CONTAINER
+notice "Running a new MatterMost container"
+logged docker run  --name $CONTAINER -d --publish 8065:8065 mattermost/$CONTAINER
 
 # It takes a while for the MM server to start accepting logins
 $HERE/wait_for_mm.sh
-echo
 
 # Finally we are ready to run the test suite
+notice "Running the test suite"
 $TEST_RUNNER
