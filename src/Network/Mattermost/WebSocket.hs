@@ -72,15 +72,18 @@ createPingPongTimeouts pId health n doLog = do
         now <- getCurrentTime
         doLog WebSocketPong
         atomically $ Queue.writeTQueue pongChan (P now)
-  watchdogPId <- forkIO $ forever $ do
-    P old <- atomically $ Queue.readTQueue pingChan
-    threadDelay (n * 1000 * 1000)
-    b <- atomically $ Queue.isEmptyTQueue pongChan
-    if b
-      then throwTo pId MMWebSocketTimeoutException
-      else do
-        P new <- atomically $ Queue.readTQueue pongChan
-        atomicWriteIORef health (new `diffUTCTime` old)
+  watchdogPId <- forkIO $ do
+      let go = do
+            P old <- atomically $ Queue.readTQueue pingChan
+            threadDelay (n * 1000 * 1000)
+            b <- atomically $ Queue.isEmptyTQueue pongChan
+            if b
+              then throwTo pId MMWebSocketTimeoutException
+              else do
+                P new <- atomically $ Queue.readTQueue pongChan
+                atomicWriteIORef health (new `diffUTCTime` old)
+                go
+      go
 
   return (pingAction, pongAction, watchdogPId)
 
@@ -110,20 +113,20 @@ mmWithWebSocket cd (Token tk) recv body = do
   health <- newIORef 0
   myId <- myThreadId
   let doLog = runLogger cd "websocket"
-  (onPing, onPong, wId) <- createPingPongTimeouts myId health 8 doLog
+  (onPing, onPong, _) <- createPingPongTimeouts myId health 8 doLog
   let action c = do
         pId <- forkIO (pingThread onPing c `catch` cleanup)
         mId <- forkIO $ flip catch cleanup $ forever $ do
           p <- WS.receiveData c
           doLog (WebSocketResponse (toJSON p))
           recv p
-        body (MMWS c health) `catch` propagate [mId, pId, wId]
+        body (MMWS c health) `catch` propagate [mId, pId]
   WS.runClientWithStream stream
                       (T.unpack $ cdHostname cd)
                       "/api/v3/users/websocket"
                       WS.defaultConnectionOptions { WS.connectionOnPong = onPong }
                       [ ("Authorization", "Bearer " <> B.pack tk) ]
-                      (\ c -> action c)
+                      action
   where cleanup :: SomeException -> IO ()
         cleanup _ = return ()
         propagate :: [ThreadId] -> SomeException -> IO ()
