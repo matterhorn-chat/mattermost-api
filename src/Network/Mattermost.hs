@@ -63,6 +63,7 @@ module Network.Mattermost
 , mmGetReactionsForPost
 , mmGetFileInfo
 , mmGetUser
+, mmGetUsers
 , mmGetTeamMembers
 , mmGetProfilesForDMList
 , mmGetMe
@@ -401,6 +402,11 @@ mmGetFileInfo cd token fileId =
 mmGetUser :: ConnectionData -> Token -> UserId -> IO User
 mmGetUser cd token userid = mmDoRequest cd "mmGetUser" token $
   printf "/api/v3/users/%s/get" (idString userid)
+
+mmGetUsers :: ConnectionData -> Token -> Int -> Int -> IO (HashMap UserId UserProfile)
+mmGetUsers cd token offset limit =
+  mmDoRequest cd "mmGetUsers" token $
+    printf "/api/v3/users/%d/%d" offset limit
 
 mmGetTeamMembers :: ConnectionData -> Token -> TeamId -> IO Value
 mmGetTeamMembers cd token teamid = mmDoRequest cd "mmGetTeamMembers" token $
