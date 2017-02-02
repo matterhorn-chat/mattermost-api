@@ -149,21 +149,21 @@ mmPath str =
 
 -- | Parse the JSON body out of a request, failing if it isn't an
 --   'application/json' response, or if the parsing failed
-mmGetJSONBody :: FromJSON t => Response_String -> IO (Value, t)
-mmGetJSONBody rsp = do
+mmGetJSONBody :: FromJSON t => String -> Response_String -> IO (Value, t)
+mmGetJSONBody label rsp = do
   contentType <- mmGetHeader rsp HdrContentType
   assertE (contentType ~= "application/json")
           (ContentTypeException
-            ("mmGetJSONBody: " ++
+            ("mmGetJSONBody: " ++ label ++ ": " ++
              "Expected content type 'application/json'" ++
              " found " ++ contentType))
 
   -- XXX: Good for seeing the json wireformat that mattermost uses
   -- putStrLn (rspBody rsp)
-  let value = left (\s -> JSONDecodeException ("mmGetJSONBody: " ++ s)
+  let value = left (\s -> JSONDecodeException ("mmGetJSONBody: " ++ label ++ ": " ++ s)
                                               (rspBody rsp))
                    (eitherDecode (BL.pack (rspBody rsp)))
-  let rawVal = left (\s -> JSONDecodeException ("mmGetJSONBody: " ++ s)
+  let rawVal = left (\s -> JSONDecodeException ("mmGetJSONBody: " ++ label ++ ": " ++ s)
                                               (rspBody rsp))
                    (eitherDecode (BL.pack (rspBody rsp)))
   hoistE $ do
@@ -213,7 +213,7 @@ mmLogin cd login = do
     then return (Left (LoginFailureException (show (rspCode rsp))))
     else do
       token <- mmGetHeader   rsp (HdrCustom "Token")
-      (raw, value) <- mmGetJSONBody rsp
+      (raw, value) <- mmGetJSONBody "User" rsp
       runLogger cd "mmLogin" $
         HttpResponse 200 rawPath (Just raw)
       return (Right (Token token, value))
@@ -236,7 +236,7 @@ mmCreateTeam cd token payload = do
   runLogger cd "mmCreateTeam" $
     HttpRequest POST path (Just (toJSON payload))
   rsp <- mmPOST cd token uri payload
-  (val, r) <- mmGetJSONBody rsp
+  (val, r) <- mmGetJSONBody "Team" rsp
   runLogger cd "mmCreateTeam" $
     HttpResponse 200 path (Just val)
   return r
@@ -293,7 +293,7 @@ mmJoinChannel cd token teamid chanid = do
   runLogger cd "mmJoinChannel" $
     HttpRequest POST path Nothing
   rsp <- mmPOST cd token uri (""::T.Text)
-  (val, (_::Channel)) <- mmGetJSONBody rsp
+  (val, (_::Channel)) <- mmGetJSONBody "Channel" rsp
   runLogger cd "mmJoinChannel" $
     HttpResponse 200 path (Just val)
   return ()
@@ -311,7 +311,7 @@ mmLeaveChannel cd token teamid chanid = do
   runLogger cd "mmLeaveChannel" $
     HttpRequest POST path (Just (toJSON payload))
   rsp <- mmPOST cd token uri payload
-  (val, (_::HM.HashMap T.Text ChannelId)) <- mmGetJSONBody rsp
+  (val, (_::HM.HashMap T.Text ChannelId)) <- mmGetJSONBody "Channel name/ID map" rsp
   runLogger cd "mmCreateDirect" $
     HttpResponse 200 path (Just val)
   return ()
@@ -355,7 +355,7 @@ mmGetPost cd token teamid chanid postid = do
              (idString postid)
   uri <- mmPath path
   rsp <- mmRequest cd token uri
-  (raw, json) <- mmGetJSONBody rsp
+  (raw, json) <- mmGetJSONBody "Posts" rsp
   runLogger cd "mmGetPost" $
     HttpResponse 200 path (Just raw)
   return json
@@ -439,7 +439,7 @@ mmCreateDirect cd token teamid userid = do
   runLogger cd "mmCreateDirect" $
     HttpRequest POST path (Just (toJSON payload))
   rsp <- mmPOST cd token uri payload
-  (val, r) <- mmGetJSONBody rsp
+  (val, r) <- mmGetJSONBody "Channel" rsp
   runLogger cd "mmCreateDirect" $
     HttpResponse 200 path (Just val)
   return r
@@ -452,7 +452,7 @@ mmCreateChannel cd token teamid payload = do
   runLogger cd "mmCreateChannel" $
     HttpRequest POST path (Just (toJSON payload))
   rsp <- mmPOST cd token uri payload
-  (val, r) <- mmGetJSONBody rsp
+  (val, r) <- mmGetJSONBody "Channel" rsp
   runLogger cd "mmCreateChannel" $
     HttpResponse 200 path (Just val)
   return r
@@ -483,7 +483,7 @@ mmPost cd token teamid post = do
   runLogger cd "mmPost" $
     HttpRequest POST path (Just (toJSON post))
   rsp <- mmPOST cd token uri post
-  (val, r) <- mmGetJSONBody rsp
+  (val, r) <- mmGetJSONBody "Post" rsp
   runLogger cd "mmPost" $
     HttpResponse 200 path (Just (val))
   return r
@@ -523,7 +523,7 @@ mmChannelAddUser cd token teamid chanId uId = do
   runLogger cd "mmChannelAddUser" $
     HttpRequest POST path (Just req)
   rsp <- mmPOST cd token uri req
-  (val, r) <- mmGetJSONBody rsp
+  (val, r) <- mmGetJSONBody "ChannelData" rsp
   runLogger cd "mmChannelAddUser" $
     HttpResponse 200 path (Just val)
   return r
@@ -557,7 +557,7 @@ mmExecute cd token teamid command = do
   runLogger cd "mmExecute" $
     HttpRequest POST path (Just (toJSON command))
   rsp <- mmPOST cd token uri command
-  (val, r) <- mmGetJSONBody rsp
+  (val, r) <- mmGetJSONBody "Value" rsp
   runLogger cd "mmExecute" $
     HttpResponse 200 path (Just (val))
   return r
@@ -571,7 +571,7 @@ mmUsersCreate cd usersCreate = do
   runLogger cd "mmUsersCreate" $
     HttpRequest POST path (Just (toJSON usersCreate))
   rsp <- mmUnauthenticatedHTTPPost cd uri usersCreate
-  (val, r) <- mmGetJSONBody rsp
+  (val, r) <- mmGetJSONBody "User" rsp
   runLogger cd "mmUsersCreate" $
     HttpResponse 200 path (Just (val))
   return r
@@ -586,7 +586,7 @@ mmUsersCreateWithToken cd token usersCreate = do
   runLogger cd "mmUsersCreateWithToken" $
     HttpRequest POST path (Just (toJSON usersCreate))
   rsp <- mmPOST cd token uri usersCreate
-  (val, r) <- mmGetJSONBody rsp
+  (val, r) <- mmGetJSONBody "User" rsp
   runLogger cd "mmUsersCreateWithToken" $
     HttpResponse 200 path (Just (val))
   return r
@@ -644,7 +644,7 @@ mmWithRequest cd fnname token path action = do
   runLogger cd fnname $
     HttpRequest GET path Nothing
   rsp  <- mmRequest cd token uri
-  (raw,json) <- mmGetJSONBody rsp
+  (raw,json) <- mmGetJSONBody fnname rsp
   runLogger cd fnname $
     HttpResponse 200 path (Just raw)
   action json
@@ -662,7 +662,7 @@ mmSetChannelHeader cd token teamid chanid header = do
   runLogger cd "mmSetChannelHeader" $
     HttpRequest POST path (Just (toJSON req))
   rsp <- mmPOST cd token uri req
-  (_, r) <- mmGetJSONBody rsp
+  (_, r) <- mmGetJSONBody "Channel" rsp
   return r
 
 mmRawPOST :: ConnectionData -> Token -> URI -> B.ByteString -> IO Response_String
