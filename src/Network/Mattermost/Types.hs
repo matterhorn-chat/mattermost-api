@@ -732,17 +732,12 @@ data MinCommand
   = MinCommand
   { minComChannelId :: ChannelId
   , minComCommand   :: Text
-  , minComSuggest   :: Bool -- XXX: really?
   } deriving (Read, Show, Eq)
 
 instance A.ToJSON MinCommand where
   toJSON MinCommand { .. } = A.object
-    [ "channelId" .= minComChannelId
+    [ "channel_id" .= minComChannelId
     , "command"   .= minComCommand
-    , "suggest"   .=
-      if minComSuggest
-        then ("true" :: Text)
-        else ("false" :: Text)
     ]
 
 --
