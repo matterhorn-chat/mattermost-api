@@ -56,6 +56,7 @@ module Network.Mattermost
 , mmGetMoreChannels
 , mmGetChannel
 , mmUpdateLastViewedAt
+, mmDeletePost
 , mmGetPost
 , mmGetPosts
 , mmGetPostsSince
@@ -468,6 +469,26 @@ mmDeleteChannel cd token teamid chanid = do
     HttpRequest POST path Nothing
   _ <- mmRawPOST cd token uri ""
   runLogger cd "mmDeleteChannel" $
+    HttpResponse 200 path Nothing
+  return ()
+
+mmDeletePost :: ConnectionData
+             -> Token
+             -> TeamId
+             -> ChannelId
+             -> PostId
+             -> IO ()
+mmDeletePost cd token teamid chanid postid = do
+  let path   = printf "/api/v3/teams/%s/channels/%s/posts/%s/delete"
+                      (idString teamid)
+                      (idString chanid)
+                      (idString postid)
+  uri <- mmPath path
+  runLogger cd "mmDeletePost" $
+    HttpRequest POST path Nothing
+  rsp <- mmPOST cd token uri ([]::[String])
+  (_, _::Value) <- mmGetJSONBody "Post" rsp
+  runLogger cd "mmDeletePost" $
     HttpResponse 200 path Nothing
   return ()
 
