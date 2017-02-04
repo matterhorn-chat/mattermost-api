@@ -25,6 +25,7 @@ module Network.Mattermost
 , UserProfile(..)
 , UsersCreate(..)
 , Post(..)
+, PendingPost(..)
 , PostId(..)
 , FileId(..)
 , Reaction(..)
