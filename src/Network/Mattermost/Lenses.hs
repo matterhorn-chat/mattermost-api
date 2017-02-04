@@ -445,7 +445,7 @@ postTypeL = makeLens postType (\ t s -> s { postType = t })
 postMessageL :: Lens' Post Text
 postMessageL = makeLens postMessage (\ t s -> s { postMessage = t })
 
-postDeleteAtL :: Lens' Post UTCTime
+postDeleteAtL :: Lens' Post (Maybe UTCTime)
 postDeleteAtL = makeLens postDeleteAt (\ t s -> s { postDeleteAt = t })
 
 postHashtagsL :: Lens' Post Text
