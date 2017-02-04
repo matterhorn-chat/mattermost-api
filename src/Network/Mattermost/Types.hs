@@ -634,6 +634,8 @@ data PendingPost
   , pendingPostMessage   :: Text
   , pendingPostId        :: PendingPostId
   , pendingPostUserId    :: UserId
+  , pendingPostParentId  :: Maybe PostId
+  , pendingPostRootId    :: Maybe PostId
   } deriving (Read, Show, Eq)
 
 instance A.ToJSON PendingPost where
@@ -644,6 +646,8 @@ instance A.ToJSON PendingPost where
     , "message"         .= pendingPostMessage   post
     , "pending_post_id" .= pendingPostId        post
     , "user_id"         .= pendingPostUserId    post
+    , "root_id"         .= pendingPostRootId    post
+    , "parent_id"       .= pendingPostParentId  post
     ]
 
 newtype PendingPostId = PPI { unPPI :: Id }
@@ -668,6 +672,8 @@ mkPendingPost msg userid channelid = do
     , pendingPostFilenames = S.empty
     , pendingPostMessage   = msg
     , pendingPostUserId    = userid
+    , pendingPostRootId    = Nothing
+    , pendingPostParentId  = Nothing
     }
 
 data FileInfo
