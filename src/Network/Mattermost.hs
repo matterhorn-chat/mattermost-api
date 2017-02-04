@@ -78,6 +78,7 @@ module Network.Mattermost
 , mmUsersCreate
 , mmUsersCreateWithToken
 , mmPost
+, mmUpdatePost
 , mmExecute
 , mmGetConfig -- Requires Admin access
 , mkPendingPost
@@ -469,6 +470,25 @@ mmDeleteChannel cd token teamid chanid = do
   runLogger cd "mmDeleteChannel" $
     HttpResponse 200 path Nothing
   return ()
+
+mmUpdatePost :: ConnectionData
+             -> Token
+             -> TeamId
+             -> Post
+             -> IO Post -- TODO: return something informative for failures
+mmUpdatePost cd token teamid post = do
+  let chanid = postChannelId post
+      path   = printf "/api/v3/teams/%s/channels/%s/posts/update"
+                      (idString teamid)
+                      (idString chanid)
+  uri <- mmPath path
+  runLogger cd "mmUpdatePost" $
+    HttpRequest POST path (Just (toJSON post))
+  rsp <- mmPOST cd token uri post
+  (val, r) <- mmGetJSONBody "Post" rsp
+  runLogger cd "mmUpdatePost" $
+    HttpResponse 200 path (Just (val))
+  return r
 
 mmPost :: ConnectionData
        -> Token
