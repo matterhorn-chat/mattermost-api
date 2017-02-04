@@ -618,9 +618,9 @@ instance A.ToJSON Post where
     , "message"         .= postMessage
     , "delete_at"       .= (utcTimeToMilliseconds <$> postDeleteAt)
     , "hashtags"        .= postHashtags
-    , "update_at"       .= postUpdateAt
+    , "update_at"       .= utcTimeToMilliseconds postUpdateAt
     , "user_id"         .= postUserId
-    , "create_at"       .= postCreateAt
+    , "create_at"       .= utcTimeToMilliseconds postCreateAt
     , "parent_id"       .= postParentId
     , "channel_id"      .= postChannelId
     , "has_reactions"   .= postHasReactions
