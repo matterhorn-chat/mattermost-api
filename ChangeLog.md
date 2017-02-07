@@ -1,5 +1,19 @@
 # Revision history for mattermost-api
 
+30600.2.0
+=========
+
+API changes:
+ * Added mmDeletePost
+ * Added mmUpdatePost for editing posts
+ * Post: make deletion time optional to match server API, do millisecond
+   conversion on JSON encoding
+ * PendingPost: add fields for setting parents in case of replies
+ * Export PendingPost type so it can be modified for replies and edits
+
+Bug fixes:
+ * Post: do millisecond conversion of timestamps on JSON encoding
+
 30600.1.0
 =========
 
