@@ -1,5 +1,16 @@
 # Revision history for mattermost-api
 
+30600.2.1
+=========
+
+API changes:
+ * Export FileInfo type
+
+Bug fixes:
+ * Fixed parsing of nullable width/height fields in FileInfo
+ * Fixed parsing of create_at, update_at, and delete_at timestamp fields
+   in FileInfo
+
 30600.2.0
 =========
 
