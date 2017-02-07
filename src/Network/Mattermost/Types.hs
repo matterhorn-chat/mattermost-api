@@ -705,8 +705,8 @@ instance FromJSON FileInfo where
     fileInfoExtension  <- o .: "extension"
     fileInfoSize       <- o .: "size"
     fileInfoMimeType   <- o .: "mime_type"
-    fileInfoWidth      <- o .: "width"
-    fileInfoHeight     <- o .: "height"
+    fileInfoWidth      <- o .:? "width"
+    fileInfoHeight     <- o .:? "height"
     fileInfoHasPreview <- (o .: "has_preview_image") <|> pure False
     return FileInfo { .. }
 
