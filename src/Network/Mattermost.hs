@@ -28,6 +28,7 @@ module Network.Mattermost
 , PendingPost(..)
 , PostId(..)
 , FileId(..)
+, FileInfo(..)
 , Reaction(..)
 , urlForFile
 , Posts(..)

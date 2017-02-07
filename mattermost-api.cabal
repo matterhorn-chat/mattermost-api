@@ -1,5 +1,5 @@
 name:                mattermost-api
-version:             30600.2.0
+version:             30600.2.1
 synopsis:            Client API for MatterMost chat system
 description:         Client API for MatterMost chat system
 license:             BSD3
