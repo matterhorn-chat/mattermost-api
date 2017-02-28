@@ -10,7 +10,6 @@ import           System.Exit
 import           Text.Show.Pretty ( ppShow )
 
 import           Data.Aeson
-import qualified Data.Foldable as F
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Sequence as Seq
 
@@ -107,12 +106,10 @@ setup = mmTestCase "Setup" testConfig $ do
   testTeam <- createTeam testTeamsCreate
 
   -- Load channels so we can get the IDs of joined channels
-  chans <- F.toList <$> getChannels testTeam
+  chans <- getChannels testTeam
 
-  let [townSquare] = filter isTownSquare chans
-      [offTopic] = filter isOffTopic chans
-      isTownSquare ch = channelDisplayName ch == "Town Square"
-      isOffTopic ch = channelDisplayName ch == "Off-Topic"
+  let townSquare = findChannel chans "Town Square"
+      offTopic   = findChannel chans "Off-Topic"
 
   print_ "Getting Config"
   config <- getConfig

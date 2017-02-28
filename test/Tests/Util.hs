@@ -282,10 +282,17 @@ createTeam tc = do
 
 findChannel :: Channels -> T.Text -> Channel
 findChannel chans name =
-    let result = Seq.viewl (Seq.filter (\c -> channelName c == name) chans)
+    let result = Seq.viewl (Seq.filter nameMatches chans)
+        nameMatches c = name `elem` [ channelName c
+                                    , channelDisplayName c
+                                    ]
     in case result of
         chan Seq.:< _ -> chan
-        _ -> error $ "Expected to find channel by name " <> show name
+        _ ->
+            let namePairs = mkPair <$> chans
+                mkPair c = (channelName c, channelDisplayName c)
+            in error $ "Expected to find channel by name " <>
+                     show name <> " but got " <> show namePairs
 
 connectFromConfig :: Config -> IO ConnectionData
 connectFromConfig cfg =
