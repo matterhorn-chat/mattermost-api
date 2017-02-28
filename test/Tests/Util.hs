@@ -9,6 +9,7 @@ module Tests.Util
   , leaveChannel
   , getMoreChannels
   , getChannels
+  , getUserByName
   , getConfig
   , saveConfig
   , teamAddUser
@@ -29,9 +30,12 @@ module Tests.Util
   -- * Websocket Event Predicates
   , hasWSEventType
   , forUser
+  , forChannel
   , isStatusChange
   , isPost
   , isNewUserEvent
+  , isUserJoin
+  , isUserLeave
   , wsHas
   , (&&&)
   )
@@ -49,6 +53,7 @@ import Test.Tasty (TestTree)
 import Test.Tasty.HUnit (testCaseSteps)
 import Control.Monad.State.Lazy
 import System.Timeout (timeout)
+import qualified Data.HashMap.Lazy as HM
 
 import Network.Mattermost
 import Network.Mattermost.WebSocket
@@ -161,6 +166,11 @@ forUser :: User -> WebsocketEvent -> Bool
 forUser u =
     wsHas (wepUserId . weData) (Just $ userId u)
 
+-- | Does the websocket correspond to the specified channel?
+forChannel :: Channel -> WebsocketEvent -> Bool
+forChannel ch =
+    wsHas (wepChannelId . weData) (Just $ channelId ch)
+
 -- | Is this websocket event a status change message?
 isStatusChange :: User
                -- ^ The user whose status changed
@@ -181,6 +191,30 @@ isNewUserEvent :: User
                -> Bool
 isNewUserEvent u =
     hasWSEventType WMNewUser &&& forUser u
+
+-- | Is the websocket event indicating that a user joined a channel?
+isUserJoin :: User
+           -- ^ The user that joined a channel
+           -> Channel
+           -- ^ The channel that was joined
+           -> WebsocketEvent
+           -> Bool
+isUserJoin u ch =
+    hasWSEventType WMUserAdded &&&
+    forUser u &&&
+    wsHas (webChannelId . weBroadcast) (Just $ channelId ch)
+
+-- | Is the websocket event indicating that a user left a channel?
+isUserLeave :: User
+            -- ^ The user that left a channel
+            -> Channel
+            -- ^ The channel that the user left
+            -> WebsocketEvent
+            -> Bool
+isUserLeave u ch =
+    hasWSEventType WMUserRemoved &&&
+    forChannel ch &&&
+    wsHas (webUserId . weBroadcast) (Just $ userId u)
 
 -- | Is the websocket event indicating that a new message was posted to
 -- a channel?
@@ -273,6 +307,22 @@ getInitialLoad = do
   cd <- getConnection
   token <- getToken
   liftIO $ mmGetInitialLoad cd token
+
+getUserByName :: T.Text -> TestM (Maybe User)
+getUserByName uname = do
+    cd <- getConnection
+    token <- getToken
+    allUserMap <- liftIO $ mmGetUsers cd token 0 10000
+    -- Find the user profile matching the username and get its ID
+    let matches = HM.filter matchingProfile allUserMap
+        matchingProfile p = userProfileUsername p == uname
+
+    case HM.size matches == 1 of
+        False -> return Nothing
+        True -> do
+            let uId = fst $ HM.toList matches !! 0
+            -- Then load the User record
+            Just <$> (liftIO $ mmGetUser cd token uId)
 
 createChannel :: Team -> MinChannel -> TestM Channel
 createChannel team mc = do

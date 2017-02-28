@@ -155,54 +155,88 @@ setup = mmTestCase "Setup" testConfig $ do
   expectWSEmpty
 
 loginAsNormalUserTest :: TestTree
-loginAsNormalUserTest = mmTestCase "Logging to normal account" testConfig $ do
-  loginAccount testUserLogin
+loginAsNormalUserTest =
+    mmTestCase "Logging in with normal account" testConfig $ do
+        loginAccount testUserLogin
+        Just testUser <- getUserByName (username testUserLogin)
+
+        expectWSEvent "hello" (hasWSEventType WMHello)
+        expectWSEvent "status" (isStatusChange testUser "online")
+        expectWSEmpty
 
 initialLoadTest :: TestTree
-initialLoadTest = mmTestCase "Initial Load" testConfig $ do
-  loginAccount testUserLogin
-  initialLoad <- getInitialLoad
-  expectWSEvent "hello" (hasWSEventType WMHello)
-  -- print the team names
-  print_ (ppShow (fmap teamName (initialLoadTeams initialLoad)))
+initialLoadTest =
+    mmTestCase "Initial Load" testConfig $ do
+        loginAccount testUserLogin
+
+        initialLoad <- getInitialLoad
+        -- print the team names
+        print_ (ppShow (fmap teamName (initialLoadTeams initialLoad)))
+
+        expectWSEvent "hello" (hasWSEventType WMHello)
+        expectWSEmpty
 
 createChannelTest :: TestTree
-createChannelTest = mmTestCase "Create Channel" testConfig $ do
-  loginAccount testUserLogin
-  initialLoad <- getInitialLoad
-  let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
-  chan <- createChannel team testMinChannel
-  print_ (ppShow chan)
+createChannelTest =
+    mmTestCase "Create Channel" testConfig $ do
+        loginAccount testUserLogin
+
+        initialLoad <- getInitialLoad
+        let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
+        chan <- createChannel team testMinChannel
+        print_ (ppShow chan)
+
+        expectWSEvent "hello" (hasWSEventType WMHello)
+        expectWSEmpty
 
 getChannelsTest :: TestTree
-getChannelsTest = mmTestCase "Get Channels" testConfig $ do
-  loginAccount testUserLogin
-  initialLoad <- getInitialLoad
-  let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
-  chans <- getChannels team
+getChannelsTest =
+    mmTestCase "Get Channels" testConfig $ do
+        loginAccount testUserLogin
+        initialLoad <- getInitialLoad
+        let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
+        chans <- getChannels team
 
-  let chan Seq.:< _ = Seq.viewl chans
-  print_ (ppShow chan)
+        let chan Seq.:< _ = Seq.viewl chans
+        print_ (ppShow chan)
+
+        expectWSEvent "hello" (hasWSEventType WMHello)
+        expectWSEmpty
 
 leaveChannelTest :: TestTree
-leaveChannelTest = mmTestCase "Leave Channel" testConfig $ do
-  loginAccount testUserLogin
-  initialLoad <- getInitialLoad
-  let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
-  chans <- getChannels team
-  print_ (ppShow chans)
+leaveChannelTest =
+    mmTestCase "Leave Channel" testConfig $ do
+        loginAccount testUserLogin
+        Just testUser <- getUserByName (username testUserLogin)
+        initialLoad <- getInitialLoad
 
-  let chan = findChannel chans $ minChannelName testMinChannel
-  leaveChannel team chan
+        let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
+        chans <- getChannels team
+        print_ (ppShow chans)
+
+        let chan = findChannel chans $ minChannelName testMinChannel
+        leaveChannel team chan
+
+        expectWSEvent "hello" (hasWSEventType WMHello)
+        expectWSEvent "leave channel" (isUserLeave testUser chan)
+        expectWSEmpty
 
 joinChannelTest :: TestTree
-joinChannelTest = mmTestCase "Join Channel" testConfig $ do
-  loginAccount testUserLogin
-  initialLoad <- getInitialLoad
+joinChannelTest =
+    mmTestCase "Join Channel" testConfig $ do
+        loginAccount testUserLogin
+        Just testUser <- getUserByName (username testUserLogin)
+        initialLoad <- getInitialLoad
 
-  let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
-  chans <- getMoreChannels team
-  print_ (ppShow chans)
+        let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
+        chans <- getMoreChannels team
+        print_ (ppShow chans)
 
-  let chan = findChannel chans $ minChannelName testMinChannel
-  joinChannel team chan
+        let chan = findChannel chans $ minChannelName testMinChannel
+        joinChannel team chan
+
+        expectWSEvent "hello" (hasWSEventType WMHello)
+        expectWSEvent "join channel" (isUserJoin testUser chan)
+        expectWSEvent "join post"
+          (isPost testUser chan "test-user has joined the channel.")
+        expectWSEmpty
