@@ -22,8 +22,11 @@ module Tests.Util
   , findChannel
   , connectFromConfig
 
+  -- * Testing Websocket Events
   , expectWSEvent
   , expectWSEmpty
+
+  -- * Websocket Event Predicates
   , hasWSEventType
   , forUser
   , isStatusChange
@@ -127,7 +130,14 @@ wsHas f expected e = f e == expected
 (&&&) :: (a -> Bool) -> (a -> Bool) -> a -> Bool
 (&&&) f g a = f a && g a
 
-expectWSEvent :: String -> (WebsocketEvent -> Bool) -> TestM ()
+-- | Expect the websocket event channel to contain an event that matches
+-- the specified predicate.
+expectWSEvent :: String
+              -- ^ A human-readable label for this test in case it
+              -- fails.
+              -> (WebsocketEvent -> Bool)
+              -- ^ The predicate to apply.
+              -> TestM ()
 expectWSEvent name match = do
     chan <- gets tsWebsocketChan
     let timeoutAmount = 10 * 1000 * 1000
@@ -146,21 +156,42 @@ expectWSEvent name match = do
             print_ msg
             error msg
 
+-- | Does the websocket correspond to the specified user?
 forUser :: User -> WebsocketEvent -> Bool
 forUser u =
     wsHas (wepUserId . weData) (Just $ userId u)
 
-isStatusChange :: User -> T.Text -> WebsocketEvent -> Bool
+-- | Is this websocket event a status change message?
+isStatusChange :: User
+               -- ^ The user whose status changed
+               -> T.Text
+               -- ^ The new status
+               -> WebsocketEvent
+               -> Bool
 isStatusChange u s =
     hasWSEventType WMStatusChange &&&
     forUser u &&&
     wsHas (wepStatus . weData) (Just s)
 
-isNewUserEvent :: User -> WebsocketEvent -> Bool
+-- | Is the websocket event indicating that a new user was added to the
+-- server?
+isNewUserEvent :: User
+               -- ^ The user that was added
+               -> WebsocketEvent
+               -> Bool
 isNewUserEvent u =
     hasWSEventType WMNewUser &&& forUser u
 
-isPost :: User -> Channel -> T.Text -> WebsocketEvent -> Bool
+-- | Is the websocket event indicating that a new message was posted to
+-- a channel?
+isPost :: User
+       -- ^ The user who posted
+       -> Channel
+       -- ^ The channel to which the new post was added
+       -> T.Text
+       -- ^ The content of the new post
+       -> WebsocketEvent
+       -> Bool
 isPost u ch msg =
     hasWSEventType WMPosted &&&
     wsHas (\e -> postMessage <$> (wepPost $ weData e))
@@ -170,10 +201,18 @@ isPost u ch msg =
     wsHas (\e -> postUserId =<< (wepPost $ weData e))
           (Just $ userId u)
 
+-- | Timeout in seconds for expectWSEmpty to wait before concluding that
+-- no new websocket events are available.
+emptyWSTimeout :: Int
+emptyWSTimeout = 2
+
+-- | Expect that the websocket event channel is empty. Waits up to
+-- emptyWSTimeout seconds. Succeeds if no events are received; fails
+-- otherwise.
 expectWSEmpty :: TestM ()
 expectWSEmpty = do
     chan <- gets tsWebsocketChan
-    let timeoutAmount = 2 * 1000 * 1000
+    let timeoutAmount = emptyWSTimeout * 1000 * 1000
     mEv <- liftIO $ timeout timeoutAmount $
                    STM.atomically $ STM.readTChan chan
     case mEv of
