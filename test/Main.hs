@@ -152,7 +152,7 @@ setup = mmTestCase "Setup" testConfig $ do
   expectWSEvent "new test user"
     (isNewUserEvent testUser)
 
-  expectWSEmpty
+  expectWSDone
 
 loginAsNormalUserTest :: TestTree
 loginAsNormalUserTest =
@@ -162,7 +162,7 @@ loginAsNormalUserTest =
 
         expectWSEvent "hello" (hasWSEventType WMHello)
         expectWSEvent "status" (isStatusChange testUser "online")
-        expectWSEmpty
+        expectWSDone
 
 initialLoadTest :: TestTree
 initialLoadTest =
@@ -174,7 +174,7 @@ initialLoadTest =
         print_ (ppShow (fmap teamName (initialLoadTeams initialLoad)))
 
         expectWSEvent "hello" (hasWSEventType WMHello)
-        expectWSEmpty
+        expectWSDone
 
 createChannelTest :: TestTree
 createChannelTest =
@@ -187,7 +187,7 @@ createChannelTest =
         print_ (ppShow chan)
 
         expectWSEvent "hello" (hasWSEventType WMHello)
-        expectWSEmpty
+        expectWSDone
 
 getChannelsTest :: TestTree
 getChannelsTest =
@@ -201,7 +201,7 @@ getChannelsTest =
         print_ (ppShow chan)
 
         expectWSEvent "hello" (hasWSEventType WMHello)
-        expectWSEmpty
+        expectWSDone
 
 leaveChannelTest :: TestTree
 leaveChannelTest =
@@ -219,7 +219,7 @@ leaveChannelTest =
 
         expectWSEvent "hello" (hasWSEventType WMHello)
         expectWSEvent "leave channel" (isUserLeave testUser chan)
-        expectWSEmpty
+        expectWSDone
 
 joinChannelTest :: TestTree
 joinChannelTest =
@@ -239,4 +239,4 @@ joinChannelTest =
         expectWSEvent "join channel" (isUserJoin testUser chan)
         expectWSEvent "join post"
           (isPost testUser chan "test-user has joined the channel.")
-        expectWSEmpty
+        expectWSDone

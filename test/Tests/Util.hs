@@ -25,7 +25,7 @@ module Tests.Util
 
   -- * Testing Websocket Events
   , expectWSEvent
-  , expectWSEmpty
+  , expectWSDone
 
   -- * Websocket Event Predicates
   , hasWSEventType
@@ -235,7 +235,7 @@ isPost u ch msg =
     wsHas (\e -> postUserId =<< (wepPost $ weData e))
           (Just $ userId u)
 
--- | Timeout in seconds for expectWSEmpty to wait before concluding that
+-- | Timeout in seconds for expectWSDone to wait before concluding that
 -- no new websocket events are available.
 emptyWSTimeout :: Int
 emptyWSTimeout = 2
@@ -243,8 +243,8 @@ emptyWSTimeout = 2
 -- | Expect that the websocket event channel is empty. Waits up to
 -- emptyWSTimeout seconds. Succeeds if no events are received; fails
 -- otherwise.
-expectWSEmpty :: TestM ()
-expectWSEmpty = do
+expectWSDone :: TestM ()
+expectWSDone = do
     chan <- gets tsWebsocketChan
     let timeoutAmount = emptyWSTimeout * 1000 * 1000
     mEv <- liftIO $ timeout timeoutAmount $
