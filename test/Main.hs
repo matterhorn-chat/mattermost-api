@@ -10,6 +10,7 @@ import           System.Exit
 import           Text.Show.Pretty ( ppShow )
 
 import           Data.Aeson
+import qualified Data.Foldable as F
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Sequence as Seq
 
@@ -101,14 +102,22 @@ setup = mmTestCase "Setup" testConfig $ do
 
   expectWSEvent "hello" (hasWSEventType WMHello)
   expectWSEvent "status" (hasWSEventType WMStatusChange &&&
-                         wsHas (wepStatus . weData) (Just "online"))
+                         wsHas (wepStatus . weData) (Just "online") &&&
+                         wsHas (wepUserId . weData) (Just $ userId adminUser))
 
   print_ "Creating test team"
   testTeam <- createTeam testTeamsCreate
 
+  -- Load channels so we can get the IDs of joined channels
+  chans <- F.toList <$> getChannels testTeam
+
+  let [townSquare] = filter isTownSquare chans
+      [offTopic] = filter isOffTopic chans
+      isTownSquare ch = channelDisplayName ch == "Town Square"
+      isOffTopic ch = channelDisplayName ch == "Off-Topic"
+
   print_ "Getting Config"
   config <- getConfig
-  print_ (ppShow config)
 
   print_ "Saving Config"
   -- Enable open team so that the admin can create
@@ -120,26 +129,46 @@ setup = mmTestCase "Setup" testConfig $ do
                                            (Bool True) teamSettings)) oldConfig)
   saveConfig newConfig
 
-  expectWSEvent "join post"
+  expectWSEvent "admin joined town square"
     (hasWSEventType WMPosted &&&
      wsHas (\e -> postMessage <$> (wepPost $ weData e))
-           (Just "testadmin has joined the channel."))
+           (Just "testadmin has joined the channel.") &&&
+     wsHas (\e -> postChannelId <$> (wepPost $ weData e))
+           (Just $ channelId townSquare))
 
-  print_ $ show adminUser
-
-  expectWSEvent "new user"
+  expectWSEvent "new admin user"
     (hasWSEventType WMNewUser &&&
-     wsHas weUserId (Just $ userId adminUser))
+     wsHas (wepUserId . weData) (Just $ userId adminUser))
 
   print_ "Creating test account"
   testUser <- createAccount testAccount
 
+  expectWSEvent "new test user"
+    (hasWSEventType WMNewUser &&&
+     wsHas (wepUserId . weData) (Just $ userId testUser))
+
   print_ "Add test user to test team"
   teamAddUser testTeam testUser
 
-  expectWSEvent "user added"
-    (hasWSEventType WMUserAdded &&&
-     wsHas weUserId (Just $ userId testUser))
+  expectWSEvent "test user joined town square"
+    (hasWSEventType WMPosted &&&
+     wsHas (\e -> postMessage <$> (wepPost $ weData e))
+           (Just "test-user has joined the channel.") &&&
+     wsHas (\e -> postChannelId <$> (wepPost $ weData e))
+           (Just $ channelId townSquare))
+
+  expectWSEvent "test user joined off-topic"
+    (hasWSEventType WMPosted &&&
+     wsHas (\e -> postMessage <$> (wepPost $ weData e))
+           (Just "test-user has joined the channel.") &&&
+     wsHas (\e -> postChannelId <$> (wepPost $ weData e))
+           (Just $ channelId offTopic))
+
+  expectWSEvent "new test user"
+    (hasWSEventType WMNewUser &&&
+     wsHas (wepUserId . weData) (Just $ userId testUser))
+
+  expectWSEmpty
 
 loginAsNormalUserTest :: TestTree
 loginAsNormalUserTest = mmTestCase "Logging to normal account" testConfig $ do

@@ -23,6 +23,7 @@ module Tests.Util
   , connectFromConfig
 
   , expectWSEvent
+  , expectWSEmpty
   , hasWSEventType
   , wsHas
   , (&&&)
@@ -138,6 +139,19 @@ expectWSEvent name match = do
         Just ev -> when (not $ match ev) $ do
             let msg = "Expected a websocket event for " <> show name <>
                       " but got " <> show ev
+            print_ msg
+            error msg
+
+expectWSEmpty :: TestM ()
+expectWSEmpty = do
+    chan <- gets tsWebsocketChan
+    let timeoutAmount = 2 * 1000 * 1000
+    mEv <- liftIO $ timeout timeoutAmount $
+                   STM.atomically $ STM.readTChan chan
+    case mEv of
+        Nothing -> return ()
+        Just ev -> do
+            let msg = "Expected no websocket events but got " <> show ev
             print_ msg
             error msg
 
