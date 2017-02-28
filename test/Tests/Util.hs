@@ -25,6 +25,10 @@ module Tests.Util
   , expectWSEvent
   , expectWSEmpty
   , hasWSEventType
+  , forUser
+  , isStatusChange
+  , isPost
+  , isNewUserEvent
   , wsHas
   , (&&&)
   )
@@ -141,6 +145,30 @@ expectWSEvent name match = do
                       " but got " <> show ev
             print_ msg
             error msg
+
+forUser :: User -> WebsocketEvent -> Bool
+forUser u =
+    wsHas (wepUserId . weData) (Just $ userId u)
+
+isStatusChange :: User -> T.Text -> WebsocketEvent -> Bool
+isStatusChange u s =
+    hasWSEventType WMStatusChange &&&
+    forUser u &&&
+    wsHas (wepStatus . weData) (Just s)
+
+isNewUserEvent :: User -> WebsocketEvent -> Bool
+isNewUserEvent u =
+    hasWSEventType WMNewUser &&& forUser u
+
+isPost :: User -> Channel -> T.Text -> WebsocketEvent -> Bool
+isPost u ch msg =
+    hasWSEventType WMPosted &&&
+    wsHas (\e -> postMessage <$> (wepPost $ weData e))
+          (Just msg) &&&
+    wsHas (\e -> postChannelId <$> (wepPost $ weData e))
+          (Just $ channelId ch) &&&
+    wsHas (\e -> postUserId =<< (wepPost $ weData e))
+          (Just $ userId u)
 
 expectWSEmpty :: TestM ()
 expectWSEmpty = do

@@ -101,9 +101,7 @@ setup = mmTestCase "Setup" testConfig $ do
   loginAdminAccount
 
   expectWSEvent "hello" (hasWSEventType WMHello)
-  expectWSEvent "status" (hasWSEventType WMStatusChange &&&
-                         wsHas (wepStatus . weData) (Just "online") &&&
-                         wsHas (wepUserId . weData) (Just $ userId adminUser))
+  expectWSEvent "status" (isStatusChange adminUser "online")
 
   print_ "Creating test team"
   testTeam <- createTeam testTeamsCreate
@@ -130,43 +128,29 @@ setup = mmTestCase "Setup" testConfig $ do
   saveConfig newConfig
 
   expectWSEvent "admin joined town square"
-    (hasWSEventType WMPosted &&&
-     wsHas (\e -> postMessage <$> (wepPost $ weData e))
-           (Just "testadmin has joined the channel.") &&&
-     wsHas (\e -> postChannelId <$> (wepPost $ weData e))
-           (Just $ channelId townSquare))
+    (isPost adminUser townSquare "testadmin has joined the channel.")
 
   expectWSEvent "new admin user"
-    (hasWSEventType WMNewUser &&&
-     wsHas (wepUserId . weData) (Just $ userId adminUser))
+    (isNewUserEvent adminUser)
 
   print_ "Creating test account"
   testUser <- createAccount testAccount
 
   expectWSEvent "new test user"
-    (hasWSEventType WMNewUser &&&
-     wsHas (wepUserId . weData) (Just $ userId testUser))
+    (isNewUserEvent testUser)
 
   print_ "Add test user to test team"
   teamAddUser testTeam testUser
 
   expectWSEvent "test user joined town square"
-    (hasWSEventType WMPosted &&&
-     wsHas (\e -> postMessage <$> (wepPost $ weData e))
-           (Just "test-user has joined the channel.") &&&
-     wsHas (\e -> postChannelId <$> (wepPost $ weData e))
-           (Just $ channelId townSquare))
+    (isPost testUser townSquare "test-user has joined the channel.")
 
   expectWSEvent "test user joined off-topic"
-    (hasWSEventType WMPosted &&&
-     wsHas (\e -> postMessage <$> (wepPost $ weData e))
-           (Just "test-user has joined the channel.") &&&
-     wsHas (\e -> postChannelId <$> (wepPost $ weData e))
-           (Just $ channelId offTopic))
+    (isPost testUser offTopic "test-user has joined the channel.")
 
+  -- For some reason we get another one of these events.
   expectWSEvent "new test user"
-    (hasWSEventType WMNewUser &&&
-     wsHas (wepUserId . weData) (Just $ userId testUser))
+    (isNewUserEvent testUser)
 
   expectWSEmpty
 
