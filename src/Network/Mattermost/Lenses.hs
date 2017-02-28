@@ -390,7 +390,7 @@ userRolesL = makeLens userRoles (\ t s -> s { userRoles = t })
 userNotifyPropsL :: Lens' User (HashMap Text Text)
 userNotifyPropsL = makeLens userNotifyProps (\ t s -> s { userNotifyProps = t })
 
-userLastPasswordUpdateL :: Lens' User UTCTime
+userLastPasswordUpdateL :: Lens' User (Maybe UTCTime)
 userLastPasswordUpdateL = makeLens userLastPasswordUpdate (\ t s -> s { userLastPasswordUpdate = t })
 
 userLastPictureUpdateL :: Lens' User (Maybe UTCTime)

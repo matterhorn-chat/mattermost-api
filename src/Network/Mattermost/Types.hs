@@ -450,7 +450,7 @@ data User
   , userLastName           :: Text
   , userRoles              :: Text -- XXX: what are the options?
   , userNotifyProps        :: HashMap Text Text -- See NotifyProps type below
-  , userLastPasswordUpdate :: UTCTime
+  , userLastPasswordUpdate :: Maybe UTCTime
   , userLastPictureUpdate  :: Maybe UTCTime
   , userLocale             :: Text
   } deriving (Read, Show, Eq)
@@ -470,8 +470,9 @@ instance A.FromJSON User where
     userFirstName          <- o .:  "first_name"
     userLastName           <- o .:  "last_name"
     userRoles              <- o .:  "roles"
-    userNotifyProps        <- o .:  "notify_props"
-    userLastPasswordUpdate <- millisecondsToUTCTime <$> o .: "last_password_update"
+    userNotifyProps        <- maybe mempty id <$> (o .:?  "notify_props")
+    userLastPasswordUpdate <- (millisecondsToUTCTime <$>) <$>
+                              (o .:? "last_password_update")
     userLastPictureUpdate  <- (millisecondsToUTCTime <$>) <$> (o .:? "last_picture_update")
     userLocale             <- o .: "locale"
     return User { .. }
