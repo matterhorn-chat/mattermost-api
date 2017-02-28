@@ -7,8 +7,11 @@ where
 
 import Data.Text (Text)
 import Control.Monad.State.Lazy
+import Control.Concurrent.MVar
+import qualified Control.Concurrent.STM.TChan as STM
 
 import Network.Mattermost
+import Network.Mattermost.WebSocket.Types
 
 data Config
   = Config { configUsername :: Text
@@ -27,4 +30,6 @@ data TestState =
               , tsConnectionData :: ConnectionData
               , tsToken          :: Maybe Token
               , tsDebug          :: Bool
+              , tsWebsocketChan  :: STM.TChan WebsocketEvent
+              , tsDone           :: MVar ()
               }

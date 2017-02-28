@@ -21,19 +21,30 @@ module Tests.Util
   , createTeam
   , findChannel
   , connectFromConfig
+
+  , expectWSEvent
+  , hasWSEventType
+  , wsHas
+  , (&&&)
   )
 where
 
 import qualified Data.Aeson as A
 import qualified Control.Exception as E
+import qualified Control.Concurrent.STM as STM
+import Control.Concurrent (forkIO)
+import Control.Concurrent.MVar
 import Data.Monoid ((<>))
 import qualified Data.Sequence as Seq
 import qualified Data.Text as T
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit (testCaseSteps)
 import Control.Monad.State.Lazy
+import System.Timeout (timeout)
 
 import Network.Mattermost
+import Network.Mattermost.WebSocket
+import Network.Mattermost.WebSocket.Types
 import Network.Mattermost.Exceptions
 
 import Tests.Types
@@ -42,13 +53,18 @@ mmTestCase :: String -> Config -> TestM () -> TestTree
 mmTestCase testName cfg act =
     testCaseSteps testName $ \prnt -> do
       cd <- connectFromConfig cfg
+      wsChan <- STM.atomically STM.newTChan
+      mv <- newEmptyMVar
       let initState = TestState { tsPrinter = prnt
                                 , tsConfig = cfg
                                 , tsConnectionData = cd
                                 , tsToken = Nothing
-                                , tsDebug = False
+                                , tsDebug = True
+                                , tsWebsocketChan = wsChan
+                                , tsDone = mv
                                 }
-      reportJSONExceptions $ evalStateT act initState
+      (reportJSONExceptions $ evalStateT act initState) `E.finally`
+        (putMVar mv ())
 
 print_ :: String -> TestM ()
 print_ s = do
@@ -77,19 +93,53 @@ adminAccount cfg =
                 , usersCreateAllowMarketing = True
                 }
 
-createAdminAccount :: TestM ()
+createAdminAccount :: TestM User
 createAdminAccount = do
   cd <- getConnection
   cfg <- gets tsConfig
-  void $ liftIO $ mmUsersCreate cd $ adminAccount cfg
+  u <- liftIO $ mmUsersCreate cd $ adminAccount cfg
   print_ "Admin Account created"
+  return u
 
 loginAccount :: Login -> TestM ()
 loginAccount login = do
   cd <- getConnection
   (token, _mmUser) <- liftIO $ join (hoistE <$> mmLogin cd login)
   print_ $ "Authenticated as " ++ T.unpack (username login)
+  chan <- gets tsWebsocketChan
+  doneMVar <- gets tsDone
+  void $ liftIO $ forkIO $ mmWithWebSocket cd token
+                           (STM.atomically . STM.writeTChan chan)
+                           (const $ takeMVar doneMVar)
   modify $ \ts -> ts { tsToken = Just token }
+
+hasWSEventType :: WebsocketEventType -> WebsocketEvent -> Bool
+hasWSEventType = wsHas weEvent
+
+wsHas :: (Eq a) => (WebsocketEvent -> a) -> a -> WebsocketEvent -> Bool
+wsHas f expected e = f e == expected
+
+(&&&) :: (a -> Bool) -> (a -> Bool) -> a -> Bool
+(&&&) f g a = f a && g a
+
+expectWSEvent :: String -> (WebsocketEvent -> Bool) -> TestM ()
+expectWSEvent name match = do
+    chan <- gets tsWebsocketChan
+    let timeoutAmount = 10 * 1000 * 1000
+    mEv <- liftIO $ timeout timeoutAmount $
+                   STM.atomically $ STM.readTChan chan
+
+    case mEv of
+        Nothing -> do
+            let msg = "Expected a websocket event for " <> show name <>
+                      " but timed out waiting"
+            print_ msg
+            error msg
+        Just ev -> when (not $ match ev) $ do
+            let msg = "Expected a websocket event for " <> show name <>
+                      " but got " <> show ev
+            print_ msg
+            error msg
 
 loginAdminAccount :: TestM ()
 loginAdminAccount = do

@@ -16,6 +16,7 @@ import qualified Data.Sequence as Seq
 import           Test.Tasty
 
 import           Network.Mattermost
+import           Network.Mattermost.WebSocket.Types
 import           Network.Mattermost.Exceptions
 
 import           Tests.Util
@@ -93,10 +94,14 @@ unitTests = testGroup "Units"
 
 setup :: TestTree
 setup = mmTestCase "Setup" testConfig $ do
-  createAdminAccount
+  adminUser <- createAdminAccount
 
   print_ "Logging into Admin account"
   loginAdminAccount
+
+  expectWSEvent "hello" (hasWSEventType WMHello)
+  expectWSEvent "status" (hasWSEventType WMStatusChange &&&
+                         wsHas (wepStatus . weData) (Just "online"))
 
   print_ "Creating test team"
   testTeam <- createTeam testTeamsCreate
@@ -115,11 +120,26 @@ setup = mmTestCase "Setup" testConfig $ do
                                            (Bool True) teamSettings)) oldConfig)
   saveConfig newConfig
 
+  expectWSEvent "join post"
+    (hasWSEventType WMPosted &&&
+     wsHas (\e -> postMessage <$> (wepPost $ weData e))
+           (Just "testadmin has joined the channel."))
+
+  print_ $ show adminUser
+
+  expectWSEvent "new user"
+    (hasWSEventType WMNewUser &&&
+     wsHas weUserId (Just $ userId adminUser))
+
   print_ "Creating test account"
   testUser <- createAccount testAccount
 
   print_ "Add test user to test team"
   teamAddUser testTeam testUser
+
+  expectWSEvent "user added"
+    (hasWSEventType WMUserAdded &&&
+     wsHas weUserId (Just $ userId testUser))
 
 loginAsNormalUserTest :: TestTree
 loginAsNormalUserTest = mmTestCase "Logging to normal account" testConfig $ do
@@ -129,6 +149,7 @@ initialLoadTest :: TestTree
 initialLoadTest = mmTestCase "Initial Load" testConfig $ do
   loginAccount testUserLogin
   initialLoad <- getInitialLoad
+  expectWSEvent "hello" (hasWSEventType WMHello)
   -- print the team names
   print_ (ppShow (fmap teamName (initialLoadTeams initialLoad)))
 
