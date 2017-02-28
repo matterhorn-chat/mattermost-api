@@ -67,7 +67,7 @@ mmTestCase testName cfg act =
                                 , tsConfig = cfg
                                 , tsConnectionData = cd
                                 , tsToken = Nothing
-                                , tsDebug = True
+                                , tsDebug = False
                                 , tsWebsocketChan = wsChan
                                 , tsDone = mv
                                 }
