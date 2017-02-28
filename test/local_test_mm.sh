@@ -8,7 +8,6 @@ ROOT=$HERE/..
 CONTAINER=mattermost-preview
 
 LOGFILE=$(mktemp)
-echo $LOGFILE
 
 function cleanup_log {
     status=$?
@@ -58,15 +57,21 @@ function cleanup_last_container {
     fi
 }
 
-# Note: [JED] You may need to change TEST_RUNNER depending on your
-# environment. As of writing this script `cabal new-build` doesn't
-# have a `new-run` so I use the following find command to locate the
-# test-mm-api executable. YMMV.
-TEST_RUNNER=$(find $ROOT -name $TEST_PROGRAM -type f)
-
-if [ -z "$TEST_RUNNER" ]
+if [ -d "$HERE/../dist-newstyle" ]
 then
-    error "cannot find $TEST_PROGRAM in $ROOT, exiting"
+    PACKAGE_VERSION=$(awk '$1 == "version:" { print $2 }' < $HERE/../mattermost-api.cabal)
+    TEST_RUNNER=$HERE/../dist-newstyle/build/mattermost-api-$PACKAGE_VERSION/build/test-mm-api/test-mm-api
+elif [ -d "$HERE/../dist" ]
+then
+    TEST_RUNNER=$(find $HERE/../dist -type f -name test-mm-api)
+else
+    error "Cannot run test suite; neither .cabal-sandbox nor dist-newstyle exists!"
+    exit 1
+fi
+
+if [ ! -e "$TEST_RUNNER" ]
+then
+    error "Error: program missing: $TEST_PROGRAM"
 fi
 
 if ! docker_installed
@@ -74,6 +79,7 @@ then
     error "'docker' not found in PATH, exiting"
 fi
 
+notice "Log file location: $LOGFILE"
 notice "Cleaning up preexisting MatterMost container"
 cleanup_last_container
 
@@ -85,5 +91,5 @@ logged docker run  --name $CONTAINER -d --publish 8065:8065 mattermost/$CONTAINE
 $HERE/wait_for_mm.sh
 
 # Finally we are ready to run the test suite
-notice "Running the test suite"
+notice "\nRunning the test suite"
 $TEST_RUNNER
