@@ -1,5 +1,19 @@
 # Revision history for mattermost-api
 
+30600.2.2
+=========
+
+Bug fixes:
+ * Support optional `notify_props` and `last_password_update` in
+   mmGetUser responses.
+
+Package changes:
+ * Renamed ChangeLog.md to CHANGELOG.md.
+
+Testing changes:
+ * Added support for testing websocket events and updated the test suite
+   to check for expected websocket events.
+
 30600.2.1
 =========
 
