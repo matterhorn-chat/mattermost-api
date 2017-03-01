@@ -9,7 +9,8 @@ maintainer:          dagitj@gmail.com
 -- copyright:
 category:            Web
 build-type:          Simple
-extra-source-files:  CHANGELOG.md
+extra-doc-files:     README.md,
+                     CHANGELOG.md
 cabal-version:       >=1.10
 tested-with:         GHC == 7.10.3, GHC == 8.0.1
 source-repository    head
