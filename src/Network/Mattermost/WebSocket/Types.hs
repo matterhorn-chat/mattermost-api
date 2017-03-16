@@ -50,7 +50,9 @@ data WebsocketEventType
   | WMUpdateTeam
   | WMReactionAdded
   | WMReactionRemoved
-    deriving (Read, Show, Eq, Ord)
+  | WMChannelCreated
+  | WMGroupAdded
+  deriving (Read, Show, Eq, Ord)
 
 instance FromJSON WebsocketEventType where
   parseJSON = A.withText "event type" $ \s -> case s of
@@ -73,6 +75,8 @@ instance FromJSON WebsocketEventType where
     "update_team"        -> return WMUpdateTeam
     "reaction_added"     -> return WMReactionAdded
     "reaction_removed"   -> return WMReactionRemoved
+    "channel_created"    -> return WMChannelCreated
+    "group_added"        -> return WMGroupAdded
     _                    -> fail ("Unknown websocket message: " ++ show s)
 
 instance ToJSON WebsocketEventType where
@@ -95,6 +99,8 @@ instance ToJSON WebsocketEventType where
   toJSON WMUpdateTeam        = "update_team"
   toJSON WMReactionAdded     = "reaction_added"
   toJSON WMReactionRemoved   = "reaction_removed"
+  toJSON WMChannelCreated    = "channel_created"
+  toJSON WMGroupAdded        = "group_added"
 
 --
 
