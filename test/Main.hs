@@ -127,27 +127,20 @@ setup = mmTestCase "Setup" testConfig $ do
   expectWSEvent "admin joined town square"
     (isPost adminUser townSquare "testadmin has joined the channel.")
 
-  expectWSEvent "new admin user"
-    (isNewUserEvent adminUser)
-
   print_ "Creating test account"
   testUser <- createAccount testAccount
 
-  expectWSEvent "new test user"
-    (isNewUserEvent testUser)
-
   print_ "Add test user to test team"
   teamAddUser testTeam testUser
+
+  expectWSEvent "new test user"
+    (isNewUserEvent testUser)
 
   expectWSEvent "test user joined town square"
     (isPost testUser townSquare "test-user has joined the channel.")
 
   expectWSEvent "test user joined off-topic"
     (isPost testUser offTopic "test-user has joined the channel.")
-
-  -- For some reason we get another one of these events.
-  expectWSEvent "new test user"
-    (isNewUserEvent testUser)
 
   expectWSDone
 
