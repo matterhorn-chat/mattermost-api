@@ -5,6 +5,7 @@ module Tests.Util
   , getToken
   , getInitialLoad
   , createChannel
+  , deleteChannel
   , joinChannel
   , leaveChannel
   , getMoreChannels
@@ -34,6 +35,7 @@ module Tests.Util
   , isStatusChange
   , isPost
   , isNewUserEvent
+  , isChannelDeleteEvent
   , isUserJoin
   , isUserLeave
   , wsHas
@@ -192,6 +194,11 @@ isNewUserEvent :: User
 isNewUserEvent u =
     hasWSEventType WMNewUser &&& forUser u
 
+-- | Is the websocket event indicating that a channel was deleted?
+isChannelDeleteEvent :: Channel -> WebsocketEvent -> Bool
+isChannelDeleteEvent ch =
+    forChannel ch &&& hasWSEventType WMChannelDeleted
+
 -- | Is the websocket event indicating that a user joined a channel?
 isUserJoin :: User
            -- ^ The user that joined a channel
@@ -336,6 +343,12 @@ createChannel team mc = do
   cd <- getConnection
   token <- getToken
   liftIO $ mmCreateChannel cd token (teamId team) mc
+
+deleteChannel :: Team -> Channel -> TestM ()
+deleteChannel team ch = do
+  cd <- getConnection
+  token <- getToken
+  liftIO $ mmDeleteChannel cd token (teamId team) (channelId ch)
 
 joinChannel :: Team -> Channel -> TestM ()
 joinChannel team chan = do

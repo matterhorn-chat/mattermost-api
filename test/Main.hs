@@ -88,6 +88,7 @@ unitTests = testGroup "Units"
     , getChannelsTest
     , leaveChannelTest
     , joinChannelTest
+    , deleteChannelTest
     ]
 
 -- Test definitions
@@ -236,4 +237,28 @@ joinChannelTest =
         expectWSEvent "join channel" (isUserJoin testUser chan)
         expectWSEvent "join post"
           (isPost testUser chan "test-user has joined the channel.")
+        expectWSDone
+
+deleteChannelTest :: TestTree
+deleteChannelTest =
+    mmTestCase "Delete Channel" testConfig $ do
+        loginAccount testUserLogin
+        Just testUser <- getUserByName (username testUserLogin)
+
+        initialLoad <- getInitialLoad
+        let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
+        chans <- getChannels team
+
+        let toDelete = findChannel chans (minChannelName testMinChannel)
+
+        deleteChannel team toDelete
+
+        expectWSEvent "hello" (hasWSEventType WMHello)
+
+        expectWSEvent "channel deletion post"
+            (isPost testUser toDelete "test-user has archived the channel.")
+
+        expectWSEvent "channel delete event"
+            (isChannelDeleteEvent toDelete)
+
         expectWSDone
