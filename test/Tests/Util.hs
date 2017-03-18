@@ -320,9 +320,9 @@ getUserByName uname = do
     cd <- getConnection
     token <- getToken
     allUserMap <- liftIO $ mmGetUsers cd token 0 10000
-    -- Find the user profile matching the username and get its ID
-    let matches = HM.filter matchingProfile allUserMap
-        matchingProfile p = userProfileUsername p == uname
+    -- Find the user matching the username and get its ID
+    let matches = HM.filter matchingUser allUserMap
+        matchingUser u = userUsername u == uname
 
     case HM.size matches == 1 of
         False -> return Nothing

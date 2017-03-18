@@ -378,41 +378,6 @@ instance IsId UserId where
   toId   = unUI
   fromId = UI
 
-data UserProfile
-  = UserProfile
-  { userProfileEmail          :: Text
-  , userProfileRoles          :: Text
-  , userProfileFirstName      :: Text
-  , userProfileAuthService    :: Text
-  , userProfileLocale         :: Text
-  , userProfileUsername       :: Text
-  , userProfileAuthData       :: Text
-  , userProfileLastName       :: Text
-  , userProfileId             :: UserId
-  , userProfileNickname       :: Text
-  , userProfileDeleteAt       :: UTCTime
-  , userProfileCreateAt       :: UTCTime
-  } deriving (Read, Show, Eq, Ord)
-
-instance HasId UserProfile UserId where
-  getId = userProfileId
-
-instance A.FromJSON UserProfile where
-  parseJSON = A.withObject "UserProfile" $ \v -> do
-    userProfileEmail          <- v .: "email"
-    userProfileRoles          <- v .: "roles"
-    userProfileFirstName      <- v .: "first_name"
-    userProfileAuthService    <- v .: "auth_service"
-    userProfileLocale         <- v .: "locale"
-    userProfileUsername       <- v .: "username"
-    userProfileAuthData       <- v .: "auth_data"
-    userProfileLastName       <- v .: "last_name"
-    userProfileId             <- v .: "id"
-    userProfileNickname       <- v .: "nickname"
-    userProfileDeleteAt       <- millisecondsToUTCTime <$> v .: "delete_at"
-    userProfileCreateAt       <- millisecondsToUTCTime <$> v .: "create_at"
-    return UserProfile { .. }
-
 --
 
 -- Note: there's lots of other stuff in an initial_load response but
