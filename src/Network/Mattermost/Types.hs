@@ -165,6 +165,7 @@ instance A.ToJSON SetChannelHeader where
 data Type = Ordinary
           | Direct
           | Private
+          | SystemHeaderChange
           | Unknown Text
   deriving (Read, Show, Ord, Eq)
 
@@ -173,13 +174,15 @@ instance A.FromJSON Type where
       return $ if | t == "O"  -> Ordinary
                   | t == "D"  -> Direct
                   | t == "P"  -> Private
+                  | t == "system_header_change" -> SystemHeaderChange
                   | otherwise -> Unknown t
 
 instance A.ToJSON Type where
-  toJSON Direct    = A.toJSON ("D"::Text)
-  toJSON Ordinary  = A.toJSON ("O"::Text)
-  toJSON Private   = A.toJSON ("P"::Text)
-  toJSON (Unknown t) = A.toJSON t
+  toJSON Direct              = A.toJSON ("D"::Text)
+  toJSON Ordinary            = A.toJSON ("O"::Text)
+  toJSON Private             = A.toJSON ("P"::Text)
+  toJSON SystemHeaderChange  = A.toJSON ("system_header_change"::Text)
+  toJSON (Unknown t)         = A.toJSON t
 
 --
 
@@ -496,6 +499,8 @@ data PostProps
   { postPropsOverrideIconUrl  :: Maybe Text
   , postPropsOverrideUsername :: Maybe Text
   , postPropsAttachments      :: Maybe (Seq PostPropAttachment) -- A.Value
+  , postPropsNewHeader        :: Maybe Text
+  , postPropsOldHeader        :: Maybe Text
   } deriving (Read, Show, Eq)
 
 instance A.FromJSON PostProps where
@@ -503,13 +508,17 @@ instance A.FromJSON PostProps where
     postPropsOverrideIconUrl  <- v .:? "override_icon_url"
     postPropsOverrideUsername <- v .:? "override_username"
     postPropsAttachments      <- v .:? "attachments"
+    postPropsNewHeader        <- v .:? "new_header"
+    postPropsOldHeader        <- v .:? "old_header"
     return PostProps { .. }
 
 instance A.ToJSON PostProps where
   toJSON PostProps { .. } = A.object $
-    [ "override_icon_url" .= v | Just v <- [postPropsOverrideIconUrl] ] ++
+    [ "override_icon_url" .= v | Just v <- [postPropsOverrideIconUrl ] ] ++
     [ "override_username" .= v | Just v <- [postPropsOverrideUsername] ] ++
-    [ "attachments" .= v | Just v <- [postPropsAttachments] ]
+    [ "attachments"       .= v | Just v <- [postPropsAttachments     ] ] ++
+    [ "new_header"        .= v | Just v <- [postPropsNewHeader       ] ] ++
+    [ "old_header"        .= v | Just v <- [postPropsOldHeader       ] ]
 
 newtype PostId = PI { unPI :: Id }
   deriving (Read, Show, Eq, Ord, Hashable, ToJSON, ToJSONKey, FromJSONKey, FromJSON)
