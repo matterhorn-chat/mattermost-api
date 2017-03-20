@@ -19,6 +19,7 @@ module Network.Mattermost
 , TeamsCreate(..)
 , Channel(..)
 , ChannelWithData(..)
+, ChannelData(..)
 , ChannelId(..)
 , Channels
 , MinChannel(..)
@@ -68,6 +69,7 @@ module Network.Mattermost
 , mmGetUser
 , mmGetUsers
 , mmGetTeamMembers
+, mmGetChannelMembers
 , mmGetProfilesForDMList
 , mmGetMe
 , mmGetProfiles
@@ -94,6 +96,7 @@ import           Control.Exception (throwIO)
 import           Control.Monad (when)
 import           Data.Monoid ((<>))
 import           Text.Printf ( printf )
+import qualified Data.Sequence as Seq
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as BL
 import           Data.Time.Clock ( UTCTime )
@@ -415,6 +418,10 @@ mmGetUsers cd token offset limit =
 mmGetTeamMembers :: ConnectionData -> Token -> TeamId -> IO Value
 mmGetTeamMembers cd token teamid = mmDoRequest cd "mmGetTeamMembers" token $
   printf "/api/v3/teams/members/%s" (idString teamid)
+
+mmGetChannelMembers :: ConnectionData -> Token -> TeamId -> IO (Seq.Seq ChannelData)
+mmGetChannelMembers cd token teamid = mmDoRequest cd "mmGetChannelMembers" token $
+  printf "/api/v3/teams/%s/channels/members" (idString teamid)
 
 mmGetProfilesForDMList :: ConnectionData -> Token -> TeamId
                        -> IO (HashMap UserId User)

@@ -10,6 +10,7 @@ module Tests.Util
   , leaveChannel
   , getMoreChannels
   , getChannels
+  , getChannelMembers
   , getUserByName
   , getConfig
   , saveConfig
@@ -49,6 +50,8 @@ import qualified Control.Concurrent.STM as STM
 import Control.Concurrent (forkIO)
 import Control.Concurrent.MVar
 import Data.Monoid ((<>))
+import Data.Maybe (catMaybes)
+import qualified Data.Foldable as F
 import qualified Data.Sequence as Seq
 import qualified Data.Text as T
 import Test.Tasty (TestTree)
@@ -367,6 +370,17 @@ leaveChannel team chan = do
   cd <- getConnection
   token <- getToken
   liftIO $ mmLeaveChannel cd token (teamId team) (channelId chan)
+
+getChannelMembers :: Team -> Channel -> TestM [User]
+getChannelMembers team chan = do
+  cd <- getConnection
+  token <- getToken
+  result <- liftIO $ mmGetChannelMembers cd token (teamId team)
+  users <- forM (F.toList result) $ \chanData -> do
+      case channelId chan == channelDataChannelId chanData of
+          False -> return Nothing
+          True -> Just <$> (liftIO $ mmGetUser cd token (channelDataUserId chanData))
+  return $ catMaybes users
 
 getChannels :: Team -> TestM Channels
 getChannels team = do

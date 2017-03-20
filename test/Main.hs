@@ -4,12 +4,14 @@ module Main (
 ) where
 
 import           Control.Exception
+import           Control.Monad (when)
 
 import           System.Exit
 
 import           Text.Show.Pretty ( ppShow )
 
 import           Data.Aeson
+import           Data.Monoid ((<>))
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Sequence as Seq
 
@@ -232,6 +234,12 @@ joinChannelTest =
 
         let chan = findChannel chans $ minChannelName testMinChannel
         joinChannel team chan
+
+        members <- getChannelMembers team chan
+        let expected :: [User]
+            expected = [testUser]
+        when (members /= expected) $
+            error $ "Expected channel members: " <> show expected
 
         expectWSEvent "hello" (hasWSEventType WMHello)
         expectWSEvent "join channel" (isUserJoin testUser chan)
