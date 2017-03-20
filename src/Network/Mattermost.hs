@@ -96,7 +96,6 @@ import           Control.Exception (throwIO)
 import           Control.Monad (when)
 import           Data.Monoid ((<>))
 import           Text.Printf ( printf )
-import qualified Data.Sequence as Seq
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as BL
 import           Data.Time.Clock ( UTCTime )
@@ -419,9 +418,9 @@ mmGetTeamMembers :: ConnectionData -> Token -> TeamId -> IO Value
 mmGetTeamMembers cd token teamid = mmDoRequest cd "mmGetTeamMembers" token $
   printf "/api/v3/teams/members/%s" (idString teamid)
 
-mmGetChannelMembers :: ConnectionData -> Token -> TeamId -> IO (Seq.Seq ChannelData)
-mmGetChannelMembers cd token teamid = mmDoRequest cd "mmGetChannelMembers" token $
-  printf "/api/v3/teams/%s/channels/members" (idString teamid)
+mmGetChannelMembers :: ConnectionData -> Token -> TeamId -> ChannelId -> IO (HashMap UserId User)
+mmGetChannelMembers cd token teamid chanid = mmDoRequest cd "mmGetChannelMembers" token $
+  printf "/api/v3/teams/%s/channels/%s/users/%d/%d" (idString teamid) (idString chanid) (0::Int) (10000::Int)
 
 mmGetProfilesForDMList :: ConnectionData -> Token -> TeamId
                        -> IO (HashMap UserId User)
