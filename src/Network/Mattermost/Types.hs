@@ -165,6 +165,7 @@ instance A.ToJSON SetChannelHeader where
 data Type = Ordinary
           | Direct
           | Private
+          | Group
           | Unknown Text
   deriving (Read, Show, Ord, Eq)
 
@@ -173,12 +174,14 @@ instance A.FromJSON Type where
       return $ if | t == "O"  -> Ordinary
                   | t == "D"  -> Direct
                   | t == "P"  -> Private
+                  | t == "G"  -> Group
                   | otherwise -> Unknown t
 
 instance A.ToJSON Type where
   toJSON Direct    = A.toJSON ("D"::Text)
   toJSON Ordinary  = A.toJSON ("O"::Text)
   toJSON Private   = A.toJSON ("P"::Text)
+  toJSON Group     = A.toJSON ("G"::Text)
   toJSON (Unknown t) = A.toJSON t
 
 --
