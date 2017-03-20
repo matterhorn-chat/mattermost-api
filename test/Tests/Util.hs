@@ -34,6 +34,7 @@ module Tests.Util
   , isStatusChange
   , isPost
   , isNewUserEvent
+  , isChannelCreatedEvent
   , isUserJoin
   , isUserLeave
   , wsHas
@@ -191,6 +192,12 @@ isNewUserEvent :: User
                -> Bool
 isNewUserEvent u =
     hasWSEventType WMNewUser &&& forUser u
+
+isChannelCreatedEvent :: Channel
+                      -> WebsocketEvent
+                      -> Bool
+isChannelCreatedEvent c =
+    hasWSEventType WMChannelCreated &&& forChannel c
 
 -- | Is the websocket event indicating that a user joined a channel?
 isUserJoin :: User

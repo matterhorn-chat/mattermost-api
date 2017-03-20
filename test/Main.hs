@@ -177,6 +177,7 @@ createChannelTest =
         print_ (ppShow chan)
 
         expectWSEvent "hello" (hasWSEventType WMHello)
+        expectWSEvent "new channel event" (isChannelCreatedEvent chan)
         expectWSDone
 
 getChannelsTest :: TestTree
