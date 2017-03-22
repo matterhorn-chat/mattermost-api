@@ -1,5 +1,22 @@
 # Revision history for mattermost-api
 
+30701.0.0
+=========
+
+* Supports server version 3.7.1.
+
+API changes:
+* Tests now provide websocket event testing infrastructure
+* The Channel data type now supports Group channels (type "G")
+* Added mmGetTeamMembers to get the users in a channel
+* Added support for the Post type `system_header_change` and the post
+  properties `new_header` and `old_header` as described at
+  https://github.com/mattermost/platform/pull/4209
+* Removed the UserProfile type in favor of the User type (fixed #23)
+
+Bug fixes:
+* WebSocket.Types: permit empty `team_id` in event data
+
 30600.2.2
 =========
 
