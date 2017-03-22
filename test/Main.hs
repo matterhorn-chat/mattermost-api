@@ -4,12 +4,14 @@ module Main (
 ) where
 
 import           Control.Exception
+import           Control.Monad (when)
 
 import           System.Exit
 
 import           Text.Show.Pretty ( ppShow )
 
 import           Data.Aeson
+import           Data.Monoid ((<>))
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Sequence as Seq
 
@@ -88,6 +90,7 @@ unitTests = testGroup "Units"
     , getChannelsTest
     , leaveChannelTest
     , joinChannelTest
+    , deleteChannelTest
     ]
 
 -- Test definitions
@@ -226,8 +229,38 @@ joinChannelTest =
         let chan = findChannel chans $ minChannelName testMinChannel
         joinChannel team chan
 
+        members <- getChannelMembers team chan
+        let expected :: [User]
+            expected = [testUser]
+        when (members /= expected) $
+            error $ "Expected channel members: " <> show expected
+
         expectWSEvent "hello" (hasWSEventType WMHello)
         expectWSEvent "join channel" (isUserJoin testUser chan)
         expectWSEvent "join post"
           (isPost testUser chan "test-user has joined the channel.")
+        expectWSDone
+
+deleteChannelTest :: TestTree
+deleteChannelTest =
+    mmTestCase "Delete Channel" testConfig $ do
+        loginAccount testUserLogin
+        Just testUser <- getUserByName (username testUserLogin)
+
+        initialLoad <- getInitialLoad
+        let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
+        chans <- getChannels team
+
+        let toDelete = findChannel chans (minChannelName testMinChannel)
+
+        deleteChannel team toDelete
+
+        expectWSEvent "hello" (hasWSEventType WMHello)
+
+        expectWSEvent "channel deletion post"
+            (isPost testUser toDelete "test-user has archived the channel.")
+
+        expectWSEvent "channel delete event"
+            (isChannelDeleteEvent toDelete)
+
         expectWSDone

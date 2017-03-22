@@ -51,19 +51,6 @@ module Network.Mattermost.Lenses
 , channelDataMentionCountL
 , channelDataNotifyPropsL
 , channelDataLastUpdateAtL
--- ** 'UserProfile' lenses
-, userProfileEmailL
-, userProfileRolesL
-, userProfileFirstNameL
-, userProfileAuthServiceL
-, userProfileLocaleL
-, userProfileUsernameL
-, userProfileAuthDataL
-, userProfileLastNameL
-, userProfileIdL
-, userProfileNicknameL
-, userProfileDeleteAtL
-, userProfileCreateAtL
 -- ** 'User' lenses
 , userIdL
 , userCreateAtL
@@ -307,46 +294,6 @@ channelDataLastUpdateAtL =
   makeLens channelDataLastUpdateAt (\ t s -> s { channelDataLastUpdateAt = t })
 
 --
-
-
-userProfileEmailL :: Lens' UserProfile Text
-userProfileEmailL = makeLens userProfileEmail (\ t s -> s { userProfileEmail = t })
-
-userProfileRolesL :: Lens' UserProfile Text
-userProfileRolesL = makeLens userProfileRoles (\ t s -> s { userProfileRoles = t })
-
-userProfileFirstNameL :: Lens' UserProfile Text
-userProfileFirstNameL = makeLens userProfileFirstName (\ t s -> s { userProfileFirstName = t })
-
-userProfileAuthServiceL :: Lens' UserProfile Text
-userProfileAuthServiceL = makeLens userProfileAuthService (\ t s -> s { userProfileAuthService = t })
-
-userProfileLocaleL :: Lens' UserProfile Text
-userProfileLocaleL = makeLens userProfileLocale (\ t s -> s { userProfileLocale = t })
-
-userProfileUsernameL :: Lens' UserProfile Text
-userProfileUsernameL = makeLens userProfileUsername (\ t s -> s { userProfileUsername = t })
-
-userProfileAuthDataL :: Lens' UserProfile Text
-userProfileAuthDataL = makeLens userProfileAuthData (\ t s -> s { userProfileAuthData = t })
-
-userProfileLastNameL :: Lens' UserProfile Text
-userProfileLastNameL = makeLens userProfileLastName (\ t s -> s { userProfileLastName = t })
-
-userProfileIdL :: Lens' UserProfile UserId
-userProfileIdL = makeLens userProfileId (\ t s -> s { userProfileId = t })
-
-userProfileNicknameL :: Lens' UserProfile Text
-userProfileNicknameL = makeLens userProfileNickname (\ t s -> s { userProfileNickname = t })
-
-userProfileDeleteAtL :: Lens' UserProfile UTCTime
-userProfileDeleteAtL = makeLens userProfileDeleteAt (\ t s -> s { userProfileDeleteAt = t })
-
-userProfileCreateAtL :: Lens' UserProfile UTCTime
-userProfileCreateAtL = makeLens userProfileCreateAt (\ t s -> s { userProfileCreateAt = t })
-
---
-
 
 userIdL :: Lens' User UserId
 userIdL = makeLens userId (\ t s -> s { userId = t })

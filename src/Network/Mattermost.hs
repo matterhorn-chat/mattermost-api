@@ -19,12 +19,13 @@ module Network.Mattermost
 , TeamsCreate(..)
 , Channel(..)
 , ChannelWithData(..)
+, ChannelData(..)
 , ChannelId(..)
 , Channels
 , MinChannel(..)
-, UserProfile(..)
 , UsersCreate(..)
 , Post(..)
+, PostProps(..)
 , PendingPost(..)
 , PostId(..)
 , FileId(..)
@@ -68,6 +69,7 @@ module Network.Mattermost
 , mmGetUser
 , mmGetUsers
 , mmGetTeamMembers
+, mmGetChannelMembers
 , mmGetProfilesForDMList
 , mmGetMe
 , mmGetProfiles
@@ -407,7 +409,7 @@ mmGetUser :: ConnectionData -> Token -> UserId -> IO User
 mmGetUser cd token userid = mmDoRequest cd "mmGetUser" token $
   printf "/api/v3/users/%s/get" (idString userid)
 
-mmGetUsers :: ConnectionData -> Token -> Int -> Int -> IO (HashMap UserId UserProfile)
+mmGetUsers :: ConnectionData -> Token -> Int -> Int -> IO (HashMap UserId User)
 mmGetUsers cd token offset limit =
   mmDoRequest cd "mmGetUsers" token $
     printf "/api/v3/users/%d/%d" offset limit
@@ -416,8 +418,12 @@ mmGetTeamMembers :: ConnectionData -> Token -> TeamId -> IO Value
 mmGetTeamMembers cd token teamid = mmDoRequest cd "mmGetTeamMembers" token $
   printf "/api/v3/teams/members/%s" (idString teamid)
 
+mmGetChannelMembers :: ConnectionData -> Token -> TeamId -> ChannelId -> IO (HashMap UserId User)
+mmGetChannelMembers cd token teamid chanid = mmDoRequest cd "mmGetChannelMembers" token $
+  printf "/api/v3/teams/%s/channels/%s/users/%d/%d" (idString teamid) (idString chanid) (0::Int) (10000::Int)
+
 mmGetProfilesForDMList :: ConnectionData -> Token -> TeamId
-                       -> IO (HashMap UserId UserProfile)
+                       -> IO (HashMap UserId User)
 mmGetProfilesForDMList cd token teamid =
   mmDoRequest cd "mmGetProfilesForDMList" token $
     printf "/api/v3/users/profiles_for_dm_list/%s" (idString teamid)
@@ -426,7 +432,7 @@ mmGetMe :: ConnectionData -> Token -> IO Value
 mmGetMe cd token = mmDoRequest cd "mmGetMe" token "/api/v3/users/me"
 
 mmGetProfiles :: ConnectionData -> Token
-              -> TeamId -> IO (HashMap UserId UserProfile)
+              -> TeamId -> IO (HashMap UserId User)
 mmGetProfiles cd token teamid = mmDoRequest cd "mmGetProfiles" token $
   printf "/api/v3/teams/%s/users/%d/%d" (idString teamid) (0::Int) (10000::Int)
 

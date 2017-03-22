@@ -157,7 +157,7 @@ data WEData = WEData
   , wepTeamId             :: Maybe TeamId
   , wepSenderName         :: Maybe Text
   , wepUserId             :: Maybe UserId
-  , wepUser               :: Maybe UserProfile
+  , wepUser               :: Maybe User
   , wepChannelDisplayName :: Maybe Text
   , wepPost               :: Maybe Post
   , wepStatus             :: Maybe Text
