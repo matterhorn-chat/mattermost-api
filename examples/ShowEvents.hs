@@ -109,7 +109,7 @@ main = do
             channelIdMap   = HM.fromList [ (getId c, c)
                                          | c <- channels
                                          ]
-            userMap        = HM.fromList [ (userProfileUsername u, u)
+            userMap        = HM.fromList [ (userUsername u, u)
                                          | u <- HM.elems users
                                          ]
 
@@ -156,7 +156,7 @@ printEvent cd token profiles chanMap we = do
       Just (Post { postMessage = msg
                  , postUserId  = usrId
                  }) -> do
-        let nick  = color ("@" ++ userProfileUsername (profiles HM.! usrId))
+        let nick  = color ("@" ++ userUsername (profiles HM.! usrId))
             cName = color ("#" ++ channelName channel)
         if channelType channel == "O"
           then putStrLn (nick ++ " in " ++ cName ++ ":  " ++ msg)
@@ -166,14 +166,14 @@ printEvent cd token profiles chanMap we = do
       Just (Post { postMessage = msg
                  , postUserId  = usrId
                  }) -> do
-        let nick = color ("@" ++ userProfileUsername (profiles HM.! usrId))
+        let nick = color ("@" ++ userUsername (profiles HM.! usrId))
         putStrLn (nick ++ " [edit]:  " ++ msg)
       Nothing -> return ()
     WMPostDeleted -> case wepPost (weData we) of
       Just (Post { postMessage = msg
                  , postUserId  = usrId
                  }) -> do
-        let nick = color ("@" ++ userProfileUsername (profiles HM.! usrId))
+        let nick = color ("@" ++ userUsername (profiles HM.! usrId))
         putStrLn (nick ++ " [deletion]:  " ++ msg)
       Nothing -> return ()
     _ -> return ()

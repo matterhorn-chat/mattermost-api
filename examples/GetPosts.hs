@@ -137,6 +137,6 @@ main = do
             when (optVerbose opts) $ do
                pPrint p
             let message = printf "%s: %s"
-                                 (userProfileUsername user)
+                                 (userUsername user)
                                  (postMessage p)
             putStrLn message
