@@ -2,7 +2,7 @@ module Tests.Util
   ( mmTestCase
   , print_
   , getConnection
-  , getToken
+  , getSession
   , getInitialLoad
   , createChannel
   , deleteChannel
@@ -61,7 +61,6 @@ import qualified Data.HashMap.Lazy as HM
 
 import Network.Mattermost
 import Network.Mattermost.WebSocket
-import Network.Mattermost.WebSocket.Types
 import Network.Mattermost.Exceptions
 
 import Tests.Types
@@ -75,7 +74,7 @@ mmTestCase testName cfg act =
       let initState = TestState { tsPrinter = prnt
                                 , tsConfig = cfg
                                 , tsConnectionData = cd
-                                , tsToken = Nothing
+                                , tsSession = Nothing
                                 , tsDebug = False
                                 , tsWebsocketChan = wsChan
                                 , tsDone = mv
@@ -121,14 +120,14 @@ createAdminAccount = do
 loginAccount :: Login -> TestM ()
 loginAccount login = do
   cd <- getConnection
-  (token, _mmUser) <- liftIO $ join (hoistE <$> mmLogin cd login)
+  (session, _mmUser) <- liftIO $ join (hoistE <$> mmLogin cd login)
   print_ $ "Authenticated as " ++ T.unpack (username login)
   chan <- gets tsWebsocketChan
   doneMVar <- gets tsDone
-  void $ liftIO $ forkIO $ mmWithWebSocket cd token
+  void $ liftIO $ forkIO $ mmWithWebSocket session
                            (STM.atomically . STM.writeTChan chan)
                            (const $ takeMVar doneMVar)
-  modify $ \ts -> ts { tsToken = Just token }
+  modify $ \ts -> ts { tsSession = Just session }
 
 hasWSEventType :: WebsocketEventType -> WebsocketEvent -> Bool
 hasWSEventType = wsHas weEvent
@@ -281,17 +280,15 @@ loginAdminAccount = do
 
 createAccount :: UsersCreate -> TestM User
 createAccount account = do
-  cd <- getConnection
-  token <- getToken
-  newUser <- liftIO $ mmUsersCreateWithToken cd token account
+  session <- getSession
+  newUser <- liftIO $ mmUsersCreateWithToken session account
   print_ $ "account created for " <> (T.unpack $ usersCreateUsername account)
   return newUser
 
 createTeam :: TeamsCreate -> TestM Team
 createTeam tc = do
-  cd <- getConnection
-  token <- getToken
-  team <- liftIO $ mmCreateTeam cd token tc
+  session <- getSession
+  team <- liftIO $ mmCreateTeam session tc
   print_ $ "Team created: " <> (T.unpack $ teamsCreateName tc)
   return team
 
@@ -317,24 +314,22 @@ connectFromConfig cfg =
 getConnection :: TestM ConnectionData
 getConnection = gets tsConnectionData
 
-getToken :: TestM Token
-getToken = do
-    val <- gets tsToken
+getSession :: TestM Session
+getSession = do
+    val <- gets tsSession
     case val of
-        Just tok -> return tok
+        Just s -> return s
         Nothing -> error "Expected authentication token but none was present"
 
 getInitialLoad :: TestM InitialLoad
 getInitialLoad = do
-  cd <- getConnection
-  token <- getToken
-  liftIO $ mmGetInitialLoad cd token
+  session <- getSession
+  liftIO $ mmGetInitialLoad session
 
 getUserByName :: T.Text -> TestM (Maybe User)
 getUserByName uname = do
-    cd <- getConnection
-    token <- getToken
-    allUserMap <- liftIO $ mmGetUsers cd token 0 10000
+    session <- getSession
+    allUserMap <- liftIO $ mmGetUsers session 0 10000
     -- Find the user matching the username and get its ID
     let matches = HM.filter matchingUser allUserMap
         matchingUser u = userUsername u == uname
@@ -344,65 +339,55 @@ getUserByName uname = do
         True -> do
             let uId = fst $ HM.toList matches !! 0
             -- Then load the User record
-            Just <$> (liftIO $ mmGetUser cd token uId)
+            Just <$> (liftIO $ mmGetUser session uId)
 
 createChannel :: Team -> MinChannel -> TestM Channel
 createChannel team mc = do
-  cd <- getConnection
-  token <- getToken
-  liftIO $ mmCreateChannel cd token (teamId team) mc
+  session <- getSession
+  liftIO $ mmCreateChannel session (teamId team) mc
 
 deleteChannel :: Team -> Channel -> TestM ()
 deleteChannel team ch = do
-  cd <- getConnection
-  token <- getToken
-  liftIO $ mmDeleteChannel cd token (teamId team) (channelId ch)
+  session <- getSession
+  liftIO $ mmDeleteChannel session (teamId team) (channelId ch)
 
 joinChannel :: Team -> Channel -> TestM ()
 joinChannel team chan = do
-  cd <- getConnection
-  token <- getToken
-  liftIO $ mmJoinChannel cd token (teamId team) (channelId chan)
+  session <- getSession
+  liftIO $ mmJoinChannel session (teamId team) (channelId chan)
 
 getMoreChannels :: Team -> TestM Channels
 getMoreChannels team = do
-  cd <- getConnection
-  token <- getToken
-  liftIO $ mmGetMoreChannels cd token (teamId team)
+  session <- getSession
+  liftIO $ mmGetMoreChannels session (teamId team)
 
 leaveChannel :: Team -> Channel -> TestM ()
 leaveChannel team chan = do
-  cd <- getConnection
-  token <- getToken
-  liftIO $ mmLeaveChannel cd token (teamId team) (channelId chan)
+  session <- getSession
+  liftIO $ mmLeaveChannel session (teamId team) (channelId chan)
 
 getChannelMembers :: Team -> Channel -> TestM [User]
 getChannelMembers team chan = do
-  cd <- getConnection
-  token <- getToken
+  session <- getSession
   (snd <$>) <$> HM.toList <$>
-      (liftIO $ mmGetChannelMembers cd token (teamId team) (channelId chan))
+      (liftIO $ mmGetChannelMembers session (teamId team) (channelId chan))
 
 getChannels :: Team -> TestM Channels
 getChannels team = do
-  cd <- getConnection
-  token <- getToken
-  liftIO $ mmGetChannels cd token (teamId team)
+  session <- getSession
+  liftIO $ mmGetChannels session (teamId team)
 
 getConfig :: TestM A.Value
 getConfig = do
-  cd <- getConnection
-  token <- getToken
-  liftIO $ mmGetConfig cd token
+  session <- getSession
+  liftIO $ mmGetConfig session
 
 saveConfig :: A.Value -> TestM ()
 saveConfig newConfig = do
-  cd <- getConnection
-  token <- getToken
-  liftIO $ mmSaveConfig cd token newConfig
+  session <- getSession
+  liftIO $ mmSaveConfig session newConfig
 
 teamAddUser :: Team -> User -> TestM ()
 teamAddUser team user = do
-  cd <- getConnection
-  token <- getToken
-  liftIO $ mmTeamAddUser cd token (teamId team) (userId user)
+  session <- getSession
+  liftIO $ mmTeamAddUser session (teamId team) (userId user)

@@ -28,7 +28,7 @@ data TestState =
     TestState { tsPrinter        :: String -> IO ()
               , tsConfig         :: Config
               , tsConnectionData :: ConnectionData
-              , tsToken          :: Maybe Token
+              , tsSession        :: Maybe Session
               , tsDebug          :: Bool
               , tsWebsocketChan  :: STM.TChan WebsocketEvent
               , tsDone           :: MVar ()
