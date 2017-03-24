@@ -59,6 +59,9 @@ runLogger ConnectionData { cdLogger = Just l } n ev =
   l (LogEvent n ev)
 runLogger _ _ _ = return ()
 
+runLoggerS :: Session -> String -> LogEventType -> IO ()
+runLoggerS (Session cd _) = runLogger cd
+
 maybeFail :: Parser a -> Parser (Maybe a)
 maybeFail p = (Just <$> p) <|> (return Nothing)
 
@@ -135,6 +138,14 @@ data Token = Token String
 
 getTokenString :: Token -> String
 getTokenString (Token s) = s
+
+data Session = Session
+  { sessConn :: ConnectionData
+  , sessTok  :: Token
+  }
+
+mkSession :: ConnectionData -> Token -> Session
+mkSession = Session
 
 --
 
