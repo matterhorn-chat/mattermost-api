@@ -281,7 +281,7 @@ loginAdminAccount = do
 createAccount :: UsersCreate -> TestM User
 createAccount account = do
   session <- getSession
-  newUser <- liftIO $ mmUsersCreateWithToken session account
+  newUser <- liftIO $ mmUsersCreateWithSession session account
   print_ $ "account created for " <> (T.unpack $ usersCreateUsername account)
   return newUser
 
