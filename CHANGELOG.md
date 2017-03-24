@@ -1,5 +1,23 @@
 # Revision history for mattermost-api
 
+30701.1.0
+=========
+
+API changes:
+* The `Token` type has been replaced with a `Session` type,
+  representing a combination of a `Token` and a `ConnectionData`
+  type. All exposed API functions which require an authenticated
+  connection will use this instead. This is a major breaking change,
+  but makes the API significantly cleaner.
+* Removed `UserProfile` type in favor of single pervasive `User` type.
+* Replaced the return type of `mmGetTeamMembers` to use a `TeamMember`
+  instead of raw JSON `Value`s.
+
+Package changes:
+* The `Network.Mattermost.Websocket` module now exports everything
+  exported by `Network.Mattermost.Websocket.Types` in order to cut
+  down on the number of imports needed by users.
+
 30701.0.0
 =========
 
