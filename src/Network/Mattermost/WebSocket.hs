@@ -102,12 +102,11 @@ pingThread onPingAction conn = loop 0
           onPingAction
           loop (n+1)
 
-mmWithWebSocket :: ConnectionData
-                -> Token
+mmWithWebSocket :: Session
                 -> (WebsocketEvent -> IO ())
                 -> (MMWebSocket -> IO ())
                 -> IO ()
-mmWithWebSocket cd (Token tk) recv body = do
+mmWithWebSocket (Session cd (Token tk)) recv body = do
   con <- mkConnection cd
   stream <- connectionToStream con
   health <- newIORef 0

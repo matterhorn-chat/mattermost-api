@@ -273,6 +273,19 @@ instance A.FromJSON Team where
     teamAllowOpenInvite <- v .: "allow_open_invite"
     return Team { .. }
 
+data TeamMember = TeamMember
+  { teamMemberUserId :: UserId
+  , teamMemberTeamId :: TeamId
+  , teamMemberRoles  :: Text
+  } deriving (Read, Show, Eq, Ord)
+
+instance A.FromJSON TeamMember where
+  parseJSON = A.withObject "TeamMember" $ \v -> do
+    teamMemberUserId <- v .: "user_id"
+    teamMemberTeamId <- v .: "team_id"
+    teamMemberRoles  <- v .: "roles"
+    return TeamMember { .. }
+
 --
 
 newtype ChannelId = CI { unCI :: Id }

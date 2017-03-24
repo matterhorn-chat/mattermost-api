@@ -27,6 +27,10 @@ module Network.Mattermost.Lenses
 , teamAllowedDomainsL
 , teamInviteIdL
 , teamAllowOpenInviteL
+-- ** 'TeamMember' lenses
+, teamMemberUserIdL
+, teamMemberTeamIdL
+, teamMemberRolesL
 -- ** 'Channel' lenses
 , channelIdL
 , channelCreateAtL
@@ -214,6 +218,18 @@ teamInviteIdL = makeLens teamInviteId (\ t s -> s { teamInviteId = t })
 
 teamAllowOpenInviteL :: Lens' Team Bool
 teamAllowOpenInviteL = makeLens teamAllowOpenInvite (\ t s -> s { teamAllowOpenInvite = t })
+
+--
+
+teamMemberUserIdL :: Lens' TeamMember UserId
+teamMemberUserIdL = makeLens teamMemberUserId (\ t s -> s { teamMemberUserId = t })
+
+teamMemberTeamIdL :: Lens' TeamMember TeamId
+teamMemberTeamIdL = makeLens teamMemberTeamId (\ t s -> s { teamMemberTeamId = t })
+
+teamMemberRolesL :: Lens' TeamMember Text
+teamMemberRolesL = makeLens teamMemberRoles (\ t s -> s { teamMemberRoles = t })
+
 
 --
 

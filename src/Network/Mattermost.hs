@@ -5,15 +5,16 @@ module Network.Mattermost
 ( -- * Types
   -- ** Mattermost-Related Types
   Login(..)
-, Token
 , Hostname
 , Port
 , ConnectionData
+, Session
 , Id(..)
 , User(..)
 , UserId(..)
 , InitialLoad(..)
 , Team(..)
+, TeamMember(..)
 , Type(..)
 , TeamId(..)
 , TeamsCreate(..)
@@ -80,7 +81,7 @@ module Network.Mattermost
 , mmChannelAddUser
 , mmTeamAddUser
 , mmUsersCreate
-, mmUsersCreateWithToken
+, mmUsersCreateWithSession
 , mmPost
 , mmUpdatePost
 , mmExecute
@@ -124,6 +125,7 @@ import           Data.Aeson ( Value(..)
                             , encode
                             , eitherDecode
                             )
+import qualified Data.Sequence as Seq
 import qualified Data.Text as T
 import           Control.Arrow ( left )
 
@@ -208,7 +210,7 @@ mmUnauthenticatedHTTPPost cd path json = do
 
 -- | Fire off a login attempt. Note: We get back more than just the auth token.
 -- We also get all the server-side configuration data for the user.
-mmLogin :: ConnectionData -> Login -> IO (Either LoginFailureException (Token, User))
+mmLogin :: ConnectionData -> Login -> IO (Either LoginFailureException (Session, User))
 mmLogin cd login = do
   let rawPath = "/api/v3/users/login"
   path <- mmPath rawPath
@@ -222,159 +224,158 @@ mmLogin cd login = do
       (raw, value) <- mmGetJSONBody "User" rsp
       runLogger cd "mmLogin" $
         HttpResponse 200 rawPath (Just raw)
-      return (Right (Token token, value))
+      return (Right (Session cd (Token token), value))
 
 -- | Fire off a login attempt. Note: We get back more than just the auth token.
 -- We also get all the server-side configuration data for the user.
-mmGetInitialLoad :: ConnectionData -> Token -> IO InitialLoad
-mmGetInitialLoad cd token =
-  mmDoRequest cd "mmGetInitialLoad" token "/api/v3/users/initial_load"
+mmGetInitialLoad :: Session -> IO InitialLoad
+mmGetInitialLoad sess =
+  mmDoRequest sess "mmGetInitialLoad" "/api/v3/users/initial_load"
 
 -- | Requires an authenticated user. Returns the full list of teams.
-mmGetTeams :: ConnectionData -> Token -> IO (HashMap TeamId Team)
-mmGetTeams cd token =
-  mmDoRequest cd "mmGetTeams" token "/api/v3/teams/all"
+mmGetTeams :: Session -> IO (HashMap TeamId Team)
+mmGetTeams sess =
+  mmDoRequest sess "mmGetTeams" "/api/v3/teams/all"
 
-mmCreateTeam :: ConnectionData -> Token -> TeamsCreate -> IO Team
-mmCreateTeam cd token payload = do
+mmCreateTeam :: Session -> TeamsCreate -> IO Team
+mmCreateTeam sess payload = do
   let path = "/api/v3/teams/create"
   uri <- mmPath path
-  runLogger cd "mmCreateTeam" $
+  runLoggerS sess "mmCreateTeam" $
     HttpRequest POST path (Just (toJSON payload))
-  rsp <- mmPOST cd token uri payload
+  rsp <- mmPOST sess uri payload
   (val, r) <- mmGetJSONBody "Team" rsp
-  runLogger cd "mmCreateTeam" $
+  runLoggerS sess "mmCreateTeam" $
     HttpResponse 200 path (Just val)
   return r
 
 -- | Requires an authenticated user. Returns the full list of channels
 -- for a given team of which the user is a member
-mmGetChannels :: ConnectionData -> Token -> TeamId -> IO Channels
-mmGetChannels cd token teamid = mmDoRequest cd "mmGetChannels" token $
+mmGetChannels :: Session -> TeamId -> IO Channels
+mmGetChannels sess teamid = mmDoRequest sess "mmGetChannels" $
   printf "/api/v3/teams/%s/channels/" (idString teamid)
 
 -- | Requires an authenticated user. Returns the channels for a team of
 -- which the user is not already a member
-mmGetMoreChannels :: ConnectionData -> Token -> TeamId -> IO Channels
-mmGetMoreChannels cd token teamid = mmDoRequest cd "mmGetMoreChannels" token $
+mmGetMoreChannels :: Session -> TeamId -> IO Channels
+mmGetMoreChannels sess teamid = mmDoRequest sess "mmGetMoreChannels" $
   printf "/api/v3/teams/%s/channels/more" (idString teamid)
 
 -- | Requires an authenticated user. Returns the details of a
 -- specific channel.
-mmGetChannel :: ConnectionData -> Token
+mmGetChannel :: Session
              -> TeamId
              -> ChannelId
              -> IO ChannelWithData
-mmGetChannel cd token teamid chanid = mmWithRequest cd "mmGetChannel" token
+mmGetChannel sess teamid chanid = mmWithRequest sess "mmGetChannel"
   (printf "/api/v3/teams/%s/channels/%s/"
           (idString teamid)
           (idString chanid))
   return
 
-mmUpdateLastViewedAt :: ConnectionData -> Token
+mmUpdateLastViewedAt :: Session
                      -> TeamId
                      -> ChannelId
                      -> IO ()
-mmUpdateLastViewedAt cd token teamid chanid = do
+mmUpdateLastViewedAt sess teamid chanid = do
   let uri = printf "/api/v3/teams/%s/channels/%s/update_last_viewed_at"
                    (idString teamid)
                    (idString chanid)
   path <- mmPath uri
-  runLogger cd "mmUpdateLastViewedAt" $
+  runLoggerS sess "mmUpdateLastViewedAt" $
     HttpRequest POST uri Nothing
-  _ <- mmRawPOST cd token path ""
-  runLogger cd "mmUpdateLastViewedAt" $
+  _ <- mmRawPOST sess path ""
+  runLoggerS sess "mmUpdateLastViewedAt" $
     HttpResponse 200 uri Nothing
   return ()
 
-mmJoinChannel :: ConnectionData -> Token
+mmJoinChannel :: Session
               -> TeamId
               -> ChannelId
               -> IO ()
-mmJoinChannel cd token teamid chanid = do
+mmJoinChannel sess teamid chanid = do
   let path = printf "/api/v3/teams/%s/channels/%s/join"
                    (idString teamid)
                    (idString chanid)
   uri <- mmPath path
-  runLogger cd "mmJoinChannel" $
+  runLoggerS sess "mmJoinChannel" $
     HttpRequest POST path Nothing
-  rsp <- mmPOST cd token uri (""::T.Text)
+  rsp <- mmPOST sess uri (""::T.Text)
   (val, (_::Channel)) <- mmGetJSONBody "Channel" rsp
-  runLogger cd "mmJoinChannel" $
+  runLoggerS sess "mmJoinChannel" $
     HttpResponse 200 path (Just val)
   return ()
 
-mmLeaveChannel :: ConnectionData -> Token
+mmLeaveChannel :: Session
                -> TeamId
                -> ChannelId
                -> IO ()
-mmLeaveChannel cd token teamid chanid = do
+mmLeaveChannel sess teamid chanid = do
   let path = printf "/api/v3/teams/%s/channels/%s/leave"
                    (idString teamid)
                    (idString chanid)
       payload = HM.fromList [("id" :: T.Text, chanid)]
   uri <- mmPath path
-  runLogger cd "mmLeaveChannel" $
+  runLoggerS sess "mmLeaveChannel" $
     HttpRequest POST path (Just (toJSON payload))
-  rsp <- mmPOST cd token uri payload
+  rsp <- mmPOST sess uri payload
   (val, (_::HM.HashMap T.Text ChannelId)) <- mmGetJSONBody "Channel name/ID map" rsp
-  runLogger cd "mmCreateDirect" $
+  runLoggerS sess "mmCreateDirect" $
     HttpResponse 200 path (Just val)
   return ()
 
-mmGetPosts :: ConnectionData -> Token
+mmGetPosts :: Session
            -> TeamId
            -> ChannelId
            -> Int -- offset in the backlog, 0 is most recent
            -> Int -- try to fetch this many
            -> IO Posts
-mmGetPosts cd token teamid chanid offset limit =
-  mmDoRequest cd "mmGetPosts" token $
+mmGetPosts sess teamid chanid offset limit =
+  mmDoRequest sess "mmGetPosts" $
   printf "/api/v3/teams/%s/channels/%s/posts/page/%d/%d"
          (idString teamid)
          (idString chanid)
          offset
          limit
 
-mmGetPostsSince :: ConnectionData
-           -> Token
+mmGetPostsSince :: Session
            -> TeamId
            -> ChannelId
            -> UTCTime
            -> IO Posts
-mmGetPostsSince cd token teamid chanid since =
-  mmDoRequest cd "mmGetPostsSince" token $
+mmGetPostsSince sess teamid chanid since =
+  mmDoRequest sess "mmGetPostsSince" $
   printf "/api/v3/teams/%s/channels/%s/posts/since/%d"
          (idString teamid)
          (idString chanid)
          (utcTimeToMilliseconds since :: Int)
 
-mmGetPost :: ConnectionData -> Token
+mmGetPost :: Session
           -> TeamId
           -> ChannelId
           -> PostId
           -> IO Posts
-mmGetPost cd token teamid chanid postid = do
+mmGetPost sess teamid chanid postid = do
   let path = printf "/api/v3/teams/%s/channels/%s/posts/%s/get"
              (idString teamid)
              (idString chanid)
              (idString postid)
   uri <- mmPath path
-  rsp <- mmRequest cd token uri
+  rsp <- mmRequest sess uri
   (raw, json) <- mmGetJSONBody "Posts" rsp
-  runLogger cd "mmGetPost" $
+  runLoggerS sess "mmGetPost" $
     HttpResponse 200 path (Just raw)
   return json
 
-mmGetPostsAfter :: ConnectionData -> Token
+mmGetPostsAfter :: Session
                 -> TeamId
                 -> ChannelId
                 -> PostId
                 -> Int -- offset in the backlog, 0 is most recent
                 -> Int -- try to fetch this many
                 -> IO Posts
-mmGetPostsAfter cd token teamid chanid postid offset limit =
-  mmDoRequest cd "mmGetPosts" token $
+mmGetPostsAfter sess teamid chanid postid offset limit =
+  mmDoRequest sess "mmGetPosts" $
   printf "/api/v3/teams/%s/channels/%s/posts/%s/after/%d/%d"
          (idString teamid)
          (idString chanid)
@@ -382,15 +383,15 @@ mmGetPostsAfter cd token teamid chanid postid offset limit =
          offset
          limit
 
-mmGetPostsBefore :: ConnectionData -> Token
+mmGetPostsBefore :: Session
                 -> TeamId
                 -> ChannelId
                 -> PostId
                 -> Int -- offset in the backlog, 0 is most recent
                 -> Int -- try to fetch this many
                 -> IO Posts
-mmGetPostsBefore cd token teamid chanid postid offset limit =
-  mmDoRequest cd "mmGetPosts" token $
+mmGetPostsBefore sess teamid chanid postid offset limit =
+  mmDoRequest sess "mmGetPosts" $
   printf "/api/v3/teams/%s/channels/%s/posts/%s/before/%d/%d"
          (idString teamid)
          (idString chanid)
@@ -398,216 +399,208 @@ mmGetPostsBefore cd token teamid chanid postid offset limit =
          offset
          limit
 
-mmGetFileInfo :: ConnectionData -> Token
+mmGetFileInfo :: Session
               -> FileId
               -> IO FileInfo
-mmGetFileInfo cd token fileId =
-  mmDoRequest cd "mmGetFileInfo" token $
+mmGetFileInfo sess fileId =
+  mmDoRequest sess "mmGetFileInfo" $
   printf "/api/v3/files/%s/get_info" (idString fileId)
 
-mmGetUser :: ConnectionData -> Token -> UserId -> IO User
-mmGetUser cd token userid = mmDoRequest cd "mmGetUser" token $
+mmGetUser :: Session -> UserId -> IO User
+mmGetUser sess userid = mmDoRequest sess "mmGetUser" $
   printf "/api/v3/users/%s/get" (idString userid)
 
-mmGetUsers :: ConnectionData -> Token -> Int -> Int -> IO (HashMap UserId User)
-mmGetUsers cd token offset limit =
-  mmDoRequest cd "mmGetUsers" token $
+mmGetUsers :: Session -> Int -> Int -> IO (HashMap UserId User)
+mmGetUsers sess offset limit =
+  mmDoRequest sess "mmGetUsers" $
     printf "/api/v3/users/%d/%d" offset limit
 
-mmGetTeamMembers :: ConnectionData -> Token -> TeamId -> IO Value
-mmGetTeamMembers cd token teamid = mmDoRequest cd "mmGetTeamMembers" token $
+mmGetTeamMembers :: Session -> TeamId -> IO (Seq.Seq TeamMember)
+mmGetTeamMembers sess teamid = mmDoRequest sess "mmGetTeamMembers" $
   printf "/api/v3/teams/members/%s" (idString teamid)
 
-mmGetChannelMembers :: ConnectionData -> Token -> TeamId -> ChannelId -> IO (HashMap UserId User)
-mmGetChannelMembers cd token teamid chanid = mmDoRequest cd "mmGetChannelMembers" token $
+mmGetChannelMembers :: Session -> TeamId -> ChannelId -> IO (HashMap UserId User)
+mmGetChannelMembers sess teamid chanid = mmDoRequest sess "mmGetChannelMembers" $
   printf "/api/v3/teams/%s/channels/%s/users/%d/%d" (idString teamid) (idString chanid) (0::Int) (10000::Int)
 
-mmGetProfilesForDMList :: ConnectionData -> Token -> TeamId
+mmGetProfilesForDMList :: Session -> TeamId
                        -> IO (HashMap UserId User)
-mmGetProfilesForDMList cd token teamid =
-  mmDoRequest cd "mmGetProfilesForDMList" token $
+mmGetProfilesForDMList sess teamid =
+  mmDoRequest sess "mmGetProfilesForDMList" $
     printf "/api/v3/users/profiles_for_dm_list/%s" (idString teamid)
 
-mmGetMe :: ConnectionData -> Token -> IO Value
-mmGetMe cd token = mmDoRequest cd "mmGetMe" token "/api/v3/users/me"
+mmGetMe :: Session -> IO Value
+mmGetMe sess = mmDoRequest sess "mmGetMe" "/api/v3/users/me"
 
-mmGetProfiles :: ConnectionData -> Token
+mmGetProfiles :: Session
               -> TeamId -> IO (HashMap UserId User)
-mmGetProfiles cd token teamid = mmDoRequest cd "mmGetProfiles" token $
+mmGetProfiles sess teamid = mmDoRequest sess "mmGetProfiles" $
   printf "/api/v3/teams/%s/users/%d/%d" (idString teamid) (0::Int) (10000::Int)
 
-mmGetStatuses :: ConnectionData -> Token -> IO (HashMap UserId T.Text)
-mmGetStatuses cd token = mmDoRequest cd "mmGetStatuses" token $
+mmGetStatuses :: Session -> IO (HashMap UserId T.Text)
+mmGetStatuses sess = mmDoRequest sess "mmGetStatuses" $
   printf "/api/v3/users/status"
 
 -- POST /api/v3/teams/{}/create_direct with {"user_id": _}
-mmCreateDirect :: ConnectionData -> Token -> TeamId -> UserId -> IO Channel
-mmCreateDirect cd token teamid userid = do
+mmCreateDirect :: Session -> TeamId -> UserId -> IO Channel
+mmCreateDirect sess teamid userid = do
   let path = printf "/api/v3/teams/%s/channels/create_direct" (idString teamid)
       payload = HM.fromList [("user_id" :: T.Text, userid)]
   uri <- mmPath path
-  runLogger cd "mmCreateDirect" $
+  runLoggerS sess "mmCreateDirect" $
     HttpRequest POST path (Just (toJSON payload))
-  rsp <- mmPOST cd token uri payload
+  rsp <- mmPOST sess uri payload
   (val, r) <- mmGetJSONBody "Channel" rsp
-  runLogger cd "mmCreateDirect" $
+  runLoggerS sess "mmCreateDirect" $
     HttpResponse 200 path (Just val)
   return r
 
 -- { name, display_name, purpose, header }
-mmCreateChannel :: ConnectionData -> Token -> TeamId -> MinChannel -> IO Channel
-mmCreateChannel cd token teamid payload = do
+mmCreateChannel :: Session -> TeamId -> MinChannel -> IO Channel
+mmCreateChannel sess teamid payload = do
   let path = printf "/api/v3/teams/%s/channels/create" (idString teamid)
   uri <- mmPath path
-  runLogger cd "mmCreateChannel" $
+  runLoggerS sess "mmCreateChannel" $
     HttpRequest POST path (Just (toJSON payload))
-  rsp <- mmPOST cd token uri payload
+  rsp <- mmPOST sess uri payload
   (val, r) <- mmGetJSONBody "Channel" rsp
-  runLogger cd "mmCreateChannel" $
+  runLoggerS sess "mmCreateChannel" $
     HttpResponse 200 path (Just val)
   return r
 
-mmDeleteChannel :: ConnectionData -> Token -> TeamId -> ChannelId -> IO ()
-mmDeleteChannel cd token teamid chanid = do
+mmDeleteChannel :: Session -> TeamId -> ChannelId -> IO ()
+mmDeleteChannel sess teamid chanid = do
   let path = printf "/api/v3/teams/%s/channels/%s/delete"
                (idString teamid) (idString chanid)
   uri <- mmPath path
-  runLogger cd "mmDeleteChannel" $
+  runLoggerS sess "mmDeleteChannel" $
     HttpRequest POST path Nothing
-  _ <- mmRawPOST cd token uri ""
-  runLogger cd "mmDeleteChannel" $
+  _ <- mmRawPOST sess uri ""
+  runLoggerS sess "mmDeleteChannel" $
     HttpResponse 200 path Nothing
   return ()
 
-mmDeletePost :: ConnectionData
-             -> Token
+mmDeletePost :: Session
              -> TeamId
              -> ChannelId
              -> PostId
              -> IO ()
-mmDeletePost cd token teamid chanid postid = do
+mmDeletePost sess teamid chanid postid = do
   let path   = printf "/api/v3/teams/%s/channels/%s/posts/%s/delete"
                       (idString teamid)
                       (idString chanid)
                       (idString postid)
   uri <- mmPath path
-  runLogger cd "mmDeletePost" $
+  runLoggerS sess "mmDeletePost" $
     HttpRequest POST path Nothing
-  rsp <- mmPOST cd token uri ([]::[String])
+  rsp <- mmPOST sess uri ([]::[String])
   (_, _::Value) <- mmGetJSONBody "Post" rsp
-  runLogger cd "mmDeletePost" $
+  runLoggerS sess "mmDeletePost" $
     HttpResponse 200 path Nothing
   return ()
 
-mmUpdatePost :: ConnectionData
-             -> Token
+mmUpdatePost :: Session
              -> TeamId
              -> Post
              -> IO Post -- TODO: return something informative for failures
-mmUpdatePost cd token teamid post = do
+mmUpdatePost sess teamid post = do
   let chanid = postChannelId post
       path   = printf "/api/v3/teams/%s/channels/%s/posts/update"
                       (idString teamid)
                       (idString chanid)
   uri <- mmPath path
-  runLogger cd "mmUpdatePost" $
+  runLoggerS sess "mmUpdatePost" $
     HttpRequest POST path (Just (toJSON post))
-  rsp <- mmPOST cd token uri post
+  rsp <- mmPOST sess uri post
   (val, r) <- mmGetJSONBody "Post" rsp
-  runLogger cd "mmUpdatePost" $
+  runLoggerS sess "mmUpdatePost" $
     HttpResponse 200 path (Just (val))
   return r
 
-mmPost :: ConnectionData
-       -> Token
+mmPost :: Session
        -> TeamId
        -> PendingPost
        -> IO Post -- TODO: return something informative for failures
-mmPost cd token teamid post = do
+mmPost sess teamid post = do
   let chanid = pendingPostChannelId post
       path   = printf "/api/v3/teams/%s/channels/%s/posts/create"
                       (idString teamid)
                       (idString chanid)
   uri <- mmPath path
-  runLogger cd "mmPost" $
+  runLoggerS sess "mmPost" $
     HttpRequest POST path (Just (toJSON post))
-  rsp <- mmPOST cd token uri post
+  rsp <- mmPOST sess uri post
   (val, r) <- mmGetJSONBody "Post" rsp
-  runLogger cd "mmPost" $
+  runLoggerS sess "mmPost" $
     HttpResponse 200 path (Just (val))
   return r
 
-mmGetConfig :: ConnectionData
-            -> Token
+mmGetConfig :: Session
             -> IO Value
-mmGetConfig cd token =
-  mmDoRequest cd "mmGetConfig" token "/api/v3/admin/config"
+mmGetConfig sess =
+  mmDoRequest sess "mmGetConfig" "/api/v3/admin/config"
 
-mmSaveConfig :: ConnectionData
-             -> Token
+mmSaveConfig :: Session
              -> Value
              -> IO ()
-mmSaveConfig cd token config = do
+mmSaveConfig sess config = do
   let path = "/api/v3/admin/save_config"
   uri <- mmPath path
-  runLogger cd "mmSaveConfig" $
+  runLoggerS sess "mmSaveConfig" $
     HttpRequest POST path (Just config)
-  _ <- mmPOST cd token uri config
-  runLogger cd "mmSaveConfig" $
+  _ <- mmPOST sess uri config
+  runLoggerS sess "mmSaveConfig" $
     HttpResponse 200 path Nothing
   return ()
 
-mmChannelAddUser :: ConnectionData
-                 -> Token
+mmChannelAddUser :: Session
                  -> TeamId
                  -> ChannelId
                  -> UserId
                  -> IO ChannelData
-mmChannelAddUser cd token teamid chanId uId = do
+mmChannelAddUser sess teamid chanId uId = do
   let path = printf "/api/v3/teams/%s/channels/%s/add"
                     (idString teamid)
                     (idString chanId)
       req = object ["user_id" .= uId]
   uri <- mmPath path
-  runLogger cd "mmChannelAddUser" $
+  runLoggerS sess "mmChannelAddUser" $
     HttpRequest POST path (Just req)
-  rsp <- mmPOST cd token uri req
+  rsp <- mmPOST sess uri req
   (val, r) <- mmGetJSONBody "ChannelData" rsp
-  runLogger cd "mmChannelAddUser" $
+  runLoggerS sess "mmChannelAddUser" $
     HttpResponse 200 path (Just val)
   return r
 
-mmTeamAddUser :: ConnectionData
-              -> Token
+mmTeamAddUser :: Session
               -> TeamId
               -> UserId
               -> IO ()
-mmTeamAddUser cd token teamid uId = do
+mmTeamAddUser sess teamid uId = do
   let path = printf "/api/v3/teams/%s/add_user_to_team"
                     (idString teamid)
       req  = object ["user_id" .= uId]
   uri <- mmPath path
-  runLogger cd "mmTeamAddUser" $
+  runLoggerS sess "mmTeamAddUser" $
     HttpRequest POST path (Just req)
-  _ <- mmPOST cd token uri req
-  runLogger cd "mmTeamAddUSer" $
+  _ <- mmPOST sess uri req
+  runLoggerS sess "mmTeamAddUSer" $
     HttpResponse 200 path Nothing
   return ()
 
-mmExecute :: ConnectionData
-          -> Token
+mmExecute :: Session
           -> TeamId
           -> MinCommand
           -> IO Value -- XXX: what to return here?
-mmExecute cd token teamid command = do
+mmExecute sess teamid command = do
   let path   = printf "/api/v3/teams/%s/commands/execute"
                       (idString teamid)
   uri <- mmPath path
-  runLogger cd "mmExecute" $
+  runLoggerS sess "mmExecute" $
     HttpRequest POST path (Just (toJSON command))
-  rsp <- mmPOST cd token uri command
+  rsp <- mmPOST sess uri command
   (val, r) <- mmGetJSONBody "Value" rsp
-  runLogger cd "mmExecute" $
+  runLoggerS sess "mmExecute" $
     HttpResponse 200 path (Just (val))
   return r
 
@@ -625,37 +618,35 @@ mmUsersCreate cd usersCreate = do
     HttpResponse 200 path (Just (val))
   return r
 
-mmUsersCreateWithToken :: ConnectionData
-                       -> Token
-                       -> UsersCreate
-                       -> IO User
-mmUsersCreateWithToken cd token usersCreate = do
+mmUsersCreateWithSession :: Session
+                         -> UsersCreate
+                         -> IO User
+mmUsersCreateWithSession sess usersCreate = do
   let path = "/api/v3/users/create"
   uri <- mmPath path
-  runLogger cd "mmUsersCreateWithToken" $
+  runLoggerS sess "mmUsersCreateWithToken" $
     HttpRequest POST path (Just (toJSON usersCreate))
-  rsp <- mmPOST cd token uri usersCreate
+  rsp <- mmPOST sess uri usersCreate
   (val, r) <- mmGetJSONBody "User" rsp
-  runLogger cd "mmUsersCreateWithToken" $
+  runLoggerS sess "mmUsersCreateWithToken" $
     HttpResponse 200 path (Just (val))
   return r
 
-mmGetReactionsForPost :: ConnectionData
-                      -> Token
+mmGetReactionsForPost :: Session
                       -> TeamId
                       -> ChannelId
                       -> PostId
                       -> IO [Reaction]
-mmGetReactionsForPost cd token tId cId pId = do
+mmGetReactionsForPost sess tId cId pId = do
   let path = printf "/api/v3/teams/%s/channels/%s/posts/%s/reactions"
                     (idString tId)
                     (idString cId)
                     (idString pId)
-  mmDoRequest cd "mmGetReactionsForPost" token path
+  mmDoRequest sess "mmGetReactionsForPost" path
 
 -- | This is for making a generic authenticated request.
-mmRequest :: ConnectionData -> Token -> URI -> IO Response_String
-mmRequest cd token path = do
+mmRequest :: Session -> URI -> IO Response_String
+mmRequest (Session cd token) path = do
   rawRsp <- withConnection cd $ \con -> do
     let request = Request
           { rqURI     = path
@@ -673,49 +664,47 @@ mmRequest cd token path = do
 
 -- This captures the most common pattern when making requests.
 mmDoRequest :: FromJSON t
-            => ConnectionData
+            => Session
             -> String
-            -> Token
             -> String
             -> IO t
-mmDoRequest cd fnname token path = mmWithRequest cd fnname token path return
+mmDoRequest sess fnname path = mmWithRequest sess fnname path return
 
 -- The slightly more general variant
 mmWithRequest :: FromJSON t
-              => ConnectionData
+              => Session
               -> String
-              -> Token
               -> String
               -> (t -> IO a)
               -> IO a
-mmWithRequest cd fnname token path action = do
+mmWithRequest sess@(Session cd _) fnname path action = do
   uri  <- mmPath path
   runLogger cd fnname $
     HttpRequest GET path Nothing
-  rsp  <- mmRequest cd token uri
+  rsp  <- mmRequest sess uri
   (raw,json) <- mmGetJSONBody fnname rsp
   runLogger cd fnname $
     HttpResponse 200 path (Just raw)
   action json
 
-mmPOST :: ToJSON t => ConnectionData -> Token -> URI -> t -> IO Response_String
-mmPOST cd token path json =
-  mmRawPOST cd token path (BL.toStrict (encode json))
+mmPOST :: ToJSON t => Session -> URI -> t -> IO Response_String
+mmPOST sess path json =
+  mmRawPOST sess path (BL.toStrict (encode json))
 
-mmSetChannelHeader :: ConnectionData -> Token -> TeamId -> ChannelId -> T.Text -> IO Channel
-mmSetChannelHeader cd token teamid chanid header = do
+mmSetChannelHeader :: Session -> TeamId -> ChannelId -> T.Text -> IO Channel
+mmSetChannelHeader sess teamid chanid header = do
   let path = printf "/api/v3/teams/%s/channels/update_header"
                     (idString teamid)
   uri <- mmPath path
   let req = SetChannelHeader chanid header
-  runLogger cd "mmSetChannelHeader" $
+  runLoggerS sess "mmSetChannelHeader" $
     HttpRequest POST path (Just (toJSON req))
-  rsp <- mmPOST cd token uri req
+  rsp <- mmPOST sess uri req
   (_, r) <- mmGetJSONBody "Channel" rsp
   return r
 
-mmRawPOST :: ConnectionData -> Token -> URI -> B.ByteString -> IO Response_String
-mmRawPOST cd token path content = do
+mmRawPOST :: Session -> URI -> B.ByteString -> IO Response_String
+mmRawPOST (Session cd token) path content = do
   rawRsp <- withConnection cd $ \con -> do
     let contentLength = B.length content
         request       = Request
