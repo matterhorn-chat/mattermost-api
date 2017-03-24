@@ -108,25 +108,25 @@ main = do
              then cd' `withLogger` mmLoggerDebugErr
              else cd'
 
-  (token, mmUser) <- join (hoistE <$> mmLogin cd login)
+  (session, mmUser) <- join (hoistE <$> mmLogin cd login)
   when (optVerbose opts) $ do
     putStrLn "Authenticated as:"
     pPrint mmUser
 
-  i <- mmGetInitialLoad cd token
+  i <- mmGetInitialLoad session
   when (optVerbose opts) $ do
     pPrint i
   forM_ (initialLoadTeams i) $ \t -> do
     when (teamName t == configTeam config) $ do
-      userMap <- mmGetProfiles cd token (getId t)
+      userMap <- mmGetProfiles session (getId t)
       when (optVerbose opts) $ do
         pPrint userMap
-      chans <- mmGetChannels cd token (getId t)
+      chans <- mmGetChannels session (getId t)
       forM_ chans $ \chan -> do
         when (optVerbose opts) $ do
           pPrint chan
         when (channelName chan == optChannel opts) $ do
-          posts <- mmGetPosts cd token (getId t) (getId chan) (optOffset opts) (optLimit opts)
+          posts <- mmGetPosts session (getId t) (getId chan) (optOffset opts) (optLimit opts)
           -- XXX: is the order really reversed?
           forM_ (reverse (toList (postsOrder posts))) $ \postId -> do
             -- this is just a toy program, so we don't care about

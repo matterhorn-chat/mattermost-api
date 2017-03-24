@@ -81,20 +81,20 @@ main = do
                       , password = configPassword config
                       }
 
-  (token, mmUser) <- join (hoistE <$> mmLogin cd login)
+  (session, mmUser) <- join (hoistE <$> mmLogin cd login)
   when (optVerbose opts) $ do
     putStrLn "Authenticated as:"
     pPrint mmUser
 
-  i <- mmGetInitialLoad cd token
+  i <- mmGetInitialLoad session
   when (optVerbose opts) $ do
     pPrint i
   forM_ (initialLoadTeams i) $ \t -> do
     when (teamName t == configTeam config) $ do
-      userMap <- mmGetProfiles cd token (getId t)
+      userMap <- mmGetProfiles session (getId t)
       when (optVerbose opts) $ do
         pPrint userMap
-      chans <- mmGetChannels cd token (getId t)
+      chans <- mmGetChannels session (getId t)
       forM_ chans $ \chan -> do
         when (optVerbose opts) $ do
           pPrint chan
@@ -103,5 +103,5 @@ main = do
             pendingPost <- mkPendingPost (optMessage opts)
                                          (getId mmUser)
                                          (getId chan)
-            post <- mmPost cd token (getId t) pendingPost
+            post <- mmPost session (getId t) pendingPost
             when (optVerbose opts) (pPrint post)

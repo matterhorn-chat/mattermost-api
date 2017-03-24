@@ -27,15 +27,15 @@ main = do
                     , password = configPassword config
                     }
 
-  (token, mmUser) <- join (hoistE <$> mmLogin cd login)
+  (session, mmUser) <- join (hoistE <$> mmLogin cd login)
   putStrLn "Authenticated as:"
   pPrint mmUser
 
-  i <- mmGetInitialLoad cd token
+  i <- mmGetInitialLoad session
   forM_ (initialLoadTeams i) $ \t -> do
     when (teamName t == configTeam config) $ do
-      chans <- mmGetChannels cd token (teamId t)
+      chans <- mmGetChannels session (teamId t)
       forM_ chans $ \chan -> do
-        channel <- mmGetChannel cd token (teamId t) (channelId chan)
+        channel <- mmGetChannel session (teamId t) (channelId chan)
         pPrint channel
         putStrLn ""

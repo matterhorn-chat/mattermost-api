@@ -71,13 +71,13 @@ main = do
                       , password = configPassword config
                       }
 
-  (token, mmUser) <- join (hoistE <$> mmLogin cd login)
+  (session, mmUser) <- join (hoistE <$> mmLogin cd login)
   when (optVerbose opts) $ do
     putStrLn "Authenticated as:"
     pPrint mmUser
   let myId = getId mmUser
 
-  mmWithWebSocket cd token printEvent checkForExit
+  mmWithWebSocket session printEvent checkForExit
 
 printEvent :: WebsocketEvent -> IO ()
 printEvent e = pPrint e

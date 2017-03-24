@@ -24,8 +24,8 @@ main = do
                     , password = configPassword config
                     }
 
-  (token, mmUser) <- join (hoistE <$> mmLogin cd login)
+  (session, mmUser) <- join (hoistE <$> mmLogin cd login)
   putStrLn "Authenticated as: "
   pPrint mmUser
-  i <- mmGetInitialLoad cd token
+  i <- mmGetInitialLoad session
   pPrint $ initialLoadTeams i

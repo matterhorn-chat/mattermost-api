@@ -15,7 +15,6 @@ import           System.Exit ( exitFailure
 import           Network.Mattermost
 import           Network.Mattermost.Util
 import           Network.Mattermost.WebSocket
-import           Network.Mattermost.WebSocket.Types (WebsocketEvent)
 
 import           Config
 import           LocalConfig -- You will need to define a function:
@@ -62,12 +61,12 @@ main = do
                       , password = configPassword config
                       }
 
-  (token, mmUser) <- join (hoistE <$> mmLogin cd login)
+  (session, mmUser) <- join (hoistE <$> mmLogin cd login)
   when (optVerbose opts) $ do
     putStrLn "Authenticated as:"
     pPrint mmUser
 
-  mmWithWebSocket cd token printEvent checkForExit
+  mmWithWebSocket session printEvent checkForExit
 
 printEvent :: WebsocketEvent -> IO ()
 printEvent we = pPrint we
