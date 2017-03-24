@@ -8,6 +8,7 @@ module Network.Mattermost.WebSocket
 , mmWithWebSocket
 , mmCloseWebSocket
 , mmGetConnectionHealth
+, module Network.Mattermost.WebSocket.Types
 ) where
 
 import           Control.Concurrent (ThreadId, forkIO, myThreadId, threadDelay)
