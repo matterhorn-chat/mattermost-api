@@ -5,6 +5,7 @@ set -e
 HERE=$(cd `dirname $0`; pwd)
 TEST_PROGRAM=test-mm-api
 ROOT=$HERE/..
+VERSION=3.7
 CONTAINER=mattermost-preview
 
 LOGFILE=$(mktemp)
@@ -85,7 +86,7 @@ cleanup_last_container
 
 # If this command fails we're in trouble.
 notice "Running a new MatterMost container"
-logged docker run  --name $CONTAINER -d --publish 8065:8065 mattermost/$CONTAINER
+logged docker run  --name mattermost -d --publish 8065:8065 mattermost/$CONTAINER:$VERSION
 
 # It takes a while for the MM server to start accepting logins
 $HERE/wait_for_mm.sh
