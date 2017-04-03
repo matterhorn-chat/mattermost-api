@@ -288,6 +288,72 @@ instance A.FromJSON TeamMember where
 
 --
 
+data NotifyOption
+  = NotifyOptionAll
+  | NotifyOptionMention
+  | NotifyOptionDefault
+  | NotifyOptionNone
+    deriving (Read, Show, Eq, Ord)
+
+instance A.FromJSON NotifyOption where
+  parseJSON (A.String "all")     = return NotifyOptionAll
+  parseJSON (A.String "mention") = return NotifyOptionMention
+  parseJSON (A.String "default") = return NotifyOptionDefault
+  parseJSON (A.String "none")    = return NotifyOptionNone
+  parseJSON xs                   = fail ("Unknown NotifyOption value: " ++ show xs)
+
+-- MatterMost actually represents this as a
+data NotifyProps = NotifyProps
+  { notifyPropsMentionKeys  :: [Text]
+  , notifyPropsEmail        :: Bool
+  , notifyPropsPush         :: NotifyOption
+  , notifyPropsDesktop      :: NotifyOption
+  , notifyPropsDesktopSound :: Bool
+  , notifyPropsChannel      :: Bool
+  , notifyPropsFirstName    :: Bool
+  , notifyPropsMarkUnread   :: NotifyOption
+  } deriving (Eq, Show, Read, Ord)
+
+emptyNotifyProps :: NotifyProps
+emptyNotifyProps = NotifyProps
+  { notifyPropsMentionKeys  = []
+  , notifyPropsEmail        = False
+  , notifyPropsPush         = NotifyOptionNone
+  , notifyPropsDesktop      = NotifyOptionNone
+  , notifyPropsDesktopSound = False
+  , notifyPropsChannel      = False
+  , notifyPropsFirstName    = False
+  , notifyPropsMarkUnread   = NotifyOptionNone
+  }
+
+newtype BoolString = BoolString { fromBoolString :: Bool }
+
+instance A.FromJSON BoolString where
+  parseJSON = A.withText "bool as string" $ \v ->
+    case v of
+      "true"  -> return (BoolString True)
+      "false" -> return (BoolString False)
+      _       -> fail "Expected \"true\" or \"false\""
+
+instance A.FromJSON NotifyProps where
+  parseJSON = A.withObject "NotifyProps" $ \v -> do
+    notifyPropsMentionKeys  <- T.split (==',') <$>
+                                 (v .:? "mention_keys" .!= "")
+    notifyPropsEmail        <- fromBoolString <$>
+                                 (v .:? "email" .!= BoolString True)
+    notifyPropsPush         <- v .:? "push" .!= NotifyOptionMention
+    notifyPropsDesktop      <- v .:? "desktop" .!= NotifyOptionAll
+    notifyPropsDesktopSound <- fromBoolString <$>
+                                 (v .:? "desktop_sound" .!= BoolString True)
+    notifyPropsChannel      <- fromBoolString <$>
+                                 (v .:? "channel" .!= BoolString True)
+    notifyPropsFirstName    <- fromBoolString <$>
+                                 (v .:? "first_name" .!= BoolString False)
+    notifyPropsMarkUnread   <- v .:? "mark_unread" .!= NotifyOptionAll
+    return NotifyProps { .. }
+
+--
+
 newtype ChannelId = CI { unCI :: Id }
   deriving (Read, Show, Eq, Ord, Hashable, ToJSON, ToJSONKey, FromJSONKey, FromJSON)
 
@@ -356,7 +422,7 @@ data ChannelData
   , channelDataLastViewedAt :: UTCTime
   , channelDataMsgCount     :: Int
   , channelDataMentionCount :: Int
-  , channelDataNotifyProps  :: HashMap Text Text
+  , channelDataNotifyProps  :: NotifyProps
   , channelDataLastUpdateAt :: UTCTime
   } deriving (Read, Show, Eq)
 
@@ -444,7 +510,7 @@ data User
   , userFirstName          :: Text
   , userLastName           :: Text
   , userRoles              :: Text -- XXX: what are the options?
-  , userNotifyProps        :: HashMap Text Text -- See NotifyProps type below
+  , userNotifyProps        :: NotifyProps -- See NotifyProps type below
   , userLastPasswordUpdate :: Maybe UTCTime
   , userLastPictureUpdate  :: Maybe UTCTime
   , userLocale             :: Text
@@ -465,7 +531,7 @@ instance A.FromJSON User where
     userFirstName          <- o .:  "first_name"
     userLastName           <- o .:  "last_name"
     userRoles              <- o .:  "roles"
-    userNotifyProps        <- maybe mempty id <$> (o .:?  "notify_props")
+    userNotifyProps        <- o .:? "notify_props" .!= emptyNotifyProps
     userLastPasswordUpdate <- (millisecondsToUTCTime <$>) <$>
                               (o .:? "last_password_update")
     userLastPictureUpdate  <- (millisecondsToUTCTime <$>) <$> (o .:? "last_picture_update")

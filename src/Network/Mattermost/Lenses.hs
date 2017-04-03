@@ -53,7 +53,7 @@ module Network.Mattermost.Lenses
 , channelDataLastViewedAtL
 , channelDataMsgCountL
 , channelDataMentionCountL
-, channelDataNotifyPropsL
+-- , channelDataNotifyPropsL
 , channelDataLastUpdateAtL
 -- ** 'User' lenses
 , userIdL
@@ -69,7 +69,7 @@ module Network.Mattermost.Lenses
 , userFirstNameL
 , userLastNameL
 , userRolesL
-, userNotifyPropsL
+-- , userNotifyPropsL
 , userLastPasswordUpdateL
 , userLastPictureUpdateL
 , userLocaleL
@@ -301,9 +301,9 @@ channelDataMsgCountL = makeLens channelDataMsgCount (\ t s -> s { channelDataMsg
 channelDataMentionCountL :: Lens' ChannelData Int
 channelDataMentionCountL = makeLens channelDataMentionCount (\ t s -> s { channelDataMentionCount = t })
 
-channelDataNotifyPropsL :: Lens' ChannelData (HashMap Text Text)
-channelDataNotifyPropsL =
-  makeLens channelDataNotifyProps (\ t s -> s { channelDataNotifyProps = t })
+-- channelDataNotifyPropsL :: Lens' ChannelData (HashMap Text Text)
+-- channelDataNotifyPropsL =
+--   makeLens channelDataNotifyProps (\ t s -> s { channelDataNotifyProps = t })
 
 channelDataLastUpdateAtL :: Lens' ChannelData UTCTime
 channelDataLastUpdateAtL =
@@ -350,8 +350,8 @@ userLastNameL = makeLens userLastName (\ t s -> s { userLastName = t })
 userRolesL :: Lens' User Text
 userRolesL = makeLens userRoles (\ t s -> s { userRoles = t })
 
-userNotifyPropsL :: Lens' User (HashMap Text Text)
-userNotifyPropsL = makeLens userNotifyProps (\ t s -> s { userNotifyProps = t })
+-- userNotifyPropsL :: Lens' User (HashMap Text Text)
+-- userNotifyPropsL = makeLens userNotifyProps (\ t s -> s { userNotifyProps = t })
 
 userLastPasswordUpdateL :: Lens' User (Maybe UTCTime)
 userLastPasswordUpdateL = makeLens userLastPasswordUpdate (\ t s -> s { userLastPasswordUpdate = t })
