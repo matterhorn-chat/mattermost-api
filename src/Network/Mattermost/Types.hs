@@ -19,7 +19,6 @@ import           Data.Aeson.Types ( ToJSONKey
                                   , Parser
                                   , typeMismatch
                                   )
-import           Data.HashMap.Strict ( HashMap )
 import qualified Data.HashMap.Strict as HM
 import           Data.Monoid ( (<>) )
 import           Data.Ratio ( (%) )
@@ -288,42 +287,53 @@ instance A.FromJSON TeamMember where
 
 --
 
+data WithDefault a
+  = IsValue a
+  | Default
+    deriving (Read, Show, Eq, Ord)
+
+instance A.FromJSON t => A.FromJSON (WithDefault t) where
+  parseJSON (A.String "default") = return Default
+  parseJSON t                    = IsValue <$> A.parseJSON t
+
+instance Functor WithDefault where
+  fmap f (IsValue x) = IsValue (f x)
+  fmap _ Default     = Default
+
 data NotifyOption
   = NotifyOptionAll
   | NotifyOptionMention
-  | NotifyOptionDefault
   | NotifyOptionNone
     deriving (Read, Show, Eq, Ord)
 
 instance A.FromJSON NotifyOption where
   parseJSON (A.String "all")     = return NotifyOptionAll
   parseJSON (A.String "mention") = return NotifyOptionMention
-  parseJSON (A.String "default") = return NotifyOptionDefault
   parseJSON (A.String "none")    = return NotifyOptionNone
   parseJSON xs                   = fail ("Unknown NotifyOption value: " ++ show xs)
 
 -- MatterMost actually represents this as a
 data NotifyProps = NotifyProps
   { notifyPropsMentionKeys  :: [Text]
-  , notifyPropsEmail        :: Bool
-  , notifyPropsPush         :: NotifyOption
-  , notifyPropsDesktop      :: NotifyOption
-  , notifyPropsDesktopSound :: Bool
-  , notifyPropsChannel      :: Bool
-  , notifyPropsFirstName    :: Bool
-  , notifyPropsMarkUnread   :: NotifyOption
+  , notifyPropsEmail        :: WithDefault Bool
+  , notifyPropsPush         :: WithDefault NotifyOption
+  , notifyPropsDesktop      :: WithDefault NotifyOption
+  , notifyPropsDesktopSound :: WithDefault Bool
+  , notifyPropsChannel      :: WithDefault Bool
+  , notifyPropsFirstName    :: WithDefault Bool
+  , notifyPropsMarkUnread   :: WithDefault NotifyOption
   } deriving (Eq, Show, Read, Ord)
 
 emptyNotifyProps :: NotifyProps
 emptyNotifyProps = NotifyProps
   { notifyPropsMentionKeys  = []
-  , notifyPropsEmail        = False
-  , notifyPropsPush         = NotifyOptionNone
-  , notifyPropsDesktop      = NotifyOptionNone
-  , notifyPropsDesktopSound = False
-  , notifyPropsChannel      = False
-  , notifyPropsFirstName    = False
-  , notifyPropsMarkUnread   = NotifyOptionNone
+  , notifyPropsEmail        = IsValue False
+  , notifyPropsPush         = IsValue NotifyOptionNone
+  , notifyPropsDesktop      = IsValue NotifyOptionNone
+  , notifyPropsDesktopSound = IsValue False
+  , notifyPropsChannel      = IsValue False
+  , notifyPropsFirstName    = IsValue False
+  , notifyPropsMarkUnread   = IsValue NotifyOptionNone
   }
 
 newtype BoolString = BoolString { fromBoolString :: Bool }
@@ -339,17 +349,17 @@ instance A.FromJSON NotifyProps where
   parseJSON = A.withObject "NotifyProps" $ \v -> do
     notifyPropsMentionKeys  <- T.split (==',') <$>
                                  (v .:? "mention_keys" .!= "")
-    notifyPropsEmail        <- fromBoolString <$>
-                                 (v .:? "email" .!= BoolString True)
-    notifyPropsPush         <- v .:? "push" .!= NotifyOptionMention
-    notifyPropsDesktop      <- v .:? "desktop" .!= NotifyOptionAll
-    notifyPropsDesktopSound <- fromBoolString <$>
-                                 (v .:? "desktop_sound" .!= BoolString True)
-    notifyPropsChannel      <- fromBoolString <$>
-                                 (v .:? "channel" .!= BoolString True)
-    notifyPropsFirstName    <- fromBoolString <$>
-                                 (v .:? "first_name" .!= BoolString False)
-    notifyPropsMarkUnread   <- v .:? "mark_unread" .!= NotifyOptionAll
+    notifyPropsEmail        <- fmap fromBoolString <$>
+                                 (v .:? "email" .!= IsValue (BoolString True))
+    notifyPropsPush         <- v .:? "push" .!= IsValue NotifyOptionMention
+    notifyPropsDesktop      <- v .:? "desktop" .!= IsValue NotifyOptionAll
+    notifyPropsDesktopSound <- fmap fromBoolString <$>
+                                 (v .:? "desktop_sound" .!= IsValue (BoolString True))
+    notifyPropsChannel      <- fmap fromBoolString <$>
+                                 (v .:? "channel" .!= IsValue (BoolString True))
+    notifyPropsFirstName    <- fmap fromBoolString <$>
+                                 (v .:? "first_name" .!= IsValue (BoolString False))
+    notifyPropsMarkUnread   <- v .:? "mark_unread" .!= IsValue NotifyOptionAll
     return NotifyProps { .. }
 
 --
