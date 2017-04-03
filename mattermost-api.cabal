@@ -31,6 +31,7 @@ library
                        Network.Mattermost.WebSocket.Types
                        Network.Mattermost.Version
   other-modules:       Network.Mattermost.Types
+                       Network.Mattermost.TH
                        Paths_mattermost_api
   -- other-extensions:
   build-depends:       base >=4.4 && <5
@@ -48,6 +49,9 @@ library
                      , hashable
                      , containers
                      , gitrev
+                     , template-haskell
+                     , microlens
+                     , microlens-th
                      -- Only here to make debugging easier
                      , pretty-show
   hs-source-dirs:      src
