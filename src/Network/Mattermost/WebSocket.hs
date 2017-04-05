@@ -99,8 +99,8 @@ pingThread onPingAction conn = loop 0
   where loop :: Int -> IO ()
         loop n = do
           threadDelay (10 * 1000 * 1000)
-          WS.sendPing conn (B.pack (show n))
           onPingAction
+          WS.sendPing conn (B.pack (show n))
           loop (n+1)
 
 mmWithWebSocket :: Session
