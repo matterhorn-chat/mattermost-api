@@ -85,7 +85,7 @@ module Network.Mattermost
 , mmPost
 , mmUpdatePost
 , mmExecute
-, mmGetConfig -- Requires Admin access
+, mmGetConfig
 , mkPendingPost
 , idString
 , hoistE
@@ -133,9 +133,8 @@ import           Network.Mattermost.Exceptions
 import           Network.Mattermost.Util
 import           Network.Mattermost.Types
 
--- XXX: What value should we really use here?
 maxLineLength :: Int
-maxLineLength = 2^(16::Int) -- ugh, this silences a warning about defaulting
+maxLineLength = 2^(16::Int)
 
 -- | This instance allows us to use 'simpleHTTP' from 'Network.HTTP.Stream' with
 -- connections from the 'connection' package.
@@ -166,8 +165,6 @@ mmGetJSONBody label rsp = do
              "Expected content type 'application/json'" ++
              " found " ++ contentType))
 
-  -- XXX: Good for seeing the json wireformat that mattermost uses
-  -- putStrLn (rspBody rsp)
   let value = left (\s -> JSONDecodeException ("mmGetJSONBody: " ++ label ++ ": " ++ s)
                                               (rspBody rsp))
                    (eitherDecode (BL.pack (rspBody rsp)))
@@ -502,7 +499,7 @@ mmDeletePost sess teamid chanid postid = do
 mmUpdatePost :: Session
              -> TeamId
              -> Post
-             -> IO Post -- TODO: return something informative for failures
+             -> IO Post
 mmUpdatePost sess teamid post = do
   let chanid = postChannelId post
       path   = printf "/api/v3/teams/%s/channels/%s/posts/update"
@@ -520,7 +517,7 @@ mmUpdatePost sess teamid post = do
 mmPost :: Session
        -> TeamId
        -> PendingPost
-       -> IO Post -- TODO: return something informative for failures
+       -> IO Post
 mmPost sess teamid post = do
   let chanid = pendingPostChannelId post
       path   = printf "/api/v3/teams/%s/channels/%s/posts/create"
@@ -535,6 +532,7 @@ mmPost sess teamid post = do
     HttpResponse 200 path (Just (val))
   return r
 
+-- | Get the system configuration. Requires administrative permission.
 mmGetConfig :: Session
             -> IO Value
 mmGetConfig sess =
@@ -591,7 +589,7 @@ mmTeamAddUser sess teamid uId = do
 mmExecute :: Session
           -> TeamId
           -> MinCommand
-          -> IO Value -- XXX: what to return here?
+          -> IO Value
 mmExecute sess teamid command = do
   let path   = printf "/api/v3/teams/%s/commands/execute"
                       (idString teamid)
