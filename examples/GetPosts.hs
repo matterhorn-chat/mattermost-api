@@ -127,7 +127,6 @@ main = do
           pPrint chan
         when (channelName chan == optChannel opts) $ do
           posts <- mmGetPosts session (getId t) (getId chan) (optOffset opts) (optLimit opts)
-          -- XXX: is the order really reversed?
           forM_ (reverse (toList (postsOrder posts))) $ \postId -> do
             -- this is just a toy program, so we don't care about
             -- this pattern match failure

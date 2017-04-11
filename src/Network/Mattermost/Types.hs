@@ -157,7 +157,6 @@ data Login
 instance A.ToJSON Login where
   toJSON l = A.object ["login_id" A..= username l
                       ,"password" A..= password l
-                      -- XXX do we also need "token" -> "" like the web client?
                       ]
 
 
@@ -248,7 +247,7 @@ data Team
   , teamType            :: Type
   , teamCompanyName     :: Text
   , teamAllowedDomains  :: Text
-  , teamInviteId        :: Id -- XXX: What type of Id is this?
+  , teamInviteId        :: Id
   , teamAllowOpenInvite :: Bool
   }
   deriving (Read, Show, Eq, Ord)
@@ -428,7 +427,7 @@ data ChannelData
   = ChannelData
   { channelDataChannelId    :: ChannelId
   , channelDataUserId       :: UserId
-  , channelDataRoles        :: Text -- XXX: what goes here
+  , channelDataRoles        :: Text
   , channelDataLastViewedAt :: UTCTime
   , channelDataMsgCount     :: Int
   , channelDataMentionCount :: Int
@@ -519,8 +518,8 @@ data User
   , userNickname           :: Text
   , userFirstName          :: Text
   , userLastName           :: Text
-  , userRoles              :: Text -- XXX: what are the options?
-  , userNotifyProps        :: NotifyProps -- See NotifyProps type below
+  , userRoles              :: Text
+  , userNotifyProps        :: NotifyProps
   , userLastPasswordUpdate :: Maybe UTCTime
   , userLastPictureUpdate  :: Maybe UTCTime
   , userLocale             :: Text
@@ -547,37 +546,6 @@ instance A.FromJSON User where
     userLastPictureUpdate  <- (millisecondsToUTCTime <$>) <$> (o .:? "last_picture_update")
     userLocale             <- o .: "locale"
     return User { .. }
-
--- XXX: Let's defer making a custom type for this until
--- we have more information about how we'll use it.
--- -- XXX: A bunch of these should be bools, but aeson is not
--- -- parsing them as such. So for now I'm just setting them as strings.
--- data NotifyProps
---   = NotifyProps
---   { notifyPropsAll          :: String -- bool
---   , notifyPropsChannel      :: String -- bool
---   , notifyPropsDesktop      :: String -- XXX: what goes here
---   , notifyPropsDesktopSound :: String -- bool
---   , notifyPropsEmail        :: String -- bool
---   , notifyPropsFirstName    :: String -- bool
---   , notifyPropsMentionKeys  :: [String]
---   , notifyPropsPush         :: String -- XXX: what goes here
---   } deriving (Read, Show, Eq, Ord)
---
--- instance A.FromJSON NotifyProps where
---   parseJSON = A.withObject "NotifyProps" $ \o -> do
---     notifyPropsAll          <- o .: "all"
---     notifyPropsChannel      <- o .: "channel"
---     notifyPropsDesktop      <- o .: "desktop"
---     notifyPropsDesktopSound <- o .: "desktop_sound"
---     notifyPropsEmail        <- o .: "email"
---     notifyPropsFirstName    <- o .: "first_name"
---     mentionKeys             <- T.splitOn "," <$> o .: "mention_keys"
---     let notifyPropsMentionKeys = map T.unpack mentionKeys
---     notifyPropsPush         <- o .: "push"
---     return NotifyProps { .. }
-
---
 
 data PostPropAttachment
   = PostPropAttachment
