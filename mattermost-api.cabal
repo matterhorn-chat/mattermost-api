@@ -6,7 +6,7 @@ license:             BSD3
 license-file:        LICENSE
 author:              Jason Dagit
 maintainer:          dagitj@gmail.com
--- copyright:
+copyright:           2016-2017 Jason Dagit, Getty Ritter, Jonathan Daugherty
 category:            Web
 build-type:          Simple
 extra-doc-files:     README.md,
