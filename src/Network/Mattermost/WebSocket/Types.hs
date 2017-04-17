@@ -25,6 +25,7 @@ import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import           Network.WebSockets (WebSocketsData(..))
+import qualified Network.WebSockets as WS
 
 import           Network.Mattermost.Types
 import           Network.Mattermost.Exceptions
@@ -145,6 +146,8 @@ instance ToJSON WebsocketEvent where
     ]
 
 instance WebSocketsData WebsocketEvent where
+  fromDataMessage (WS.Text bs _) = fromLazyByteString bs
+  fromDataMessage (WS.Binary bs) = fromLazyByteString bs
   fromLazyByteString s = case A.eitherDecode s of
     Left err -> throw (JSONDecodeException err (BC.unpack s))
     Right v  -> v

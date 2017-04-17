@@ -35,7 +35,7 @@ library
                        Paths_mattermost_api
   -- other-extensions:
   build-depends:       base >=4.4 && <5
-                     , websockets <= 0.10.0.0
+                     , websockets >= 0.11.0.0
                      , stm
                      , aeson >= 1.0.0.0
                      , connection
