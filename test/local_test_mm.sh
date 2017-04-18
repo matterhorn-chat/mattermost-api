@@ -6,7 +6,7 @@ HERE=$(cd `dirname $0`; pwd)
 TEST_PROGRAM=test-mm-api
 ROOT=$HERE/..
 VERSION=3.7
-CONTAINER=mattermost-prod-app
+CONTAINER=mattermost-preview
 
 LOGFILE=$(mktemp)
 
@@ -87,8 +87,8 @@ cleanup_last_container
 
 # If this command fails we're in trouble.
 notice "Running a new MatterMost container"
-docker pull mattermost/mattermost-prod-app
-docker run  --name mattermost -d --publish 8065:8065 mattermost/mattermost-prod-app
+docker pull mattermost/mattermost-preview
+docker run  --name mattermost -d --publish 8065:8065 mattermost/mattermost-preview:$VERSION
 echo "docker run returned: $?
 
 # It takes a while for the MM server to start accepting logins
