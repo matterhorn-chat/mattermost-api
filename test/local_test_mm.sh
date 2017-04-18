@@ -6,7 +6,7 @@ HERE=$(cd `dirname $0`; pwd)
 TEST_PROGRAM=test-mm-api
 ROOT=$HERE/..
 VERSION=3.7
-CONTAINER=mattermost/mattermost-prod-app
+CONTAINER=mattermost-prod-app
 
 LOGFILE=$(mktemp)
 
