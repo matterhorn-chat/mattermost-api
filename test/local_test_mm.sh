@@ -43,7 +43,6 @@ function docker_installed {
 }
 
 function container_present {
-    docker ps --all
     docker ps --all | grep $CONTAINER >/dev/null
 }
 
@@ -54,8 +53,8 @@ function cleanup_last_container {
     # script on a fresh system).
     if container_present
     then
-        docker stop $CONTAINER
-        docker rm   $CONTAINER
+        logged docker stop $CONTAINER
+        logged docker rm   $CONTAINER
     fi
 }
 
@@ -87,13 +86,12 @@ cleanup_last_container
 
 # If this command fails we're in trouble.
 notice "Running a new MatterMost container"
-docker pull mattermost/mattermost-preview
-docker run  --name mattermost -d --publish 8065:8065 mattermost/mattermost-preview:$VERSION
-echo "docker run returned:" $?
+logged docker run  --name mattermost -d --publish 8065:8065 mattermost/$CONTAINER:$VERSION
+notice "docker run returned: $?"
 
 # It takes a while for the MM server to start accepting logins
 $HERE/wait_for_mm.sh
 
 # Finally we are ready to run the test suite
-notice "\nRunning the test suite"
+notice "Running the test suite"
 $TEST_RUNNER
