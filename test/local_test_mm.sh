@@ -89,7 +89,7 @@ cleanup_last_container
 notice "Running a new MatterMost container"
 docker pull mattermost/mattermost-preview
 docker run  --name mattermost -d --publish 8065:8065 mattermost/mattermost-preview:$VERSION
-echo "docker run returned: $?
+echo "docker run returned:" $?
 
 # It takes a while for the MM server to start accepting logins
 $HERE/wait_for_mm.sh
