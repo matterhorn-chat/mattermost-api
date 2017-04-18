@@ -43,6 +43,7 @@ function docker_installed {
 }
 
 function container_present {
+    docker ps --all
     docker ps --all | grep $CONTAINER >/dev/null
 }
 
@@ -53,8 +54,8 @@ function cleanup_last_container {
     # script on a fresh system).
     if container_present
     then
-        logged docker stop $CONTAINER
-        logged docker rm   $CONTAINER
+        docker stop $CONTAINER
+        docker rm   $CONTAINER
     fi
 }
 
@@ -87,7 +88,7 @@ cleanup_last_container
 # If this command fails we're in trouble.
 notice "Running a new MatterMost container"
 docker pull mattermost/mattermost-prod-app
-logged docker run  --name mattermost -d --publish 8065:8065 mattermost/mattermost-prod-app
+docker run  --name mattermost -d --publish 8065:8065 mattermost/mattermost-prod-app
 
 # It takes a while for the MM server to start accepting logins
 $HERE/wait_for_mm.sh
