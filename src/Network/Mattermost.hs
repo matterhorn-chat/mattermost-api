@@ -1,5 +1,6 @@
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE OverloadedStrings    #-}
+{-# LANGUAGE TupleSections        #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Network.Mattermost
 ( -- * Types
@@ -58,7 +59,7 @@ module Network.Mattermost
 , mmGetChannels
 , mmGetMoreChannels
 , mmGetChannel
-, mmUpdateLastViewedAt
+, mmViewChannel
 , mmDeletePost
 , mmGetPost
 , mmGetPosts
@@ -125,6 +126,7 @@ import           Data.Aeson ( Value(..)
                             , encode
                             , eitherDecode
                             )
+import           Data.Maybe ( maybeToList )
 import qualified Data.Sequence as Seq
 import qualified Data.Text as T
 import           Control.Arrow ( left )
@@ -254,6 +256,7 @@ mmGetChannels sess teamid = mmDoRequest sess "mmGetChannels" $
 
 -- | Requires an authenticated user. Returns the channels for a team of
 -- which the user is not already a member
+-- TODO: XXX This now requires offset and limit parameters
 mmGetMoreChannels :: Session -> TeamId -> IO Channels
 mmGetMoreChannels sess teamid = mmDoRequest sess "mmGetMoreChannels" $
   printf "/api/v3/teams/%s/channels/more" (idString teamid)
@@ -270,20 +273,22 @@ mmGetChannel sess teamid chanid = mmWithRequest sess "mmGetChannel"
           (idString chanid))
   return
 
-mmUpdateLastViewedAt :: Session
-                     -> TeamId
-                     -> ChannelId
-                     -> IO ()
-mmUpdateLastViewedAt sess teamid chanid = do
-  let uri = printf "/api/v3/teams/%s/channels/%s/update_last_viewed_at"
-                   (idString teamid)
-                   (idString chanid)
-  path <- mmPath uri
-  runLoggerS sess "mmUpdateLastViewedAt" $
-    HttpRequest POST uri Nothing
-  _ <- mmRawPOST sess path ""
-  runLoggerS sess "mmUpdateLastViewedAt" $
-    HttpResponse 200 uri Nothing
+mmViewChannel :: Session
+              -> TeamId
+              -> ChannelId       -- ^ channel to view
+              -> Maybe ChannelId -- ^ previous channel
+              -> IO ()
+mmViewChannel sess teamid chanid previd = do
+  let path    = printf "/api/v3/teams/%s/channels/view"
+                       (idString teamid)
+      prev    = maybeToList (("prev_channel_id" :: T.Text,) <$> previd)
+      payload = HM.fromList $ [("channel_id" :: T.Text, chanid)] ++ prev
+  uri <- mmPath path
+  runLoggerS sess "mmViewChannel" $
+    HttpRequest POST path (Just (toJSON payload))
+  _ <- mmPOST sess uri payload
+  runLoggerS sess "mmViewChannel" $
+    HttpResponse 200 path Nothing
   return ()
 
 mmJoinChannel :: Session
