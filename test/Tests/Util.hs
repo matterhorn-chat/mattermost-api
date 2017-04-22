@@ -359,7 +359,7 @@ joinChannel team chan = do
 getMoreChannels :: Team -> TestM Channels
 getMoreChannels team = do
   session <- getSession
-  liftIO $ mmGetMoreChannels session (teamId team)
+  liftIO $ mmGetMoreChannels session (teamId team) 0 100
 
 leaveChannel :: Team -> Channel -> TestM ()
 leaveChannel team chan = do
