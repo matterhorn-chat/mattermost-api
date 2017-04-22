@@ -53,6 +53,7 @@ data WebsocketEventType
   | WMReactionRemoved
   | WMChannelCreated
   | WMGroupAdded
+  | WMAddedToTeam
   deriving (Read, Show, Eq, Ord)
 
 instance FromJSON WebsocketEventType where
@@ -78,6 +79,7 @@ instance FromJSON WebsocketEventType where
     "reaction_removed"   -> return WMReactionRemoved
     "channel_created"    -> return WMChannelCreated
     "group_added"        -> return WMGroupAdded
+    "added_to_team"      -> return WMAddedToTeam
     _                    -> fail ("Unknown websocket message: " ++ show s)
 
 instance ToJSON WebsocketEventType where
@@ -102,6 +104,7 @@ instance ToJSON WebsocketEventType where
   toJSON WMReactionRemoved   = "reaction_removed"
   toJSON WMChannelCreated    = "channel_created"
   toJSON WMGroupAdded        = "group_added"
+  toJSON WMAddedToTeam       = "added_to_team"
 
 --
 
