@@ -256,10 +256,13 @@ mmGetChannels sess teamid = mmDoRequest sess "mmGetChannels" $
 
 -- | Requires an authenticated user. Returns the channels for a team of
 -- which the user is not already a member
--- TODO: XXX This now requires offset and limit parameters
-mmGetMoreChannels :: Session -> TeamId -> IO Channels
-mmGetMoreChannels sess teamid = mmDoRequest sess "mmGetMoreChannels" $
-  printf "/api/v3/teams/%s/channels/more" (idString teamid)
+mmGetMoreChannels :: Session -> TeamId -> Int -> Int -> IO Channels
+mmGetMoreChannels sess teamid offset limit =
+  mmDoRequest sess "mmGetMoreChannels" $
+    printf "/api/v3/teams/%s/channels/more/%d/%d"
+           (idString teamid)
+           offset
+           limit
 
 -- | Requires an authenticated user. Returns the details of a
 -- specific channel.
