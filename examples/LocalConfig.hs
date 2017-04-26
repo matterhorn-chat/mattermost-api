@@ -9,9 +9,9 @@ getConfig = do
   let cmd = words "pass ldap"
   pass <- takeWhile (/='\n') <$> readProcess (head cmd) (tail cmd) ""
   return $ Config
-         { configUsername = T.pack "gdritter"
-         , configHostname = T.pack "mattermost.galois.com"
-         , configTeam     = T.pack "galwegians"
+         { configUsername = T.pack "USERNAME"
+         , configHostname = T.pack "mattermost.example.com"
+         , configTeam     = T.pack "TEAMNAME"
          , configPort     = 443 -- currently we only support HTTPS
          , configPassword = T.pack pass
          }
