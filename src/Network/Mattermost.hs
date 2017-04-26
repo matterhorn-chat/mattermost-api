@@ -68,6 +68,7 @@ module Network.Mattermost
 , mmGetPostsAfter
 , mmGetReactionsForPost
 , mmGetFileInfo
+, mmGetFile
 , mmGetUser
 , mmGetUsers
 , mmGetTeamMembers
@@ -410,6 +411,17 @@ mmGetFileInfo :: Session
 mmGetFileInfo sess fileId =
   mmDoRequest sess "mmGetFileInfo" $
   printf "/api/v3/files/%s/get_info" (idString fileId)
+
+mmGetFile :: Session
+          -> FileId
+          -> IO B.ByteString
+mmGetFile sess@(Session cd _) fileId = do
+  let path = printf "/api/v4/files/%s" (idString fileId)
+  uri  <- mmPath path
+  runLogger cd "mmGetFile" $
+    HttpRequest GET path Nothing
+  rsp  <- mmRequest sess uri
+  return (B.pack (rspBody rsp))
 
 mmGetUser :: Session -> UserId -> IO User
 mmGetUser sess userid = mmDoRequest sess "mmGetUser" $
