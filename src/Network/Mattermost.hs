@@ -478,9 +478,18 @@ mmGetTeamMembers sess teamid = mmDoRequest sess "mmGetTeamMembers" $
 
 -- |
 -- route: @\/api\/v3\/teams\/{team_id}\/channels\/{channel_id}\/users\/{offset}\/{limit}@
-mmGetChannelMembers :: Session -> TeamId -> ChannelId -> IO (HashMap UserId User)
-mmGetChannelMembers sess teamid chanid = mmDoRequest sess "mmGetChannelMembers" $
-  printf "/api/v3/teams/%s/channels/%s/users/%d/%d" (idString teamid) (idString chanid) (0::Int) (10000::Int)
+mmGetChannelMembers :: Session
+                    -> TeamId
+                    -> ChannelId
+                    -> Int
+                    -> Int
+                    -> IO (HashMap UserId User)
+mmGetChannelMembers sess teamid chanid offset limit = mmDoRequest sess "mmGetChannelMembers" $
+  printf "/api/v3/teams/%s/channels/%s/users/%d/%d"
+         (idString teamid)
+         (idString chanid)
+         offset
+         limit
 
 -- |
 -- route: @\/api\/v3\/users\/profiles_for_dm_list\/{team_id}@
@@ -498,9 +507,15 @@ mmGetMe sess = mmDoRequest sess "mmGetMe" "/api/v3/users/me"
 -- |
 -- route: @\/api\/v3\/teams\/{team_id}\/users\/{offset}\/{limit}@
 mmGetProfiles :: Session
-              -> TeamId -> IO (HashMap UserId User)
-mmGetProfiles sess teamid = mmDoRequest sess "mmGetProfiles" $
-  printf "/api/v3/teams/%s/users/%d/%d" (idString teamid) (0::Int) (10000::Int)
+              -> TeamId
+              -> Int
+              -> Int
+              -> IO (HashMap UserId User)
+mmGetProfiles sess teamid offset limit = mmDoRequest sess "mmGetProfiles" $
+  printf "/api/v3/teams/%s/users/%d/%d"
+         (idString teamid)
+         offset
+         limit
 
 -- |
 -- route: @\/api\/v3\/users\/status@

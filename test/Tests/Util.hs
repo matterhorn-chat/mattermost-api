@@ -370,7 +370,7 @@ getChannelMembers :: Team -> Channel -> TestM [User]
 getChannelMembers team chan = do
   session <- getSession
   (snd <$>) <$> HM.toList <$>
-      (liftIO $ mmGetChannelMembers session (teamId team) (channelId chan))
+      (liftIO $ mmGetChannelMembers session (teamId team) (channelId chan) 0 10000)
 
 getChannels :: Team -> TestM Channels
 getChannels team = do
