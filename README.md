@@ -24,3 +24,13 @@ HTTP.**
 
 For use in production we use TLS, but for testing purposes we avoid the
 certificate setup.
+
+# Our Versioning Scheme
+
+This library uses the same versioning scheme as `matterhorn`, see [Our
+Versioning
+Scheme](https://github.com/matterhorn-chat/matterhorn/blob/master/README.md#our-versioning-scheme).
+The short version is that in `ABBCC.X.Y`, the `ABBCC` corresponds to MatterMost
+server version `A.BB.CC` and the `X.Y` portion of the version string corresponds
+to the version of `mattermost-api` package releases.
+
