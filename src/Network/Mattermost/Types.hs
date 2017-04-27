@@ -825,6 +825,36 @@ instance IsId CommandId where
 instance HasId Command CommandId where
   getId = commandId
 
+data CommandResponseType
+  = CommandResponseInChannel
+  | CommandResponseEphemeral
+    deriving (Read, Show, Eq)
+
+instance A.FromJSON CommandResponseType where
+  parseJSON (A.String "in_channel") = return CommandResponseInChannel
+  parseJSON (A.String "ephemeral")  = return CommandResponseEphemeral
+  parseJSON _ = fail "Unknown command response type: expected `in_channel` or `ephemeral`"
+
+data CommandResponse
+  = CommandResponse
+  { commandResponseType         :: CommandResponseType
+  , commandResponseText         :: Text
+  , commandResponseUsername     :: Text
+  , commandResponseIconURL      :: Text
+  , commandResponseGotoLocation :: Text
+  , commandResponseAttachments  :: Seq PostPropAttachment
+  } deriving (Read, Show, Eq)
+
+instance A.FromJSON CommandResponse where
+  parseJSON = A.withObject "CommandResponse" $ \o -> do
+    commandResponseType         <- o .: "response_type"
+    commandResponseText         <- o .: "text"
+    commandResponseUsername     <- o .: "username"
+    commandResponseIconURL      <- o .: "icon_url"
+    commandResponseGotoLocation <- o .: "goto_location"
+    commandResponseAttachments  <- o .:? "attachments" .!= S.empty
+    return CommandResponse { .. }
+
 --
 
 data UsersCreate

@@ -59,3 +59,7 @@ suffixLenses ''WEData
 
 -- * 'WEBroadcast' lenses
 suffixLenses ''WEBroadcast
+
+-- * 'CommandResponse' lenses
+suffixLenses ''CommandResponse
+suffixLenses ''CommandResponseType

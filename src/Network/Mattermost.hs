@@ -35,6 +35,8 @@ module Network.Mattermost
 , urlForFile
 , Posts(..)
 , MinCommand(..)
+, CommandResponse(..)
+, CommandResponseType(..)
 -- ** Log-related types
 , Logger
 , LogEvent(..)
@@ -426,7 +428,7 @@ mmGetProfilesForDMList sess teamid =
   mmDoRequest sess "mmGetProfilesForDMList" $
     printf "/api/v3/users/profiles_for_dm_list/%s" (idString teamid)
 
-mmGetMe :: Session -> IO Value
+mmGetMe :: Session -> IO User
 mmGetMe sess = mmDoRequest sess "mmGetMe" "/api/v3/users/me"
 
 mmGetProfiles :: Session
@@ -589,7 +591,7 @@ mmTeamAddUser sess teamid uId = do
 mmExecute :: Session
           -> TeamId
           -> MinCommand
-          -> IO Value
+          -> IO CommandResponse
 mmExecute sess teamid command = do
   let path   = printf "/api/v3/teams/%s/commands/execute"
                       (idString teamid)
