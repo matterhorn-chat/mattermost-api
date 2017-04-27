@@ -12,8 +12,6 @@ module Tests.Util
   , getChannels
   , getChannelMembers
   , getUserByName
-  , getConfig
-  , saveConfig
   , teamAddUser
   , reportJSONExceptions
   , adminAccount
@@ -45,7 +43,6 @@ module Tests.Util
   )
 where
 
-import qualified Data.Aeson as A
 import qualified Control.Exception as E
 import qualified Control.Concurrent.STM as STM
 import Control.Concurrent (forkIO)
@@ -376,16 +373,6 @@ getChannels :: Team -> TestM Channels
 getChannels team = do
   session <- getSession
   liftIO $ mmGetChannels session (teamId team)
-
-getConfig :: TestM A.Value
-getConfig = do
-  session <- getSession
-  liftIO $ mmGetConfig session
-
-saveConfig :: A.Value -> TestM ()
-saveConfig newConfig = do
-  session <- getSession
-  liftIO $ mmSaveConfig session newConfig
 
 teamAddUser :: Team -> User -> TestM ()
 teamAddUser team user = do
