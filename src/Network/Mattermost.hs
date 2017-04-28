@@ -78,6 +78,7 @@ module Network.Mattermost
 , mmGetProfiles
 , mmGetStatuses
 , mmGetInitialLoad
+, mmSaveConfig
 , mmSetChannelHeader
 , mmChannelAddUser
 , mmTeamAddUser
@@ -86,6 +87,7 @@ module Network.Mattermost
 , mmPost
 , mmUpdatePost
 , mmExecute
+, mmGetConfig
 , mkPendingPost
 , idString
 , hoistE
@@ -625,6 +627,27 @@ mmPost sess teamid post = do
   runLoggerS sess "mmPost" $
     HttpResponse 200 path (Just (val))
   return r
+
+-- | Get the system configuration. Requires administrative permission.
+--
+-- route: @\/api\/v3\/admin\/config@
+mmGetConfig :: Session
+            -> IO Value
+mmGetConfig sess =
+  mmDoRequest sess "mmGetConfig" "/api/v3/admin/config"
+
+mmSaveConfig :: Session
+             -> Value
+             -> IO ()
+mmSaveConfig sess config = do
+  let path = "/api/v3/admin/save_config"
+  uri <- mmPath path
+  runLoggerS sess "mmSaveConfig" $
+    HttpRequest POST path (Just config)
+  _ <- mmPOST sess uri config
+  runLoggerS sess "mmSaveConfig" $
+    HttpResponse 200 path Nothing
+  return ()
 
 -- |
 -- route: @\/api\/v3\/teams\/{team_id}\/channels\/{channel_id}\/add@

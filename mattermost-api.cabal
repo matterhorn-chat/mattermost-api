@@ -180,3 +180,4 @@ test-suite test-mm-api
                   , pretty-show
                   , unordered-containers
                   , containers
+                  , aeson

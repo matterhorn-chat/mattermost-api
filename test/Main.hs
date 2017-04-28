@@ -10,7 +10,9 @@ import           System.Exit
 
 import           Text.Show.Pretty ( ppShow )
 
+import           Data.Aeson
 import           Data.Monoid ((<>))
+import qualified Data.HashMap.Strict as HM
 import qualified Data.Sequence as Seq
 
 import           Test.Tasty
@@ -111,6 +113,19 @@ setup = mmTestCase "Setup" testConfig $ do
 
   let townSquare = findChannel chans "Town Square"
       offTopic   = findChannel chans "Off-Topic"
+
+  print_ "Getting Config"
+  config <- getConfig
+
+  print_ "Saving Config"
+  -- Enable open team so that the admin can create
+  -- new users.
+  let Object oldConfig    = config
+      Object teamSettings = oldConfig HM.! "TeamSettings"
+      newConfig           = Object (HM.insert "TeamSettings"
+                                   (Object (HM.insert "EnableOpenServer"
+                                           (Bool True) teamSettings)) oldConfig)
+  saveConfig newConfig
 
   expectWSEvent "admin joined town square"
     (isPost adminUser townSquare "testadmin has joined the channel.")
