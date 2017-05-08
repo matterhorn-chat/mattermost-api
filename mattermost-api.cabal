@@ -15,7 +15,7 @@ cabal-version:       >=1.10
 tested-with:         GHC == 7.10.3, GHC == 8.0.1
 source-repository    head
   type: git
-  location: https://github.com/dagit/mattermost-api.git
+  location: https://github.com/matterhorn-chat/mattermost-api.git
 
 flag build-examples
   description: Build example applications
