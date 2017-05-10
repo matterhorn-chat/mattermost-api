@@ -92,7 +92,7 @@ data ConnectionData
   , cdUseTLS        :: Bool
   }
 
--- | Creates a TLS connection to the server.
+-- | Creates a structure representing a TLS connection to the server.
 mkConnectionData :: Hostname -> Port -> ConnectionContext -> ConnectionData
 mkConnectionData host port ctx = ConnectionData
   { cdHostname      = host
