@@ -17,7 +17,6 @@ import qualified Data.Sequence as Seq
 
 import           Test.Tasty
 
-import           Network.Mattermost
 import           Network.Mattermost.Types
 import           Network.Mattermost.WebSocket.Types
 import           Network.Mattermost.Exceptions
