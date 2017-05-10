@@ -360,7 +360,7 @@ joinChannel team chan = do
 getMoreChannels :: Team -> TestM Channels
 getMoreChannels team = do
   session <- getSession
-  liftIO $ mmGetMoreChannels session (teamId team)
+  liftIO $ mmGetMoreChannels session (teamId team) 0 100
 
 leaveChannel :: Team -> Channel -> TestM ()
 leaveChannel team chan = do
@@ -371,7 +371,7 @@ getChannelMembers :: Team -> Channel -> TestM [User]
 getChannelMembers team chan = do
   session <- getSession
   (snd <$>) <$> HM.toList <$>
-      (liftIO $ mmGetChannelMembers session (teamId team) (channelId chan))
+      (liftIO $ mmGetChannelMembers session (teamId team) (channelId chan) 0 10000)
 
 getChannels :: Team -> TestM Channels
 getChannels team = do

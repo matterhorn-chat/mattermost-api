@@ -311,7 +311,6 @@ instance A.FromJSON NotifyOption where
   parseJSON (A.String "none")    = return NotifyOptionNone
   parseJSON xs                   = fail ("Unknown NotifyOption value: " ++ show xs)
 
--- MatterMost actually represents this as a
 data NotifyProps = NotifyProps
   { notifyPropsMentionKeys  :: [Text]
   , notifyPropsEmail        :: WithDefault Bool

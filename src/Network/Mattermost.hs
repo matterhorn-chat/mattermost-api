@@ -1,5 +1,6 @@
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE OverloadedStrings    #-}
+{-# LANGUAGE TupleSections        #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Network.Mattermost
 ( -- * Types
@@ -62,7 +63,7 @@ module Network.Mattermost
 , mmGetChannels
 , mmGetMoreChannels
 , mmGetChannel
-, mmUpdateLastViewedAt
+, mmViewChannel
 , mmDeletePost
 , mmGetPost
 , mmGetPosts
@@ -71,6 +72,7 @@ module Network.Mattermost
 , mmGetPostsAfter
 , mmGetReactionsForPost
 , mmGetFileInfo
+, mmGetFile
 , mmGetUser
 , mmGetUsers
 , mmGetTeamMembers
@@ -129,6 +131,7 @@ import           Data.Aeson ( Value(..)
                             , encode
                             , eitherDecode
                             )
+import           Data.Maybe ( maybeToList )
 import qualified Data.Sequence as Seq
 import qualified Data.Text as T
 import           Control.Arrow ( left )
@@ -211,6 +214,8 @@ mmUnauthenticatedHTTPPost cd path json = do
 
 -- | Fire off a login attempt. Note: We get back more than just the auth token.
 -- We also get all the server-side configuration data for the user.
+--
+-- route: @\/api\/v3\/users\/login@
 mmLogin :: ConnectionData -> Login -> IO (Either LoginFailureException (Session, User))
 mmLogin cd login = do
   let rawPath = "/api/v3/users/login"
@@ -229,15 +234,21 @@ mmLogin cd login = do
 
 -- | Fire off a login attempt. Note: We get back more than just the auth token.
 -- We also get all the server-side configuration data for the user.
+--
+-- route: @\/api\/v3\/users\/initial_load@
 mmGetInitialLoad :: Session -> IO InitialLoad
 mmGetInitialLoad sess =
   mmDoRequest sess "mmGetInitialLoad" "/api/v3/users/initial_load"
 
 -- | Requires an authenticated user. Returns the full list of teams.
+--
+-- route: @\/api\/v3\/teams\/all@
 mmGetTeams :: Session -> IO (HashMap TeamId Team)
 mmGetTeams sess =
   mmDoRequest sess "mmGetTeams" "/api/v3/teams/all"
 
+-- |
+-- route: @\/api\/v3\/teams\/create@
 mmCreateTeam :: Session -> TeamsCreate -> IO Team
 mmCreateTeam sess payload = do
   let path = "/api/v3/teams/create"
@@ -252,18 +263,28 @@ mmCreateTeam sess payload = do
 
 -- | Requires an authenticated user. Returns the full list of channels
 -- for a given team of which the user is a member
+--
+-- route: @\/api\/v3\/teams\/{team_id}\/channels\/@
 mmGetChannels :: Session -> TeamId -> IO Channels
 mmGetChannels sess teamid = mmDoRequest sess "mmGetChannels" $
   printf "/api/v3/teams/%s/channels/" (idString teamid)
 
 -- | Requires an authenticated user. Returns the channels for a team of
 -- which the user is not already a member
-mmGetMoreChannels :: Session -> TeamId -> IO Channels
-mmGetMoreChannels sess teamid = mmDoRequest sess "mmGetMoreChannels" $
-  printf "/api/v3/teams/%s/channels/more" (idString teamid)
+--
+-- route: @\/api\/v3\/teams\/{team_id}\/channels\/more\/{offset}\/{limit}@
+mmGetMoreChannels :: Session -> TeamId -> Int -> Int -> IO Channels
+mmGetMoreChannels sess teamid offset limit =
+  mmDoRequest sess "mmGetMoreChannels" $
+    printf "/api/v3/teams/%s/channels/more/%d/%d"
+           (idString teamid)
+           offset
+           limit
 
 -- | Requires an authenticated user. Returns the details of a
 -- specific channel.
+--
+-- route: @\/api\/v3\/teams\/{team_id}\/channels\/{channel_id}@
 mmGetChannel :: Session
              -> TeamId
              -> ChannelId
@@ -274,22 +295,28 @@ mmGetChannel sess teamid chanid = mmWithRequest sess "mmGetChannel"
           (idString chanid))
   return
 
-mmUpdateLastViewedAt :: Session
-                     -> TeamId
-                     -> ChannelId
-                     -> IO ()
-mmUpdateLastViewedAt sess teamid chanid = do
-  let uri = printf "/api/v3/teams/%s/channels/%s/update_last_viewed_at"
-                   (idString teamid)
-                   (idString chanid)
-  path <- mmPath uri
-  runLoggerS sess "mmUpdateLastViewedAt" $
-    HttpRequest POST uri Nothing
-  _ <- mmRawPOST sess path ""
-  runLoggerS sess "mmUpdateLastViewedAt" $
-    HttpResponse 200 uri Nothing
+-- |
+-- route: @\/api\/v3\/teams\/{team_id}\/channels\/view@
+mmViewChannel :: Session
+              -> TeamId
+              -> ChannelId       -- ^ channel to view
+              -> Maybe ChannelId -- ^ previous channel
+              -> IO ()
+mmViewChannel sess teamid chanid previd = do
+  let path    = printf "/api/v3/teams/%s/channels/view"
+                       (idString teamid)
+      prev    = maybeToList (("prev_channel_id" :: T.Text,) <$> previd)
+      payload = HM.fromList $ [("channel_id" :: T.Text, chanid)] ++ prev
+  uri <- mmPath path
+  runLoggerS sess "mmViewChannel" $
+    HttpRequest POST path (Just (toJSON payload))
+  _ <- mmPOST sess uri payload
+  runLoggerS sess "mmViewChannel" $
+    HttpResponse 200 path Nothing
   return ()
 
+-- |
+-- route: @\/api\/v3\/teams\/{team_id}\/channels\/{channel_id}\/join@
 mmJoinChannel :: Session
               -> TeamId
               -> ChannelId
@@ -307,6 +334,8 @@ mmJoinChannel sess teamid chanid = do
     HttpResponse 200 path (Just val)
   return ()
 
+-- |
+-- route: @\/api\/v3\/teams\/{team_id}\/channels\/{channel_id}\/leave@
 mmLeaveChannel :: Session
                -> TeamId
                -> ChannelId
@@ -325,6 +354,8 @@ mmLeaveChannel sess teamid chanid = do
     HttpResponse 200 path (Just val)
   return ()
 
+-- |
+-- route: @\/api\/v3\/teams\/{team_id}\/channels\/{channel_id}\/posts\/page\/{offset}\/{limit}@
 mmGetPosts :: Session
            -> TeamId
            -> ChannelId
@@ -339,6 +370,8 @@ mmGetPosts sess teamid chanid offset limit =
          offset
          limit
 
+-- |
+-- route: @\/api\/v3\/teams\/{team_id}\/channels\/{channel_id}\/posts\/since\/{utc_time}@
 mmGetPostsSince :: Session
            -> TeamId
            -> ChannelId
@@ -351,6 +384,8 @@ mmGetPostsSince sess teamid chanid since =
          (idString chanid)
          (utcTimeToMilliseconds since :: Int)
 
+-- |
+-- route: @\/api\/v3\/teams\/{team_id}\/channels\/{channel_id}\/posts\/{post_id}\/get@
 mmGetPost :: Session
           -> TeamId
           -> ChannelId
@@ -368,6 +403,8 @@ mmGetPost sess teamid chanid postid = do
     HttpResponse 200 path (Just raw)
   return json
 
+-- |
+-- route: @\/api\/v3\/teams\/{team_id}\/channels\/{channel_id}\/posts\/{post_id}\/after\/{offset}\/{limit}@
 mmGetPostsAfter :: Session
                 -> TeamId
                 -> ChannelId
@@ -384,6 +421,8 @@ mmGetPostsAfter sess teamid chanid postid offset limit =
          offset
          limit
 
+-- |
+-- route: @\/api\/v3\/teams\/{team_id}\/channels\/{channel_id}\/posts\/{post_id}\/before\/{offset}\/{limit}@
 mmGetPostsBefore :: Session
                 -> TeamId
                 -> ChannelId
@@ -400,6 +439,8 @@ mmGetPostsBefore sess teamid chanid postid offset limit =
          offset
          limit
 
+-- |
+-- route: @\/api\/v3\/files\/{file_id}\/get_info@
 mmGetFileInfo :: Session
               -> FileId
               -> IO FileInfo
@@ -407,42 +448,87 @@ mmGetFileInfo sess fileId =
   mmDoRequest sess "mmGetFileInfo" $
   printf "/api/v3/files/%s/get_info" (idString fileId)
 
+-- |
+-- route: @\/api\/v4\/files\/{file_id}@
+mmGetFile :: Session
+          -> FileId
+          -> IO B.ByteString
+mmGetFile sess@(Session cd _) fileId = do
+  let path = printf "/api/v4/files/%s" (idString fileId)
+  uri  <- mmPath path
+  runLogger cd "mmGetFile" $
+    HttpRequest GET path Nothing
+  rsp  <- mmRequest sess uri
+  return (B.pack (rspBody rsp))
+
+-- |
+-- route: @\/api\/v3\/users\/{user_id}\/get@
 mmGetUser :: Session -> UserId -> IO User
 mmGetUser sess userid = mmDoRequest sess "mmGetUser" $
   printf "/api/v3/users/%s/get" (idString userid)
 
+-- |
+-- route: @\/api\/v3\/users\/{offset}\/{limit}@
 mmGetUsers :: Session -> Int -> Int -> IO (HashMap UserId User)
 mmGetUsers sess offset limit =
   mmDoRequest sess "mmGetUsers" $
     printf "/api/v3/users/%d/%d" offset limit
 
+-- |
+-- route: @\/api\/v3\/teams\/members\/{team_id}@
 mmGetTeamMembers :: Session -> TeamId -> IO (Seq.Seq TeamMember)
 mmGetTeamMembers sess teamid = mmDoRequest sess "mmGetTeamMembers" $
   printf "/api/v3/teams/members/%s" (idString teamid)
 
-mmGetChannelMembers :: Session -> TeamId -> ChannelId -> IO (HashMap UserId User)
-mmGetChannelMembers sess teamid chanid = mmDoRequest sess "mmGetChannelMembers" $
-  printf "/api/v3/teams/%s/channels/%s/users/%d/%d" (idString teamid) (idString chanid) (0::Int) (10000::Int)
+-- |
+-- route: @\/api\/v3\/teams\/{team_id}\/channels\/{channel_id}\/users\/{offset}\/{limit}@
+mmGetChannelMembers :: Session
+                    -> TeamId
+                    -> ChannelId
+                    -> Int
+                    -> Int
+                    -> IO (HashMap UserId User)
+mmGetChannelMembers sess teamid chanid offset limit = mmDoRequest sess "mmGetChannelMembers" $
+  printf "/api/v3/teams/%s/channels/%s/users/%d/%d"
+         (idString teamid)
+         (idString chanid)
+         offset
+         limit
 
+-- |
+-- route: @\/api\/v3\/users\/profiles_for_dm_list\/{team_id}@
 mmGetProfilesForDMList :: Session -> TeamId
                        -> IO (HashMap UserId User)
 mmGetProfilesForDMList sess teamid =
   mmDoRequest sess "mmGetProfilesForDMList" $
     printf "/api/v3/users/profiles_for_dm_list/%s" (idString teamid)
 
+-- |
+-- route: @\/api\/v3\/users\/me@
 mmGetMe :: Session -> IO User
 mmGetMe sess = mmDoRequest sess "mmGetMe" "/api/v3/users/me"
 
+-- |
+-- route: @\/api\/v3\/teams\/{team_id}\/users\/{offset}\/{limit}@
 mmGetProfiles :: Session
-              -> TeamId -> IO (HashMap UserId User)
-mmGetProfiles sess teamid = mmDoRequest sess "mmGetProfiles" $
-  printf "/api/v3/teams/%s/users/%d/%d" (idString teamid) (0::Int) (10000::Int)
+              -> TeamId
+              -> Int
+              -> Int
+              -> IO (HashMap UserId User)
+mmGetProfiles sess teamid offset limit = mmDoRequest sess "mmGetProfiles" $
+  printf "/api/v3/teams/%s/users/%d/%d"
+         (idString teamid)
+         offset
+         limit
 
+-- |
+-- route: @\/api\/v3\/users\/status@
 mmGetStatuses :: Session -> IO (HashMap UserId T.Text)
 mmGetStatuses sess = mmDoRequest sess "mmGetStatuses" $
   printf "/api/v3/users/status"
 
--- POST /api/v3/teams/{}/create_direct with {"user_id": _}
+-- |
+-- route: @\/api\/v3\/teams\/{team_id}\/channels\/create_direct@
 mmCreateDirect :: Session -> TeamId -> UserId -> IO Channel
 mmCreateDirect sess teamid userid = do
   let path = printf "/api/v3/teams/%s/channels/create_direct" (idString teamid)
@@ -457,6 +543,8 @@ mmCreateDirect sess teamid userid = do
   return r
 
 -- { name, display_name, purpose, header }
+-- |
+-- route: @\/api\/v3\/teams\/{team_id}\/channels\/create@
 mmCreateChannel :: Session -> TeamId -> MinChannel -> IO Channel
 mmCreateChannel sess teamid payload = do
   let path = printf "/api/v3/teams/%s/channels/create" (idString teamid)
@@ -469,6 +557,8 @@ mmCreateChannel sess teamid payload = do
     HttpResponse 200 path (Just val)
   return r
 
+-- |
+-- route: @\/api\/v3\/teams\/{team_id}\/channels\/{channel_id}\/delete@
 mmDeleteChannel :: Session -> TeamId -> ChannelId -> IO ()
 mmDeleteChannel sess teamid chanid = do
   let path = printf "/api/v3/teams/%s/channels/%s/delete"
@@ -481,6 +571,8 @@ mmDeleteChannel sess teamid chanid = do
     HttpResponse 200 path Nothing
   return ()
 
+-- |
+-- route: @\/api\/v3\/teams\/{team_id}\/channels\/{channel_id}\/posts\/{post_id}\/delete@
 mmDeletePost :: Session
              -> TeamId
              -> ChannelId
@@ -500,6 +592,8 @@ mmDeletePost sess teamid chanid postid = do
     HttpResponse 200 path Nothing
   return ()
 
+-- |
+-- route: @\/api\/v3\/teams\/{team_id}\/channels\/{channel_id}\/posts\/update@
 mmUpdatePost :: Session
              -> TeamId
              -> Post
@@ -518,6 +612,8 @@ mmUpdatePost sess teamid post = do
     HttpResponse 200 path (Just (val))
   return r
 
+-- |
+-- route: @\/api\/v3\/teams\/{team_id}\/channels\/{channel_id}\/posts\/create@
 mmPost :: Session
        -> TeamId
        -> PendingPost
@@ -537,6 +633,8 @@ mmPost sess teamid post = do
   return r
 
 -- | Get the system configuration. Requires administrative permission.
+--
+-- route: @\/api\/v3\/admin\/config@
 mmGetConfig :: Session
             -> IO Value
 mmGetConfig sess =
@@ -555,6 +653,8 @@ mmSaveConfig sess config = do
     HttpResponse 200 path Nothing
   return ()
 
+-- |
+-- route: @\/api\/v3\/teams\/{team_id}\/channels\/{channel_id}\/add@
 mmChannelAddUser :: Session
                  -> TeamId
                  -> ChannelId
@@ -574,6 +674,8 @@ mmChannelAddUser sess teamid chanId uId = do
     HttpResponse 200 path (Just val)
   return r
 
+-- |
+-- route: @\/api\/v3\/teams\/{team_id}\/add_user_to_team@
 mmTeamAddUser :: Session
               -> TeamId
               -> UserId
@@ -590,6 +692,8 @@ mmTeamAddUser sess teamid uId = do
     HttpResponse 200 path Nothing
   return ()
 
+-- |
+-- route: @\/api\/v3\/teams\/{team_id}\/commands\/execute@
 mmExecute :: Session
           -> TeamId
           -> MinCommand
@@ -606,6 +710,8 @@ mmExecute sess teamid command = do
     HttpResponse 200 path (Just (val))
   return r
 
+-- |
+-- route: @\/api\/v3\/users\/create@
 mmUsersCreate :: ConnectionData
               -> UsersCreate
               -> IO User
@@ -620,6 +726,8 @@ mmUsersCreate cd usersCreate = do
     HttpResponse 200 path (Just (val))
   return r
 
+-- |
+-- route: @\/api\/v3\/users\/create@
 mmUsersCreateWithSession :: Session
                          -> UsersCreate
                          -> IO User
@@ -634,6 +742,8 @@ mmUsersCreateWithSession sess usersCreate = do
     HttpResponse 200 path (Just (val))
   return r
 
+-- |
+-- route: @\/api\/v3\/teams\/{team_id}\/channels\/{channel_id}\/posts\/{post_id}\/reactions@
 mmGetReactionsForPost :: Session
                       -> TeamId
                       -> ChannelId
@@ -693,6 +803,8 @@ mmPOST :: ToJSON t => Session -> URI -> t -> IO Response_String
 mmPOST sess path json =
   mmRawPOST sess path (BL.toStrict (encode json))
 
+-- |
+-- route: @\/api\/v3\/teams\/{team_id}\/channels\/update_header@
 mmSetChannelHeader :: Session -> TeamId -> ChannelId -> T.Text -> IO Channel
 mmSetChannelHeader sess teamid chanid header = do
   let path = printf "/api/v3/teams/%s/channels/update_header"

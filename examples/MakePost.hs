@@ -91,7 +91,7 @@ main = do
     pPrint i
   forM_ (initialLoadTeams i) $ \t -> do
     when (teamName t == configTeam config) $ do
-      userMap <- mmGetProfiles session (getId t)
+      userMap <- mmGetProfiles session (getId t) 0 10000
       when (optVerbose opts) $ do
         pPrint userMap
       chans <- mmGetChannels session (getId t)

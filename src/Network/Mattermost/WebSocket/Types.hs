@@ -9,8 +9,8 @@ module Network.Mattermost.WebSocket.Types
 , WEBroadcast(..)
 ) where
 
+import           Control.Applicative
 import           Control.Exception ( throw )
-import           Control.Applicative ((<|>))
 import           Data.Aeson ( FromJSON(..)
                             , ToJSON(..)
                             , (.:)
@@ -21,6 +21,8 @@ import qualified Data.Aeson as A
 import qualified Data.Aeson.Types as A
 import           Data.ByteString.Lazy (fromStrict, toStrict)
 import qualified Data.ByteString.Lazy.Char8 as BC
+import qualified Data.HashMap.Strict as HM
+import           Data.Int (Int64)
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Text.Encoding (decodeUtf8, encodeUtf8)
@@ -37,10 +39,13 @@ data WebsocketEventType
   | WMPostEdited
   | WMPostDeleted
   | WMChannelDeleted
-  | WMChannelViewed
+  | WMChannelCreated
   | WMDirectAdded
+  | WMGroupAdded
   | WMNewUser
+  | WMAddedToTeam
   | WMLeaveTeam
+  | WMUpdateTeam
   | WMUserAdded
   | WMUserUpdated
   | WMUserRemoved
@@ -48,11 +53,10 @@ data WebsocketEventType
   | WMEphemeralMessage
   | WMStatusChange
   | WMHello
-  | WMUpdateTeam
+  | WMWebRTC
+  | WMAuthenticationChallenge
   | WMReactionAdded
   | WMReactionRemoved
-  | WMChannelCreated
-  | WMGroupAdded
   deriving (Read, Show, Eq, Ord)
 
 instance FromJSON WebsocketEventType where
@@ -62,7 +66,6 @@ instance FromJSON WebsocketEventType where
     "post_edited"        -> return WMPostEdited
     "post_deleted"       -> return WMPostDeleted
     "channel_deleted"    -> return WMChannelDeleted
-    "channel_viewed"     -> return WMChannelViewed
     "direct_added"       -> return WMDirectAdded
     "new_user"           -> return WMNewUser
     "leave_team"         -> return WMLeaveTeam
@@ -78,6 +81,9 @@ instance FromJSON WebsocketEventType where
     "reaction_removed"   -> return WMReactionRemoved
     "channel_created"    -> return WMChannelCreated
     "group_added"        -> return WMGroupAdded
+    "added_to_team"      -> return WMAddedToTeam
+    "webrtc"             -> return WMWebRTC
+    "authentication_challenge" -> return WMAuthenticationChallenge
     _                    -> fail ("Unknown websocket message: " ++ show s)
 
 instance ToJSON WebsocketEventType where
@@ -86,7 +92,6 @@ instance ToJSON WebsocketEventType where
   toJSON WMPostEdited        = "post_edited"
   toJSON WMPostDeleted       = "post_deleted"
   toJSON WMChannelDeleted    = "channel_deleted"
-  toJSON WMChannelViewed     = "channel_viewed"
   toJSON WMDirectAdded       = "direct_added"
   toJSON WMNewUser           = "new_user"
   toJSON WMLeaveTeam         = "leave_team"
@@ -102,6 +107,9 @@ instance ToJSON WebsocketEventType where
   toJSON WMReactionRemoved   = "reaction_removed"
   toJSON WMChannelCreated    = "channel_created"
   toJSON WMGroupAdded        = "group_added"
+  toJSON WMAddedToTeam       = "added_to_team"
+  toJSON WMWebRTC            = "webrtc"
+  toJSON WMAuthenticationChallenge = "authentication_challenge"
 
 --
 
@@ -117,32 +125,26 @@ fromValueString = A.withText "string-encoded json" $ \s -> do
 --
 
 data WebsocketEvent = WebsocketEvent
-  { weTeamId    :: Maybe TeamId
-  , weEvent     :: WebsocketEventType
-  , weUserId    :: Maybe UserId
-  , weChannelId :: Maybe ChannelId
+  { weEvent     :: WebsocketEventType
   , weData      :: WEData
   , weBroadcast :: WEBroadcast
+  , weSeq       :: Int64
   } deriving (Read, Show, Eq)
 
 instance FromJSON WebsocketEvent where
   parseJSON = A.withObject "WebsocketEvent" $ \o -> do
-    weTeamId    <- (Just <$> (o .:  "team_id")) <|> return Nothing
-    weEvent     <- o .:  "event"
-    weUserId    <- o .:?  "user_id"
-    weChannelId <- (Just <$> (o .:  "channel_id")) <|> return Nothing
+    weEvent     <- o .: "event"
     weData      <- o .: "data"
     weBroadcast <- o .: "broadcast"
+    weSeq       <- o .: "seq"
     return WebsocketEvent { .. }
 
 instance ToJSON WebsocketEvent where
   toJSON WebsocketEvent { .. } = A.object
-    [ "team_id"    .= weTeamId
-    , "event"      .= weEvent
-    , "user_id"    .= weUserId
-    , "channel_id" .= weChannelId
+    [ "event"      .= weEvent
     , "data"       .= weData
     , "broadcast"  .= weBroadcast
+    , "seq"        .= weSeq
     ]
 
 instance WebSocketsData WebsocketEvent where
@@ -203,18 +205,24 @@ data WEBroadcast = WEBroadcast
   { webChannelId :: Maybe ChannelId
   , webUserId    :: Maybe UserId
   , webTeamId    :: Maybe TeamId
+  , webOmitUsers :: Maybe (HM.HashMap UserId Bool)
   } deriving (Read, Show, Eq)
+
+nullable :: Alternative f => f a -> f (Maybe a)
+nullable p = (Just <$> p) <|> pure Nothing
 
 instance FromJSON WEBroadcast where
   parseJSON = A.withObject "WebSocketEvent Broadcast" $ \o -> do
-    webChannelId          <- (Just <$> (o .: "channel_id")) <|> return Nothing
-    webTeamId             <- (Just <$> (o .: "team_id")) <|> return Nothing
-    webUserId             <- (Just <$> (o .: "user_id")) <|> return Nothing
+    webChannelId <- nullable (o .: "channel_id")
+    webTeamId    <- nullable (o .: "team_id")
+    webUserId    <- nullable (o .: "user_id")
+    webOmitUsers <- nullable (o .: "omit_users")
     return WEBroadcast { .. }
 
 instance ToJSON WEBroadcast where
   toJSON WEBroadcast { .. } = A.object
-    [ "channel_id"   .= webChannelId
-    , "team_id"      .= webTeamId
-    , "user_id"      .= webUserId
+    [ "channel_id" .= webChannelId
+    , "team_id"    .= webTeamId
+    , "user_id"    .= webUserId
+    , "omit_users" .= webOmitUsers
     ]
