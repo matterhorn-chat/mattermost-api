@@ -1,20 +1,24 @@
 # Revision history for mattermost-api
 
-30701.2.0
+30802.0.0
 =========
 
-API changes:
-
-* The `Network.Mattermost.Types` module is now directly exported
-  and all clients should obtain their types from this import.  The
-  types are still exported from `Network.Mattermost` to allow time
-  for this change but this export is deprecated will be removed
-  in a future version.
-
-30701.1.0
-=========
+This release supports server version 3.8.2.
 
 API changes:
+* The `Network.Mattermost.Types` module is now directly exported and all
+  clients should obtain their types from this import. The types are
+  still exported from `Network.Mattermost` to allow time for this change
+  but this export is deprecated will be removed in a future version.
+* Added the CommandResponse type for the execute endpoint.
+* mmGetMoreChannels, mmGetChannelMembers, and mmGetProfiles now take
+  limit/offset parameters.
+* mmGetFile now supports v4 file-fetching.
+* Added new constructors to the WebsocketEventType corresponding to
+  server websocket events.
+* mmUpdateLastViewedAt was replaced with mmViewChannel.
+* Added the WithDefault type to wrap around bools and NotifyOptions.
+* Added NotifyProps types.
 * The `Token` type has been replaced with a `Session` type,
   representing a combination of a `Token` and a `ConnectionData`
   type. All exposed API functions which require an authenticated
@@ -24,7 +28,13 @@ API changes:
 * Replaced the return type of `mmGetTeamMembers` to use a `TeamMember`
   instead of raw JSON `Value`s.
 
+Documentation:
+* All API functions how have corresponding HTTP route documentation.
+
 Package changes:
+* Source repository was updated.
+* Constrained 'memory' version to avoid 'foundation' dependency.
+* Include Network.Mattermost.TH.
 * The `Network.Mattermost.Websocket` module now exports everything
   exported by `Network.Mattermost.Websocket.Types` in order to cut
   down on the number of imports needed by users.
