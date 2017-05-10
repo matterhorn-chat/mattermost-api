@@ -1,5 +1,16 @@
 # Revision history for mattermost-api
 
+30701.2.0
+=========
+
+API changes:
+
+* The `Network.Mattermost.Types` module is now directly exported
+  and all clients should obtain their types from this import.  The
+  types are still exported from `Network.Mattermost` to allow time
+  for this change but this export is deprecated will be removed
+  in a future version.
+
 30701.1.0
 =========
 

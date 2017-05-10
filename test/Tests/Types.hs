@@ -11,6 +11,7 @@ import Control.Concurrent.MVar
 import qualified Control.Concurrent.STM.TChan as STM
 
 import Network.Mattermost
+import Network.Mattermost.Types
 import Network.Mattermost.WebSocket.Types
 
 data Config
