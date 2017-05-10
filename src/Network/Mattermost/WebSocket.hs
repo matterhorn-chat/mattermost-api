@@ -32,7 +32,6 @@ import           Network.Connection ( Connection
 import qualified Network.WebSockets as WS
 import           Network.WebSockets.Stream (Stream, makeStream)
 
-import           Network.Mattermost
 import           Network.Mattermost.Util
 import           Network.Mattermost.Types
 import           Network.Mattermost.WebSocket.Types

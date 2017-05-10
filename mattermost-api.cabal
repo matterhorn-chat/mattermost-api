@@ -1,5 +1,5 @@
 name:                mattermost-api
-version:             30701.1.0
+version:             30701.2.0
 synopsis:            Client API for MatterMost chat system
 description:         Client API for MatterMost chat system
 license:             BSD3
@@ -30,8 +30,8 @@ library
                        Network.Mattermost.WebSocket
                        Network.Mattermost.WebSocket.Types
                        Network.Mattermost.Version
-  other-modules:       Network.Mattermost.Types
-                       Network.Mattermost.TH
+                       Network.Mattermost.Types
+  other-modules:       Network.Mattermost.TH
                        Paths_mattermost_api
   -- other-extensions:
   build-depends:       base >=4.4 && <5
