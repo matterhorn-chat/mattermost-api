@@ -30,6 +30,7 @@ library
                        Network.Mattermost.WebSocket
                        Network.Mattermost.WebSocket.Types
                        Network.Mattermost.Version
+                       Network.Mattermost.BaseTypes
                        Network.Mattermost.Types
                        Network.Mattermost.Internal.Types
   other-modules:       Network.Mattermost.TH

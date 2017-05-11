@@ -30,29 +30,8 @@ import           Data.Time.Clock ( UTCTime, getCurrentTime )
 import           Data.Time.Clock.POSIX ( posixSecondsToUTCTime
                                        , utcTimeToPOSIXSeconds )
 import           Network.Connection (ConnectionContext, initConnectionContext)
-import           Network.HTTP.Base (RequestMethod)
-import           Network.HTTP.Headers (Header, HeaderName(..), mkHeader)
+import           Network.Mattermost.BaseTypes
 import           Network.Mattermost.Internal.Types
-
--- | A 'Logger' is any function which responds to log events:
-type Logger = LogEvent -> IO ()
-
--- | If there is a 'Logger' in the 'ConnectionData' struct, it will
---   be sporadically called with values of type 'LogEvent'.
-data LogEvent = LogEvent
-  { logFunction  :: String
-  , logEventType :: LogEventType
-  } deriving (Eq, Show)
-
--- | A 'LogEventType' describes the particular event that happened
-data LogEventType
-  = HttpRequest RequestMethod String (Maybe A.Value)
-  | HttpResponse Int String (Maybe A.Value)
-  | WebSocketRequest A.Value
-  | WebSocketResponse A.Value
-  | WebSocketPing
-  | WebSocketPong
-    deriving (Eq, Show)
 
 runLogger :: ConnectionData -> String -> LogEventType -> IO ()
 runLogger ConnectionData { cdLogger = Just l } n ev =
@@ -64,34 +43,6 @@ runLoggerS (Session cd _) = runLogger cd
 
 maybeFail :: Parser a -> Parser (Maybe a)
 maybeFail p = (Just <$> p) <|> (return Nothing)
-
-type Hostname = Text
-type Port     = Int
-
--- For now we don't support or expose the ability to reuse connections,
--- but we have this field in case we want to support that in the future.
--- Doing so will require some modifications to withConnection (and uses).
--- Note: don't export this until we support connection reuse.
-data AutoClose = No | Yes
-  deriving (Read, Show, Eq, Ord)
-
--- | We return a list of headers so that we can treat
--- the headers like a monoid.
-autoCloseToHeader :: AutoClose -> [Header]
-autoCloseToHeader No  = []
-autoCloseToHeader Yes = [mkHeader HdrConnection "Close"]
-
-
-data ConnectionData
-  = ConnectionData
-  { cdHostname      :: Hostname
-  , cdPort          :: Port
-  , cdAutoClose     :: AutoClose
-  , cdConnectionCtx :: ConnectionContext
-  , cdToken         :: Maybe Token
-  , cdLogger        :: Maybe Logger
-  , cdUseTLS        :: Bool
-  }
 
 -- | Creates a structure representing a TLS connection to the server.
 mkConnectionData :: Hostname -> Port -> ConnectionContext -> ConnectionData
