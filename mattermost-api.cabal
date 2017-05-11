@@ -30,9 +30,9 @@ library
                        Network.Mattermost.WebSocket
                        Network.Mattermost.WebSocket.Types
                        Network.Mattermost.Version
-                       Network.Mattermost.BaseTypes
                        Network.Mattermost.Types
-                       Network.Mattermost.Internal.Types
+                       Network.Mattermost.Types.Base
+                       Network.Mattermost.Types.Internal
   other-modules:       Network.Mattermost.TH
                        Paths_mattermost_api
   -- other-extensions:

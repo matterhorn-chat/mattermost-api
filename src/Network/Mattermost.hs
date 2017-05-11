@@ -138,8 +138,8 @@ import           Control.Arrow ( left )
 
 import           Network.Mattermost.Exceptions
 import           Network.Mattermost.Util
-import           Network.Mattermost.BaseTypes
-import           Network.Mattermost.Internal.Types
+import           Network.Mattermost.Types.Base
+import           Network.Mattermost.Types.Internal
 import           Network.Mattermost.Types
 
 maxLineLength :: Int

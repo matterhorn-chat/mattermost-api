@@ -30,8 +30,8 @@ import           Data.Time.Clock ( UTCTime, getCurrentTime )
 import           Data.Time.Clock.POSIX ( posixSecondsToUTCTime
                                        , utcTimeToPOSIXSeconds )
 import           Network.Connection (ConnectionContext, initConnectionContext)
-import           Network.Mattermost.BaseTypes
-import           Network.Mattermost.Internal.Types
+import           Network.Mattermost.Types.Base
+import           Network.Mattermost.Types.Internal
 
 runLogger :: ConnectionData -> String -> LogEventType -> IO ()
 runLogger ConnectionData { cdLogger = Just l } n ev =

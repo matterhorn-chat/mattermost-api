@@ -1,4 +1,9 @@
-module Network.Mattermost.BaseTypes where
+-- | These are the fundamental types that are used for building
+-- everything else.  Specifically, these types are used by the
+-- Network.Mattermost.Types.Internal, but are not subject to the
+-- cautions that as associated with the latter.
+
+module Network.Mattermost.Types.Base where
 
 import qualified Data.Aeson as A
 import           Data.Text (Text)

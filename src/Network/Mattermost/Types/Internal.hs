@@ -5,11 +5,11 @@
 -- disruption and may be subject to change without being reflected in
 -- the mattermost-api version.
 
-module Network.Mattermost.Internal.Types where
+module Network.Mattermost.Types.Internal where
 
 import Network.Connection (ConnectionContext)
 import Network.HTTP.Headers (Header, HeaderName(..), mkHeader)
-import Network.Mattermost.BaseTypes
+import Network.Mattermost.Types.Base
 
 data Token = Token String
   deriving (Read, Show, Eq, Ord)
