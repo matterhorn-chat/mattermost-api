@@ -435,7 +435,7 @@ data ChannelData
   } deriving (Read, Show, Eq)
 
 instance A.FromJSON ChannelData where
-  parseJSON = A.withObject "ChanelData" $ \o -> do
+  parseJSON = A.withObject "ChannelData" $ \o -> do
     channelDataChannelId <- o .: "channel_id"
     channelDataUserId    <- o .: "user_id"
     channelDataRoles     <- o .: "roles"
