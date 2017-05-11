@@ -18,7 +18,7 @@ module Network.Mattermost.Logging
 import Data.Time.Clock (getCurrentTime)
 import System.IO (Handle, hFlush, hPutStr, stderr)
 
-import Network.Mattermost.Types
+import Network.Mattermost.Types.Base
 
 -- | 'mmLoggerDebugFilter' is the same as 'mmLoggerDebug' but takes
 --   a user-defined predicate that it uses to select which events to
