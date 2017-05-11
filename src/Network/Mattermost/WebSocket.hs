@@ -33,7 +33,7 @@ import qualified Network.WebSockets as WS
 import           Network.WebSockets.Stream (Stream, makeStream)
 
 import           Network.Mattermost.Util
-import           Network.Mattermost.InternalTypes
+import           Network.Mattermost.Internal.Types
 import           Network.Mattermost.Types
 import           Network.Mattermost.WebSocket.Types
 

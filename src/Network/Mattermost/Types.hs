@@ -32,7 +32,7 @@ import           Data.Time.Clock.POSIX ( posixSecondsToUTCTime
 import           Network.Connection (ConnectionContext, initConnectionContext)
 import           Network.HTTP.Base (RequestMethod)
 import           Network.HTTP.Headers (Header, HeaderName(..), mkHeader)
-import           Network.Mattermost.InternalTypes
+import           Network.Mattermost.Internal.Types
 
 -- | A 'Logger' is any function which responds to log events:
 type Logger = LogEvent -> IO ()
