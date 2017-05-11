@@ -32,6 +32,7 @@ import           Data.Time.Clock.POSIX ( posixSecondsToUTCTime
 import           Network.Connection (ConnectionContext, initConnectionContext)
 import           Network.HTTP.Base (RequestMethod)
 import           Network.HTTP.Headers (Header, HeaderName(..), mkHeader)
+import           Network.Mattermost.InternalTypes
 
 -- | A 'Logger' is any function which responds to log events:
 type Logger = LogEvent -> IO ()
@@ -131,12 +132,6 @@ withLogger cd logger = cd { cdLogger = Just logger }
 
 noLogger :: ConnectionData -> ConnectionData
 noLogger cd = cd { cdLogger = Nothing }
-
-data Token = Token String
-  deriving (Read, Show, Eq, Ord)
-
-getTokenString :: Token -> String
-getTokenString (Token s) = s
 
 data Session = Session
   { sessConn :: ConnectionData
