@@ -27,7 +27,6 @@ import           Network.Connection ( Connection
                                     , connectTo )
 
 import           Network.Mattermost.Types.Internal
--- import           Network.Mattermost.Types
 
 -- | This unwraps a 'Maybe' value, throwing a provided exception
 --   if the value is 'Nothing'.

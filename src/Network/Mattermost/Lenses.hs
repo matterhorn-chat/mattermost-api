@@ -3,7 +3,7 @@
 
 module Network.Mattermost.Lenses where
 
-import Network.Mattermost.Types.Internal
+import Network.Mattermost.Internal.Types
 import Network.Mattermost.Types
 import Network.Mattermost.WebSocket.Types
 import Network.Mattermost.TH
