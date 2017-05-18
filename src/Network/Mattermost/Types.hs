@@ -620,7 +620,7 @@ instance A.ToJSON Post where
 data PendingPost
   = PendingPost
   { pendingPostChannelId :: ChannelId
-  , pendingPostCreateAt  :: UTCTime
+  , pendingPostCreateAt  :: Maybe UTCTime
   , pendingPostFilenames :: Seq FilePath
   , pendingPostMessage   :: Text
   , pendingPostId        :: PendingPostId
@@ -632,7 +632,7 @@ data PendingPost
 instance A.ToJSON PendingPost where
   toJSON post = A.object
     [ "channel_id"      .= pendingPostChannelId post
-    , "create_at"       .= utcTimeToMilliseconds (pendingPostCreateAt post)
+    , "create_at"       .= maybe 0 utcTimeToMilliseconds (pendingPostCreateAt post)
     , "filenames"       .= pendingPostFilenames post
     , "message"         .= pendingPostMessage   post
     , "pending_post_id" .= pendingPostId        post
@@ -659,7 +659,7 @@ mkPendingPost msg userid channelid = do
   return PendingPost
     { pendingPostId        = PPI (Id pid)
     , pendingPostChannelId = channelid
-    , pendingPostCreateAt  = now
+    , pendingPostCreateAt  = Nothing
     , pendingPostFilenames = S.empty
     , pendingPostMessage   = msg
     , pendingPostUserId    = userid
