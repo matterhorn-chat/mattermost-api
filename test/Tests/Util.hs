@@ -60,7 +60,6 @@ import System.Timeout (timeout)
 import qualified Data.HashMap.Lazy as HM
 
 import Network.Mattermost
-import Network.Mattermost.Types
 import Network.Mattermost.WebSocket
 import Network.Mattermost.Exceptions
 
