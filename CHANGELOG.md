@@ -1,4 +1,20 @@
-# Revision history for mattermost-api
+
+30802.1.0
+=========
+
+This release supports server version 3.8.2.
+
+API changes:
+* Made the PendingPost `created_at` field optional. It defaults to 0.
+  This behavior is due to MatterMost's support for admins setting the
+  creation timestamp to values in the past. A value of zero causes
+  the server to use the server's clock to set the creation timestamp.
+  Any other value is only permitted for users with administrative
+  privileges.
+* Moved some types to a new Types.Internal module and exposed that
+  module for testing purposes. It should not be used by anyone wanting
+  a stable API. For a stable API, see the export list for the Types
+  module.
 
 30802.0.0
 =========
@@ -119,4 +135,4 @@ Initial release for server version 3.6.0.
 0.1.0.0
 =======
 
-First version. Released on an unsuspecting world.
+First version.
