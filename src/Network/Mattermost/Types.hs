@@ -522,7 +522,7 @@ data PostPropAttachment
   , ppaTitle      :: Text
   , ppaTitleLink  :: Text
   , ppaText       :: Text
-  , ppaFields     :: [PostPropAttachmentField]
+  , ppaFields     :: Seq PostPropAttachmentField
   , ppaImageURL   :: Text
   , ppaThumbURL   :: Text
   , ppaFooter     :: Text
