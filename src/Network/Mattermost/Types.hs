@@ -492,16 +492,60 @@ instance A.FromJSON User where
     userLocale             <- o .: "locale"
     return User { .. }
 
+-- The PostPropAttachment and PostPropAttachmentField types are
+-- actually defined by Slack, and simply used by MatterMost; the
+-- description of these fields can be found in this document:
+-- https://api.slack.com/docs/message-attachments
+
+data PostPropAttachmentField = PostPropAttachmentField
+  { ppafTitle :: Text
+  , ppafValue :: Text
+  , ppafShort :: Bool
+  } deriving (Read, Show, Eq)
+
+instance A.FromJSON PostPropAttachmentField where
+  parseJSON = A.withObject "PostPropAttachmentField" $ \v -> do
+    ppafTitle <- v .: "title"
+    ppafValue <- v .: "value"
+    ppafShort <- v .: "short"
+    return PostPropAttachmentField { .. }
+
 data PostPropAttachment
   = PostPropAttachment
-  { ppaColor :: Text
-  , ppaText  :: Text
+  { ppaId         :: Int
+  , ppaFallback   :: Text
+  , ppaColor      :: Text
+  , ppaPretext    :: Text
+  , ppaAuthorName :: Text
+  , ppaAuthorLink :: Text
+  , ppaAuthorIcon :: Text
+  , ppaTitle      :: Text
+  , ppaTitleLink  :: Text
+  , ppaText       :: Text
+  , ppaFields     :: [PostPropAttachmentField]
+  , ppaImageURL   :: Text
+  , ppaThumbURL   :: Text
+  , ppaFooter     :: Text
+  , ppaFooterIcon :: Text
   } deriving (Read, Show, Eq)
 
 instance A.FromJSON PostPropAttachment where
   parseJSON = A.withObject "Attachment" $ \v -> do
-    ppaColor <- v .: "color"
-    ppaText  <- v .: "text"
+    ppaId         <- v .: "id"
+    ppaFallback   <- v .: "fallback"
+    ppaColor      <- v .: "color"
+    ppaPretext    <- v .: "pretext"
+    ppaAuthorName <- v .: "author_name"
+    ppaAuthorLink <- v .: "author_link"
+    ppaAuthorIcon <- v .: "author_icon"
+    ppaTitle      <- v .: "title"
+    ppaTitleLink  <- v .: "title_link"
+    ppaText       <- v .: "text"
+    ppaFields     <- v .: "fields"
+    ppaImageURL   <- v .: "image_url"
+    ppaThumbURL   <- v .: "thumb_url"
+    ppaFooter     <- v .: "footer"
+    ppaFooterIcon <- v .: "footer_icon"
     return PostPropAttachment { .. }
 
 instance A.ToJSON PostPropAttachment where
