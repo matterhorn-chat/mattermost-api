@@ -541,7 +541,7 @@ instance A.FromJSON PostPropAttachment where
     ppaTitle      <- v .: "title"
     ppaTitleLink  <- v .: "title_link"
     ppaText       <- v .: "text"
-    ppaFields     <- v .: "fields"
+    ppaFields     <- (v .: "fields" <|> return mempty)
     ppaImageURL   <- v .: "image_url"
     ppaThumbURL   <- v .: "thumb_url"
     ppaFooter     <- v .: "footer"
