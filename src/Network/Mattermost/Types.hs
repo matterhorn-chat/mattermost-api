@@ -531,21 +531,22 @@ data PostPropAttachment
 
 instance A.FromJSON PostPropAttachment where
   parseJSON = A.withObject "Attachment" $ \v -> do
-    ppaId         <- v .: "id"
-    ppaFallback   <- v .: "fallback"
-    ppaColor      <- v .: "color"
-    ppaPretext    <- v .: "pretext"
-    ppaAuthorName <- v .: "author_name"
-    ppaAuthorLink <- v .: "author_link"
-    ppaAuthorIcon <- v .: "author_icon"
-    ppaTitle      <- v .: "title"
-    ppaTitleLink  <- v .: "title_link"
-    ppaText       <- v .: "text"
-    ppaFields     <- (v .: "fields" <|> return mempty)
-    ppaImageURL   <- v .: "image_url"
-    ppaThumbURL   <- v .: "thumb_url"
-    ppaFooter     <- v .: "footer"
-    ppaFooterIcon <- v .: "footer_icon"
+    let x .:?? f = x .: f <|> return mempty
+    ppaId         <- v .: "id" <|> return 0
+    ppaFallback   <- v .:?? "fallback"
+    ppaColor      <- v .:?? "color"
+    ppaPretext    <- v .:?? "pretext"
+    ppaAuthorName <- v .:?? "author_name"
+    ppaAuthorLink <- v .:?? "author_link"
+    ppaAuthorIcon <- v .:?? "author_icon"
+    ppaTitle      <- v .:?? "title"
+    ppaTitleLink  <- v .:?? "title_link"
+    ppaText       <- v .:?? "text"
+    ppaFields     <- v .:?? "fields"
+    ppaImageURL   <- v .:?? "image_url"
+    ppaThumbURL   <- v .:?? "thumb_url"
+    ppaFooter     <- v .:?? "footer"
+    ppaFooterIcon <- v .:?? "footer_icon"
     return PostPropAttachment { .. }
 
 instance A.ToJSON PostPropAttachment where
