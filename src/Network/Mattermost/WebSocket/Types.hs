@@ -167,6 +167,7 @@ data WEData = WEData
   , wepPost               :: Maybe Post
   , wepStatus             :: Maybe Text
   , wepReaction           :: Maybe Reaction
+  , wepServerVersion      :: Maybe Text
   } deriving (Read, Show, Eq)
 
 instance FromJSON WEData where
@@ -186,6 +187,7 @@ instance FromJSON WEData where
     wepReaction <- case wepReactionRaw of
       Just str -> fromValueString str
       Nothing  -> return Nothing
+    wepServerVersion      <- o .:? "server_version"
     return WEData { .. }
 
 instance ToJSON WEData where
