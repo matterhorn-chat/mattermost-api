@@ -23,7 +23,7 @@ import           Data.ByteString.Lazy (fromStrict, toStrict)
 import qualified Data.ByteString.Lazy.Char8 as BC
 import qualified Data.HashMap.Strict as HM
 import           Data.Int (Int64)
-import           Data.Sequence (Seq)
+import           Data.Set (Set)
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Text.Encoding (decodeUtf8, encodeUtf8)
@@ -168,7 +168,7 @@ data WEData = WEData
   , wepPost               :: Maybe Post
   , wepStatus             :: Maybe Text
   , wepReaction           :: Maybe Reaction
-  , wepMentions           :: Maybe (Seq Text)
+  , wepMentions           :: Maybe (Set UserId)
   } deriving (Read, Show, Eq)
 
 instance FromJSON WEData where
