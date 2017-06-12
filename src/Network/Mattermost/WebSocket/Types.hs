@@ -23,6 +23,7 @@ import           Data.ByteString.Lazy (fromStrict, toStrict)
 import qualified Data.ByteString.Lazy.Char8 as BC
 import qualified Data.HashMap.Strict as HM
 import           Data.Int (Int64)
+import           Data.Sequence (Seq)
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Text.Encoding (decodeUtf8, encodeUtf8)
@@ -167,6 +168,7 @@ data WEData = WEData
   , wepPost               :: Maybe Post
   , wepStatus             :: Maybe Text
   , wepReaction           :: Maybe Reaction
+  , wepMentions           :: Maybe (Seq Text)
   } deriving (Read, Show, Eq)
 
 instance FromJSON WEData where
@@ -186,6 +188,10 @@ instance FromJSON WEData where
     wepReaction <- case wepReactionRaw of
       Just str -> fromValueString str
       Nothing  -> return Nothing
+    wepMentionsRaw <- o .:? "mentions"
+    wepMentions <- case wepMentionsRaw of
+      Just str -> fromValueString str
+      Nothing  -> return Nothing
     return WEData { .. }
 
 instance ToJSON WEData where
@@ -197,6 +203,7 @@ instance ToJSON WEData where
     , "channel_name" .= wepChannelDisplayName
     , "post"         .= toValueString wepPost
     , "reaction"     .= wepReaction
+    , "mentions"     .= toValueString wepMentions
     ]
 
 --
