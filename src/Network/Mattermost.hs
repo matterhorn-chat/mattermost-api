@@ -4,7 +4,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Network.Mattermost
 ( -- * Types
-  -- ** Mattermost-Related Types (deprecated: use Network.MatterMost.Types instead)
+  -- ** Mattermost-Related Types (deprecated: use Network.Mattermost.Types instead)
   -- n.b. the deprecation notice is in that haddock header because we're
   -- still waiting for https://ghc.haskell.org/trac/ghc/ticket/4879 ...
   Login(..)

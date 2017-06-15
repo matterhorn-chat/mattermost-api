@@ -1,7 +1,7 @@
 name:                mattermost-api
 version:             30802.1.0
-synopsis:            Client API for MatterMost chat system
-description:         Client API for MatterMost chat system
+synopsis:            Client API for Mattermost chat system
+description:         Client API for Mattermost chat system
 license:             BSD3
 license-file:        LICENSE
 author:              Jason Dagit
