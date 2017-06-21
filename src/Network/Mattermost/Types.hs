@@ -940,3 +940,118 @@ instance A.ToJSON Reaction where
     , "emoji_name" .= reactionEmojiName
     , "create_at"  .= utcTimeToMilliseconds reactionCreateAt
     ]
+
+-- * Preferences
+
+data PreferenceCategory
+  = PreferenceCategoryDirectChannelShow
+  | PreferenceCategoryTutorialStep
+  | PreferenceCategoryAdvancedSettings
+  | PreferenceCategoryFlaggedPost
+  | PreferenceCategoryDisplaySettings
+  | PreferenceCategoryTheme
+  | PreferenceCategoryAuthorizedOAuthApp
+  | PreferenceCategoryNotifications
+  | PreferenceCategoryOther Text
+    deriving (Read, Show, Eq)
+
+instance A.FromJSON PreferenceCategory where
+  parseJSON = A.withText "PreferenceCategory" $ \t -> return $ case t of
+    "direct_channel_show" -> PreferenceCategoryDirectChannelShow
+    "tutorial_step"       -> PreferenceCategoryTutorialStep
+    "advanced_settings"   -> PreferenceCategoryAdvancedSettings
+    "flagged_post"        -> PreferenceCategoryFlaggedPost
+    "display_settings"    -> PreferenceCategoryDisplaySettings
+    "theme"               -> PreferenceCategoryTheme
+    "oauth_app"           -> PreferenceCategoryAuthorizedOAuthApp
+    "notifications"       -> PreferenceCategoryNotifications
+    _                     -> PreferenceCategoryOther t
+
+instance A.ToJSON PreferenceCategory where
+  toJSON cat = A.String $ case cat of
+    PreferenceCategoryDirectChannelShow  -> "direct_channel_show"
+    PreferenceCategoryTutorialStep       -> "tutorial_step"
+    PreferenceCategoryAdvancedSettings   -> "advanced_settings"
+    PreferenceCategoryFlaggedPost        -> "flagged_post"
+    PreferenceCategoryDisplaySettings    -> "display_settings"
+    PreferenceCategoryTheme              -> "theme"
+    PreferenceCategoryAuthorizedOAuthApp -> "oauth_app"
+    PreferenceCategoryNotifications      -> "notifications"
+    PreferenceCategoryOther t            -> t
+
+data PreferenceName
+  = PreferenceName { fromRawPreferenceName :: Text }
+    deriving (Read, Show, Eq)
+
+instance A.FromJSON PreferenceName where
+  parseJSON = A.withText "PreferenceValue" (return . PreferenceName)
+
+instance A.ToJSON PreferenceName where
+  toJSON = A.toJSON . fromRawPreferenceName
+
+data PreferenceValue
+  = PreferenceValue { fromRawPreferenceValue :: Text }
+    deriving (Read, Show, Eq)
+
+instance A.FromJSON PreferenceValue where
+  parseJSON = A.withText "PreferenceValue" (return . PreferenceValue)
+
+instance A.ToJSON PreferenceValue where
+  toJSON = A.toJSON . fromRawPreferenceValue
+
+data Preference
+  = Preference
+  { preferenceUserId   :: UserId
+  , preferenceCategory :: PreferenceCategory
+  , preferenceName     :: PreferenceName
+  , preferenceValue    :: PreferenceValue
+  } deriving (Read, Show, Eq)
+
+instance A.FromJSON Preference where
+  parseJSON = A.withObject "Preference" $ \v -> do
+    preferenceUserId   <- v .: "user_id"
+    preferenceCategory <- v .: "category"
+    preferenceName     <- v .: "name"
+    preferenceValue    <- v .: "value"
+    return Preference { .. }
+
+instance A.ToJSON Preference where
+  toJSON Preference { .. } = A.object
+    [ "user_id"  .= preferenceUserId
+    , "category" .= preferenceCategory
+    , "name"     .= preferenceName
+    , "value"    .= preferenceValue
+    ]
+
+data FlaggedPost = FlaggedPost
+  { flaggedPostUserId :: UserId
+  , flaggedPostId     :: PostId
+  , flaggedPostStatus :: Bool
+  } deriving (Read, Show, Eq)
+
+-- | Attempt to expose a 'Preference' as a 'FlaggedPost'
+preferenceToFlaggedPost :: Preference -> Maybe FlaggedPost
+preferenceToFlaggedPost
+  Preference
+    { preferenceCategory = PreferenceCategoryFlaggedPost
+    , preferenceName     = PreferenceName name
+    , preferenceValue    = PreferenceValue value
+    , preferenceUserId   = userId
+    } = Just FlaggedPost
+          { flaggedPostUserId = userId
+          , flaggedPostId     = PI (Id name)
+          , flaggedPostStatus = value == "true"
+          }
+preferenceToFlaggedPost _ = Nothing
+
+instance A.ToJSON FlaggedPost where
+  toJSON FlaggedPost
+    { flaggedPostUserId = userId
+    , flaggedPostId     = PI (Id name)
+    , flaggedPostStatus = status
+    } = A.toJSON $ Preference
+          { preferenceCategory = PreferenceCategoryFlaggedPost
+          , preferenceName     = PreferenceName name
+          , preferenceValue    = PreferenceValue (if status then "true" else "false")
+          , preferenceUserId   = userId
+          }

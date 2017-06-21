@@ -41,6 +41,12 @@ module Network.Mattermost
 , MinCommand(..)
 , CommandResponse(..)
 , CommandResponseType(..)
+, Preference(..)
+, PreferenceCategory(..)
+, PreferenceName(..)
+, PreferenceValue(..)
+, FlaggedPost(..)
+, preferenceToFlaggedPost
 -- ** Log-related types
 , Logger
 , LogEvent(..)
@@ -93,6 +99,9 @@ module Network.Mattermost
 , mmUpdatePost
 , mmExecute
 , mmGetConfig
+, mmSavePreferences
+, mmFlagPost
+, mmGetMyPreferences
 , mkPendingPost
 , idString
 , hoistE
@@ -758,6 +767,47 @@ mmGetReactionsForPost sess tId cId pId = do
                     (idString cId)
                     (idString pId)
   mmDoRequest sess "mmGetReactionsForPost" path
+
+-- |
+-- route: @\/api\/v3\/preferences\/save@
+mmSavePreferences :: Session
+                  -> Seq.Seq Preference
+                  -> IO ()
+mmSavePreferences sess pref = do
+  uri <- mmPath "/api/v3/preferences/save"
+  _ <- mmPOST sess uri pref
+  return ()
+
+-- |
+-- route: @\/api\/v3\/preferences\/save@
+--
+-- This is a convenience function for a particular use of
+-- 'mmSavePreference'
+mmFlagPost :: Session
+           -> UserId
+           -> PostId
+           -> Bool
+           -> IO ()
+mmFlagPost sess uId pId status = do
+  let flaggedPost =
+        FlaggedPost
+          { flaggedPostUserId = uId
+          , flaggedPostId     = pId
+          , flaggedPostStatus = status
+          }
+  let rawPath = "/api/v3/preferences/save"
+  runLoggerS sess "mmLogin" $
+    HttpRequest POST rawPath (Just (toJSON [flaggedPost]))
+  uri <- mmPath rawPath
+  _ <- mmPOST sess uri (Seq.singleton flaggedPost)
+  return ()
+
+
+mmGetMyPreferences :: Session
+                -> IO (Seq.Seq Preference)
+mmGetMyPreferences sess =
+  mmDoRequest sess "mmMyPreferences" "/api/v4/users/me/preferences"
+
 
 -- | This is for making a generic authenticated request.
 mmRequest :: Session -> URI -> IO Response_String

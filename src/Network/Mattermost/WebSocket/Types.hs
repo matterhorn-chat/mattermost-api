@@ -23,6 +23,7 @@ import           Data.ByteString.Lazy (fromStrict, toStrict)
 import qualified Data.ByteString.Lazy.Char8 as BC
 import qualified Data.HashMap.Strict as HM
 import           Data.Int (Int64)
+import           Data.Sequence (Seq)
 import           Data.Set (Set)
 import           Data.Text (Text)
 import qualified Data.Text as T
@@ -51,6 +52,7 @@ data WebsocketEventType
   | WMUserUpdated
   | WMUserRemoved
   | WMPreferenceChanged
+  | WMPreferenceDeleted
   | WMEphemeralMessage
   | WMStatusChange
   | WMHello
@@ -73,7 +75,7 @@ instance FromJSON WebsocketEventType where
     "user_added"         -> return WMUserAdded
     "user_updated"       -> return WMUserUpdated
     "user_removed"       -> return WMUserRemoved
-    "preference_changed" -> return WMPreferenceChanged
+    "preferences_changed" -> return WMPreferenceChanged
     "ephemeral_message"  -> return WMEphemeralMessage
     "status_change"      -> return WMStatusChange
     "hello"              -> return WMHello
@@ -85,6 +87,7 @@ instance FromJSON WebsocketEventType where
     "added_to_team"      -> return WMAddedToTeam
     "webrtc"             -> return WMWebRTC
     "authentication_challenge" -> return WMAuthenticationChallenge
+    "preferences_deleted" -> return WMPreferenceDeleted
     _                    -> fail ("Unknown websocket message: " ++ show s)
 
 instance ToJSON WebsocketEventType where
@@ -99,7 +102,8 @@ instance ToJSON WebsocketEventType where
   toJSON WMUserAdded         = "user_added"
   toJSON WMUserUpdated       = "user_updated"
   toJSON WMUserRemoved       = "user_removed"
-  toJSON WMPreferenceChanged = "preference_changed"
+  toJSON WMPreferenceChanged = "preferences_changed"
+  toJSON WMPreferenceDeleted = "preferences_deleted"
   toJSON WMEphemeralMessage  = "ephemeral_message"
   toJSON WMStatusChange      = "status_change"
   toJSON WMHello             = "hello"
@@ -169,6 +173,7 @@ data WEData = WEData
   , wepStatus             :: Maybe Text
   , wepReaction           :: Maybe Reaction
   , wepMentions           :: Maybe (Set UserId)
+  , wepPreferences        :: Maybe (Seq Preference)
   } deriving (Read, Show, Eq)
 
 instance FromJSON WEData where
@@ -192,6 +197,10 @@ instance FromJSON WEData where
     wepMentions <- case wepMentionsRaw of
       Just str -> fromValueString str
       Nothing  -> return Nothing
+    wepPreferencesRaw <- o .:? "preferences"
+    wepPreferences <- case wepPreferencesRaw of
+      Just str -> fromValueString str
+      Nothing  -> return Nothing
     return WEData { .. }
 
 instance ToJSON WEData where
@@ -204,6 +213,7 @@ instance ToJSON WEData where
     , "post"         .= toValueString wepPost
     , "reaction"     .= wepReaction
     , "mentions"     .= toValueString wepMentions
+    , "preferences"  .= toValueString wepPreferences
     ]
 
 --
