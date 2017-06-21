@@ -15,8 +15,10 @@ module Network.Mattermost.Logging
 , mmLoggerDebugFilterErr
 ) where
 
+import Control.Monad (when)
 import Data.Time.Clock (getCurrentTime)
-import System.IO (Handle, hFlush, hPutStr, stderr)
+import System.IO (Handle, hFlush, hPutStr, stderr
+                 , hIsSeekable, hSeek, SeekMode(..))
 
 import Network.Mattermost.Types.Base
 
@@ -33,6 +35,8 @@ mmLoggerDebugFilter p h l
 mmLoggerDebug :: Handle -> Logger
 mmLoggerDebug h LogEvent { logFunction = f, logEventType = e } = do
   now <- getCurrentTime
+  canSeek <- hIsSeekable h
+  when canSeek $ hSeek h SeekFromEnd 0
   mapM_ (hPutStr h)
     [ "[", show now, "] ", f, ": ", show e, "\n" ]
   hFlush h
@@ -62,6 +66,8 @@ mmLoggerInfoFilter p h l
 mmLoggerInfo :: Handle -> Logger
 mmLoggerInfo h LogEvent { logFunction = f, logEventType = e } = do
   now <- getCurrentTime
+  canSeek <- hIsSeekable h
+  when canSeek $ hSeek h SeekFromEnd 0
   mapM_ (hPutStr h)
     [ "[", show now, "] ", f, ": ", info e, "\n" ]
   hFlush h
