@@ -100,7 +100,9 @@ module Network.Mattermost
 , mmExecute
 , mmGetConfig
 , mmSavePreferences
+, mmDeletePreferences
 , mmFlagPost
+, mmUnflagPost
 , mmGetMyPreferences
 , mkPendingPost
 , idString
@@ -780,23 +782,55 @@ mmSavePreferences sess pref = do
 
 -- |
 -- route: @\/api\/v3\/preferences\/save@
+mmDeletePreferences :: Session
+                  -> Seq.Seq Preference
+                  -> IO ()
+mmDeletePreferences sess pref = do
+  uri <- mmPath "/api/v3/preferences/delete"
+  _ <- mmPOST sess uri pref
+  return ()
+
+-- |
+-- route: @\/api\/v3\/preferences\/save@
 --
 -- This is a convenience function for a particular use of
 -- 'mmSavePreference'
 mmFlagPost :: Session
            -> UserId
            -> PostId
-           -> Bool
            -> IO ()
-mmFlagPost sess uId pId status = do
+mmFlagPost sess uId pId = do
   let flaggedPost =
         FlaggedPost
           { flaggedPostUserId = uId
           , flaggedPostId     = pId
-          , flaggedPostStatus = status
+          , flaggedPostStatus = True
           }
   let rawPath = "/api/v3/preferences/save"
-  runLoggerS sess "mmLogin" $
+  runLoggerS sess "mmFlagPost" $
+    HttpRequest POST rawPath (Just (toJSON [flaggedPost]))
+  uri <- mmPath rawPath
+  _ <- mmPOST sess uri (Seq.singleton flaggedPost)
+  return ()
+
+-- |
+-- route: @\/api\/v3\/preferences\/save@
+--
+-- This is a convenience function for a particular use of
+-- 'mmSavePreference'
+mmUnflagPost :: Session
+           -> UserId
+           -> PostId
+           -> IO ()
+mmUnflagPost sess uId pId = do
+  let flaggedPost =
+        FlaggedPost
+          { flaggedPostUserId = uId
+          , flaggedPostId     = pId
+          , flaggedPostStatus = True
+          }
+  let rawPath = "/api/v3/preferences/dleete"
+  runLoggerS sess "mmUnflagPost" $
     HttpRequest POST rawPath (Just (toJSON [flaggedPost]))
   uri <- mmPath rawPath
   _ <- mmPOST sess uri (Seq.singleton flaggedPost)
