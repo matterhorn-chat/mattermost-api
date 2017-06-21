@@ -29,6 +29,7 @@ module Network.Mattermost
 , MinChannel(..)
 , UsersCreate(..)
 , Post(..)
+, PostType(..)
 , PostProps(..)
 , PendingPost(..)
 , PostId(..)

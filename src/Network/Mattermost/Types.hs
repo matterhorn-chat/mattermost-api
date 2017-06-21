@@ -121,7 +121,6 @@ data Type = Ordinary
           | Direct
           | Private
           | Group
-          | SystemHeaderChange
           | Unknown Text
   deriving (Read, Show, Ord, Eq)
 
@@ -131,14 +130,12 @@ instance A.FromJSON Type where
                   | t == "D"  -> Direct
                   | t == "P"  -> Private
                   | t == "G"  -> Group
-                  | t == "system_header_change" -> SystemHeaderChange
                   | otherwise -> Unknown t
 
 instance A.ToJSON Type where
   toJSON Direct              = A.toJSON ("D"::Text)
   toJSON Ordinary            = A.toJSON ("O"::Text)
   toJSON Private             = A.toJSON ("P"::Text)
-  toJSON SystemHeaderChange  = A.toJSON ("system_header_change"::Text)
   toJSON Group     = A.toJSON ("G"::Text)
   toJSON (Unknown t)         = A.toJSON t
 
@@ -599,6 +596,45 @@ urlForFile :: FileId -> Text
 urlForFile fId =
   "/api/v3/files/" <> idString fId <> "/get"
 
+data PostType
+  = PostTypeJoinChannel
+  | PostTypeLeaveChannel
+  | PostTypeAddToChannel
+  | PostTypeRemoveFromChannel
+  | PostTypeHeaderChange
+  | PostTypeDisplayNameChange
+  | PostTypePurposeChange
+  | PostTypeChannelDeleted
+  | PostTypeEphemeral
+  | PostTypeUnknown T.Text
+    deriving (Read, Show, Eq)
+
+instance A.FromJSON PostType where
+  parseJSON = A.withText "Post type" $ \ t -> return $ case t of
+    "system_join_channel"        -> PostTypeJoinChannel
+    "system_leave_channel"       -> PostTypeLeaveChannel
+    "system_add_to_channel"      -> PostTypeAddToChannel
+    "system_remove_from_channel" -> PostTypeRemoveFromChannel
+    "system_header_change"       -> PostTypeHeaderChange
+    "system_displayname_change"  -> PostTypeDisplayNameChange
+    "system_purpose_change"      -> PostTypePurposeChange
+    "system_channel_deleted"     -> PostTypeChannelDeleted
+    "system_ephemeral"           -> PostTypeEphemeral
+    _                            -> PostTypeUnknown t
+
+instance A.ToJSON PostType where
+  toJSON typ = A.String $ case typ of
+    PostTypeJoinChannel       -> "system_join_channel"
+    PostTypeLeaveChannel      -> "system_leave_channel"
+    PostTypeAddToChannel      -> "system_add_to_channel"
+    PostTypeRemoveFromChannel -> "system_remove_from_channel"
+    PostTypeHeaderChange      -> "system_header_change"
+    PostTypeDisplayNameChange -> "system_displayname_change"
+    PostTypePurposeChange     -> "system_purpose_change"
+    PostTypeChannelDeleted    -> "system_channel_deleted"
+    PostTypeEphemeral         -> "system_ephemeral"
+    PostTypeUnknown t         -> t
+
 data Post
   = Post
   { postPendingPostId :: Maybe PostId
@@ -607,7 +643,7 @@ data Post
   , postRootId        :: Text
   , postFileIds       :: Seq FileId
   , postId            :: PostId
-  , postType          :: Type
+  , postType          :: PostType
   , postMessage       :: Text
   , postDeleteAt      :: Maybe UTCTime
   , postHashtags      :: Text
