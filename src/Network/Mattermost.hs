@@ -819,9 +819,9 @@ mmFlagPost sess uId pId = do
 -- This is a convenience function for a particular use of
 -- 'mmSavePreference'
 mmUnflagPost :: Session
-           -> UserId
-           -> PostId
-           -> IO ()
+             -> UserId
+             -> PostId
+             -> IO ()
 mmUnflagPost sess uId pId = do
   let flaggedPost =
         FlaggedPost
@@ -829,7 +829,7 @@ mmUnflagPost sess uId pId = do
           , flaggedPostId     = pId
           , flaggedPostStatus = True
           }
-  let rawPath = "/api/v3/preferences/dleete"
+  let rawPath = "/api/v3/preferences/delete"
   runLoggerS sess "mmUnflagPost" $
     HttpRequest POST rawPath (Just (toJSON [flaggedPost]))
   uri <- mmPath rawPath
