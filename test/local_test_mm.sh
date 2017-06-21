@@ -81,11 +81,11 @@ then
 fi
 
 notice "Log file location: $LOGFILE"
-notice "Cleaning up preexisting MatterMost container"
+notice "Cleaning up preexisting Mattermost container"
 cleanup_last_container
 
 # If this command fails we're in trouble.
-notice "Running a new MatterMost container"
+notice "Running a new Mattermost container"
 logged docker run  --name mattermost -d --publish 8065:8065 mattermost/$CONTAINER:$VERSION
 notice "docker run returned: $?"
 

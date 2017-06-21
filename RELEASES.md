@@ -8,8 +8,8 @@ the platforms on which binary distributions will be built.
 
 1. Set the `mattermost-api` package version in the cabal file. The
    version string must be of the form `XYYZZ.B.C` where XYYZZ
-   corresponds to the MatterMost server version supported by the
-   release. For example, if the release supports MatterMost server
+   corresponds to the Mattermost server version supported by the
+   release. For example, if the release supports Mattermost server
    version 1.2.3, the XYYZZ portion of the `matterhorn` version should
    be `10203`. The `B.C` portion of the version corresponds to our own
    version namespace for the package and should follow the guidelines

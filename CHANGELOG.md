@@ -6,7 +6,7 @@ This release supports server version 3.8.2.
 
 API changes:
 * Made the PendingPost `created_at` field optional. It defaults to 0.
-  This behavior is due to MatterMost's support for admins setting the
+  This behavior is due to Mattermost's support for admins setting the
   creation timestamp to values in the past. A value of zero causes
   the server to use the server's clock to set the creation timestamp.
   Any other value is only permitted for users with administrative

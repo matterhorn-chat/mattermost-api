@@ -490,7 +490,7 @@ instance A.FromJSON User where
     return User { .. }
 
 -- The PostPropAttachment and PostPropAttachmentField types are
--- actually defined by Slack, and simply used by MatterMost; the
+-- actually defined by Slack, and simply used by Mattermost; the
 -- description of these fields can be found in this document:
 -- https://api.slack.com/docs/message-attachments
 
