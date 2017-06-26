@@ -235,7 +235,7 @@ mmLogin cd login = do
   let rawPath = "/api/v3/users/login"
   path <- mmPath rawPath
   runLogger cd "mmLogin" $
-    HttpRequest GET rawPath (Just (toJSON login))
+    HttpRequest GET rawPath (Just (toJSON $ login { password = "<elided>" }))
   rsp  <- mmUnauthenticatedHTTPPost cd path login
   if (rspCode rsp /= (2,0,0))
     then return (Left (LoginFailureException (show (rspCode rsp))))
