@@ -103,6 +103,7 @@ module Network.Mattermost
 , mmDeletePreferences
 , mmFlagPost
 , mmUnflagPost
+, mmGetFlaggedPosts
 , mmGetMyPreferences
 , mkPendingPost
 , idString
@@ -836,6 +837,12 @@ mmUnflagPost sess uId pId = do
   _ <- mmPOST sess uri (Seq.singleton flaggedPost)
   return ()
 
+mmGetFlaggedPosts :: Session
+                  -> UserId
+                  -> IO Posts
+mmGetFlaggedPosts sess uId =
+  let path = printf "/api/v4/users/%s/posts/flagged" (idString uId)
+  in mmDoRequest sess "mmGetFlaggedPosts" path
 
 mmGetMyPreferences :: Session
                 -> IO (Seq.Seq Preference)
