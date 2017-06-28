@@ -238,13 +238,18 @@ mmLogin cd login = do
     HttpRequest GET rawPath (Just (toJSON $ login { password = "<elided>" }))
   rsp  <- mmUnauthenticatedHTTPPost cd path login
   if (rspCode rsp /= (2,0,0))
-    then return (Left (LoginFailureException (show (rspCode rsp))))
+    then do
+        let eMsg = "Server returned unexpected " <> showRespCode (rspCode rsp) <> " response"
+        return $ Left $ LoginFailureException eMsg
     else do
       token <- mmGetHeader   rsp (HdrCustom "Token")
       (raw, value) <- mmGetJSONBody "User" rsp
       runLogger cd "mmLogin" $
         HttpResponse 200 rawPath (Just raw)
       return (Right (Session cd (Token token), value))
+
+showRespCode :: (Int, Int, Int) -> String
+showRespCode (a, b, c) = concat $ show <$> [a, b, c]
 
 -- | Fire off a login attempt. Note: We get back more than just the auth token.
 -- We also get all the server-side configuration data for the user.
