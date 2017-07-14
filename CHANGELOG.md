@@ -1,4 +1,36 @@
 
+31000.0.0
+=========
+
+API changes:
+ * Added flagged posts API:
+   * Types: FlaggedPost
+   * mmGetFlaggedPosts
+   * mmFlagPost
+   * mmUnflagPost
+ * Added preferences API:
+   * Types: Preference, PreferenceCategory, PreferenceName,
+     PreferenceValue
+   * mmDeletePreferences
+   * mmSavePreferences
+   * mmGetMyPreferences
+ * Added PostType for post types (joins, parts, header changes, etc.)
+   and changed the type of Post.postType to use this new type.
+ * Added a new field WEData.wepMentions so that websocket events can
+   include the set of UserIds in a mention set.
+ * Made most fields of PostPropAttachment optional.
+ * Added a new PostPropAttachment type as defined by Slack and used by
+   Mattermost.
+ * Allow null for the "fields" field of PostPropAttachment.
+ * Extended PostPropAttachment with additional fields to better match
+   the upstream spec.
+
+Other changes:
+ * Improved the LoginFailureException message format.
+ * Refrain from logging passwords when logging login requests.
+ * Logging operations seek to the end of the log in case of a shared log
+   file.
+
 30802.1.0
 =========
 
