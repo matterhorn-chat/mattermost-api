@@ -34,8 +34,8 @@ main = do
   i <- mmGetInitialLoad session
   forM_ (initialLoadTeams i) $ \t -> do
     when (teamName t == configTeam config) $ do
-      chans <- mmGetChannels session (teamId t)
+      chans <- mmGetChannels (teamId t) session
       forM_ chans $ \chan -> do
-        channel <- mmGetChannel session (teamId t) (channelId chan)
+        channel <- mmGetChannel (teamId t) (channelId chan) session
         pPrint channel
         putStrLn ""

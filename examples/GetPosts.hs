@@ -118,15 +118,15 @@ main = do
     pPrint i
   forM_ (initialLoadTeams i) $ \t -> do
     when (teamName t == configTeam config) $ do
-      userMap <- mmGetProfiles session (getId t) 0 10000
+      userMap <- mmGetProfiles (getId t) 0 10000 session
       when (optVerbose opts) $ do
         pPrint userMap
-      chans <- mmGetChannels session (getId t)
+      chans <- mmGetChannels (getId t) session
       forM_ chans $ \chan -> do
         when (optVerbose opts) $ do
           pPrint chan
         when (channelName chan == optChannel opts) $ do
-          posts <- mmGetPosts session (getId t) (getId chan) (optOffset opts) (optLimit opts)
+          posts <- mmGetPosts (getId t) (getId chan) (optOffset opts) (optLimit opts) session
           forM_ (reverse (toList (postsOrder posts))) $ \postId -> do
             -- this is just a toy program, so we don't care about
             -- this pattern match failure
