@@ -60,6 +60,8 @@ data WebsocketEventType
   | WMAuthenticationChallenge
   | WMReactionAdded
   | WMReactionRemoved
+  | WMChannelViewed
+  | WMChannelUpdated
   deriving (Read, Show, Eq, Ord)
 
 instance FromJSON WebsocketEventType where
@@ -88,6 +90,8 @@ instance FromJSON WebsocketEventType where
     "webrtc"             -> return WMWebRTC
     "authentication_challenge" -> return WMAuthenticationChallenge
     "preferences_deleted" -> return WMPreferenceDeleted
+    "channel_viewed"     -> return WMChannelViewed
+    "channel_updated"    -> return WMChannelUpdated
     _                    -> fail ("Unknown websocket message: " ++ show s)
 
 instance ToJSON WebsocketEventType where
@@ -115,6 +119,8 @@ instance ToJSON WebsocketEventType where
   toJSON WMAddedToTeam       = "added_to_team"
   toJSON WMWebRTC            = "webrtc"
   toJSON WMAuthenticationChallenge = "authentication_challenge"
+  toJSON WMChannelViewed           = "channel_viewed"
+  toJSON WMChannelUpdated          = "channel_updated"
 
 --
 
