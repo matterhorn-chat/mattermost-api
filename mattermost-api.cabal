@@ -45,7 +45,7 @@ library
                      -- To prevent broken websockets versions from using
                      -- incompatible versions of binary (for details, see
                      -- https://github.com/matterhorn-chat/mattermost-api/issues/36):
-                     , binary >= 0.8.2.0
+                     , binary >= 0.8.1
                      , bytestring
                      , process
                      , HTTP
