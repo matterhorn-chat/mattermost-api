@@ -42,6 +42,9 @@ library
                      , aeson >= 1.0.0.0
                      , connection
                      , memory <0.14.3
+                     -- To prevent broken websockets versions from using
+                     -- incompatible versions of binary:
+                     , binary >= 0.8.2.0
                      , bytestring
                      , process
                      , HTTP
