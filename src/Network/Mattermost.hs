@@ -68,6 +68,9 @@ module Network.Mattermost
 , mmJoinChannel
 , mmGetTeams
 , mmGetChannels
+, mmGetAllChannelsForUser
+, mmGetAllChannelDataForUser
+, mmGetAllChannelsWithDataForUser
 , mmGetMoreChannels
 , mmGetChannel
 , mmViewChannel
@@ -144,7 +147,8 @@ import           Data.Aeson ( Value(..)
                             , encode
                             , eitherDecode
                             )
-import           Data.Maybe ( maybeToList )
+import           Data.Maybe ( maybeToList, fromJust )
+import qualified Data.Foldable as F
 import qualified Data.Sequence as Seq
 import qualified Data.Text as T
 import           Control.Arrow ( left )
@@ -314,6 +318,40 @@ mmGetChannel sess teamid chanid = mmWithRequest sess "mmGetChannel"
           (idString teamid)
           (idString chanid))
   return
+
+-- | Get channel/user metadata in bulk.
+mmGetAllChannelDataForUser :: Session
+                           -> TeamId
+                           -> UserId
+                           -> IO (Seq.Seq ChannelData)
+mmGetAllChannelDataForUser sess teamid userid =
+    mmDoRequest sess "mmGetAllChannelDataForUser" $
+      printf "/api/v4/users/%s/teams/%s/channels/members"
+             (idString userid)
+             (idString teamid)
+
+mmGetAllChannelsForUser :: Session
+                        -> TeamId
+                        -> UserId
+                        -> IO (Seq.Seq Channel)
+mmGetAllChannelsForUser sess teamid userid =
+    mmDoRequest sess "mmGetAllChannelsForUser" $
+      printf "/api/v4/users/%s/teams/%s/channels"
+             (idString userid)
+             (idString teamid)
+
+mmGetAllChannelsWithDataForUser :: Session
+                                -> TeamId
+                                -> UserId
+                                -> IO (HM.HashMap ChannelId ChannelWithData)
+mmGetAllChannelsWithDataForUser sess teamid userid = do
+    chans <- mmGetAllChannelsForUser sess teamid userid
+    datas <- mmGetAllChannelDataForUser sess teamid userid
+
+    let dataMap = HM.fromList $ F.toList $ (\d -> (channelDataChannelId d, d)) <$> datas
+        mkPair chan = (getId chan, ChannelWithData chan $ fromJust $ HM.lookup (getId chan) dataMap)
+
+    return $ HM.fromList $ F.toList $ mkPair <$> chans
 
 -- |
 -- route: @\/api\/v3\/teams\/{team_id}\/channels\/view@
