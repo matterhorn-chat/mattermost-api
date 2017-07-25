@@ -952,6 +952,7 @@ data PreferenceCategory
   | PreferenceCategoryTheme
   | PreferenceCategoryAuthorizedOAuthApp
   | PreferenceCategoryNotifications
+  | PreferenceCategoryLast
   | PreferenceCategoryOther Text
     deriving (Read, Show, Eq)
 
@@ -965,6 +966,7 @@ instance A.FromJSON PreferenceCategory where
     "theme"               -> PreferenceCategoryTheme
     "oauth_app"           -> PreferenceCategoryAuthorizedOAuthApp
     "notifications"       -> PreferenceCategoryNotifications
+    "last"                -> PreferenceCategoryLast
     _                     -> PreferenceCategoryOther t
 
 instance A.ToJSON PreferenceCategory where
@@ -977,6 +979,7 @@ instance A.ToJSON PreferenceCategory where
     PreferenceCategoryTheme              -> "theme"
     PreferenceCategoryAuthorizedOAuthApp -> "oauth_app"
     PreferenceCategoryNotifications      -> "notifications"
+    PreferenceCategoryLast               -> "last"
     PreferenceCategoryOther t            -> t
 
 data PreferenceName
