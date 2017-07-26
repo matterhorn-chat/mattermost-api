@@ -1,4 +1,15 @@
 
+40000.0.0
+=========
+
+Package changes:
+ * Added lower bound for binary to avoid build failures in the websocket
+   package on GHC 7.10 (see https://github.com/jaspervdj/websockets/pull/155)
+
+API changes:
+ * Added support for the `channel_viewed` and `channel_updated`
+   websocket events
+
 31000.0.0
 =========
 
