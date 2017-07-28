@@ -187,7 +187,7 @@ data WEData = WEData
 
 instance FromJSON WEData where
   parseJSON = A.withObject "WebSocketEvent Data" $ \o -> do
-    wepChannelId          <- o .:? "channel_id"
+    wepChannelId          <- nullable (o .: "channel_id")
     wepTeamId             <- maybeFail (o .: "team_id")
     wepSenderName         <- o .:? "sender_name"
     wepUserId             <- o .:? "user_id"
