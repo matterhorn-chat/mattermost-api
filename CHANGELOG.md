@@ -1,4 +1,11 @@
 
+40000.0.1
+=========
+
+API changes:
+ * Added support for the `emoji_added` websocket event type.
+ * WEData's JSON parser now permits both null and empty channel IDs.
+
 40000.0.0
 =========
 
