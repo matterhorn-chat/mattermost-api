@@ -62,6 +62,7 @@ data WebsocketEventType
   | WMReactionRemoved
   | WMChannelViewed
   | WMChannelUpdated
+  | WMEmojiAdded
   deriving (Read, Show, Eq, Ord)
 
 instance FromJSON WebsocketEventType where
@@ -92,6 +93,7 @@ instance FromJSON WebsocketEventType where
     "preferences_deleted" -> return WMPreferenceDeleted
     "channel_viewed"     -> return WMChannelViewed
     "channel_updated"    -> return WMChannelUpdated
+    "emoji_added"        -> return WMEmojiAdded
     _                    -> fail ("Unknown websocket message: " ++ show s)
 
 instance ToJSON WebsocketEventType where
@@ -121,6 +123,7 @@ instance ToJSON WebsocketEventType where
   toJSON WMAuthenticationChallenge = "authentication_challenge"
   toJSON WMChannelViewed           = "channel_viewed"
   toJSON WMChannelUpdated          = "channel_updated"
+  toJSON WMEmojiAdded              = "emoji_added"
 
 --
 
@@ -184,7 +187,7 @@ data WEData = WEData
 
 instance FromJSON WEData where
   parseJSON = A.withObject "WebSocketEvent Data" $ \o -> do
-    wepChannelId          <- o .:? "channel_id"
+    wepChannelId          <- nullable (o .: "channel_id")
     wepTeamId             <- maybeFail (o .: "team_id")
     wepSenderName         <- o .:? "sender_name"
     wepUserId             <- o .:? "user_id"
