@@ -863,7 +863,7 @@ instance A.FromJSON CommandResponseType where
 
 data CommandResponse
   = CommandResponse
-  { commandResponseType         :: CommandResponseType
+  { commandResponseType         :: Maybe CommandResponseType
   , commandResponseText         :: Text
   , commandResponseUsername     :: Text
   , commandResponseIconURL      :: Text
@@ -873,7 +873,7 @@ data CommandResponse
 
 instance A.FromJSON CommandResponse where
   parseJSON = A.withObject "CommandResponse" $ \o -> do
-    commandResponseType         <- o .: "response_type"
+    commandResponseType         <- optional (o .: "response_type")
     commandResponseText         <- o .: "text"
     commandResponseUsername     <- o .: "username"
     commandResponseIconURL      <- o .: "icon_url"
