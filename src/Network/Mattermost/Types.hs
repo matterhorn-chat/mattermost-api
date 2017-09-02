@@ -810,12 +810,16 @@ data MinCommand
   = MinCommand
   { minComChannelId :: ChannelId
   , minComCommand   :: Text
+  , minComParentId  :: Maybe PostId
+  , minComRootId    :: Maybe PostId
   } deriving (Read, Show, Eq)
 
 instance A.ToJSON MinCommand where
   toJSON MinCommand { .. } = A.object
     [ "channel_id" .= minComChannelId
     , "command"   .= minComCommand
+    , "parent_id" .= minComParentId
+    , "root_id" .= minComRootId
     ]
 
 --
