@@ -640,7 +640,7 @@ data Post
   { postPendingPostId :: Maybe PostId
   , postOriginalId    :: Maybe PostId
   , postProps         :: PostProps
-  , postRootId        :: Text
+  , postRootId        :: Maybe PostId
   , postFileIds       :: Seq FileId
   , postId            :: PostId
   , postType          :: PostType
@@ -663,7 +663,7 @@ instance A.FromJSON Post where
     postPendingPostId <- maybeFail (v .: "pending_post_id")
     postOriginalId    <- maybeFail (v .: "original_id")
     postProps         <- v .: "props"
-    postRootId        <- v .: "root_id"
+    postRootId        <- maybeFail (v .: "root_id")
     postFileIds       <- (v .: "file_ids") <|> (return mempty)
     postId            <- v .: "id"
     postType          <- v .: "type"
