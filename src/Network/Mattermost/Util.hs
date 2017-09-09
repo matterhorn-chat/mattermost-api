@@ -89,8 +89,10 @@ mkConnection cd = do
                                then Just (TLSSettingsSimple False False False)
                                else Nothing
     , connectionUseSocks  = do
-        (host, port) <- proxy
-        return $ SockSettingsSimple host (toEnum port)
+        (ty, host, port) <- proxy
+        case ty of
+            Socks -> return $ SockSettingsSimple host (toEnum port)
+            Other -> return $ OtherProxy host (toEnum port)
     }
 
 

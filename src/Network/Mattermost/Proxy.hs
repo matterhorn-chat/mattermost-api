@@ -1,5 +1,6 @@
 module Network.Mattermost.Proxy
   ( Scheme(..)
+  , ProxyType(..)
   , proxyForScheme
   , proxyHostPermitted
   )
@@ -16,6 +17,9 @@ import Text.Read (readMaybe)
 data Scheme = HTTP | HTTPS
             deriving (Eq, Show)
 
+data ProxyType = Socks | Other
+               deriving (Eq, Show)
+
 newtype NormalizedEnv = NormalizedEnv [(String, String)]
 
 proxyHostPermitted :: String -> IO Bool
@@ -29,7 +33,7 @@ proxyHostPermitted hostname = do
             return $ not $ (hostname `elem` blacklistedHosts) ||
                            allHostsBlocked
 
-proxyForScheme :: Scheme -> IO (Maybe (String, Int))
+proxyForScheme :: Scheme -> IO (Maybe (ProxyType, String, Int))
 proxyForScheme s = do
     env <- getEnvironment
     let proxy = case s of
@@ -37,27 +41,33 @@ proxyForScheme s = do
           HTTPS -> httpsProxy
     return $ proxy $ normalizeEnv env
 
-httpProxy :: NormalizedEnv -> Maybe (String, Int)
-httpProxy env = socksProxyFor "HTTP_PROXY" env <|>
-                socksProxyFor "ALL_PROXY" env
+httpProxy :: NormalizedEnv -> Maybe (ProxyType, String, Int)
+httpProxy env = proxyFor "HTTP_PROXY" env <|>
+                proxyFor "ALL_PROXY" env
 
-httpsProxy :: NormalizedEnv -> Maybe (String, Int)
-httpsProxy env = socksProxyFor "HTTPS_PROXY" env <|>
-                 socksProxyFor "ALL_PROXY" env
+httpsProxy :: NormalizedEnv -> Maybe (ProxyType, String, Int)
+httpsProxy env = proxyFor "HTTPS_PROXY" env <|>
+                 proxyFor "ALL_PROXY" env
 
-socksProxyFor :: String -> NormalizedEnv -> Maybe (String, Int)
-socksProxyFor name env = do
+proxyFor :: String -> NormalizedEnv -> Maybe (ProxyType, String, Int)
+proxyFor name env = do
     val <- envLookup name env
     uri <- parseURI val
 
     let scheme = uriScheme uri
-        isSocks = "socks" `isPrefixOf` scheme
-    if isSocks
-       then do
-           auth <- uriAuthority uri
-           port <- readMaybe (drop 1 $ uriPort auth)
-           return (uriRegName auth, port)
-        else Nothing
+        getProxyType = isSocks <|> isHttp
+        isSocks = if "socks" `isPrefixOf` scheme
+                     then return Socks
+                     else Nothing
+        isHttp = if "https" `isPrefixOf` scheme ||
+                    "http" `isPrefixOf` scheme
+                    then return Other
+                    else Nothing
+
+    ty <- getProxyType
+    auth <- uriAuthority uri
+    port <- readMaybe (drop 1 $ uriPort auth)
+    return (ty, uriRegName auth, port)
 
 normalizeEnv :: [(String, String)] -> NormalizedEnv
 normalizeEnv env =
