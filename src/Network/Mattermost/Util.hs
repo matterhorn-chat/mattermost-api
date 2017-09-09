@@ -69,6 +69,14 @@ withConnection cd action =
 
 -- | Creates a connection from a 'ConnectionData' value, returning it. It
 --   is the user's responsibility to close this appropriately.
+--
+-- This function respects ALL_PROXY, HTTP_PROXY, HTTPS_PROXY, and
+-- NO_PROXY environment variables for controlling whether the resulting
+-- connection uses a proxy. However, note:
+--
+-- * Only SOCKS version 4 and 5 proxies are supported using socks4://
+--   and socks5:// URIs, and
+-- * No proxy authentication is supported.
 mkConnection :: ConnectionData -> IO Connection
 mkConnection cd = do
   proxy' <- proxyForScheme (if cdUseTLS cd then HTTPS else HTTP)
