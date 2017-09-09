@@ -71,7 +71,9 @@ withConnection cd action =
 --   is the user's responsibility to close this appropriately.
 mkConnection :: ConnectionData -> IO Connection
 mkConnection cd = do
-  proxy <- proxyForScheme (if cdUseTLS cd then HTTPS else HTTP)
+  proxy' <- proxyForScheme (if cdUseTLS cd then HTTPS else HTTP)
+  canUseProxy <- proxyHostPermitted (T.unpack $ cdHostname cd)
+  let proxy = if canUseProxy then proxy' else Nothing
   connectTo (cdConnectionCtx cd) $ ConnectionParams
     { connectionHostname  = T.unpack $ cdHostname cd
     , connectionPort      = fromIntegral (cdPort cd)

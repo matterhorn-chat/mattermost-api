@@ -1,20 +1,33 @@
 module Network.Mattermost.Proxy
   ( Scheme(..)
   , proxyForScheme
+  , proxyHostPermitted
   )
 where
 
 import Control.Applicative ((<|>))
 import Data.Char (toLower)
 import Data.List (isPrefixOf)
+import Data.List.Split (splitOn)
 import Network.URI (parseURI, uriRegName, uriPort, uriAuthority, uriScheme)
-import System.Environment (getEnvironment)
+import System.Environment (getEnvironment, lookupEnv)
 import Text.Read (readMaybe)
 
 data Scheme = HTTP | HTTPS
             deriving (Eq, Show)
 
 newtype NormalizedEnv = NormalizedEnv [(String, String)]
+
+proxyHostPermitted :: String -> IO Bool
+proxyHostPermitted hostname = do
+    result <- lookupEnv "NO_PROXY"
+    case result of
+        Nothing -> return True
+        Just blacklist -> do
+            let blacklistedHosts = splitOn "," blacklist
+                allHostsBlocked = "*" `elem` blacklistedHosts
+            return $ not $ (hostname `elem` blacklistedHosts) ||
+                           allHostsBlocked
 
 proxyForScheme :: Scheme -> IO (Maybe (String, Int))
 proxyForScheme s = do
