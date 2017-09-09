@@ -27,6 +27,7 @@ library
                        Network.Mattermost.Lenses
                        Network.Mattermost.Logging
                        Network.Mattermost.Util
+                       Network.Mattermost.Proxy
                        Network.Mattermost.WebSocket
                        Network.Mattermost.WebSocket.Types
                        Network.Mattermost.Version

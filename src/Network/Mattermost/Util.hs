@@ -21,12 +21,14 @@ import           Control.Exception ( Exception
                                    , bracket )
 import           Network.Connection ( Connection
                                     , ConnectionParams(..)
+                                    , ProxySettings(..)
                                     , TLSSettings(..)
                                     , connectionGet
                                     , connectionClose
                                     , connectTo )
 
 import           Network.Mattermost.Types.Internal
+import           Network.Mattermost.Proxy
 
 -- | This unwraps a 'Maybe' value, throwing a provided exception
 --   if the value is 'Nothing'.
@@ -69,13 +71,16 @@ withConnection cd action =
 --   is the user's responsibility to close this appropriately.
 mkConnection :: ConnectionData -> IO Connection
 mkConnection cd = do
+  proxy <- proxyForScheme (if cdUseTLS cd then HTTPS else HTTP)
   connectTo (cdConnectionCtx cd) $ ConnectionParams
     { connectionHostname  = T.unpack $ cdHostname cd
     , connectionPort      = fromIntegral (cdPort cd)
     , connectionUseSecure = if cdUseTLS cd
                                then Just (TLSSettingsSimple False False False)
                                else Nothing
-    , connectionUseSocks  = Nothing
+    , connectionUseSocks  = do
+        (host, port) <- proxy
+        return $ SockSettingsSimple host (toEnum port)
     }
 
 
