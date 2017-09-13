@@ -1,4 +1,21 @@
 
+40000.1.0
+=========
+
+API changes:
+ * The postRootId of Post is now a Maybe PostId to better reflect the
+   actual wire format.
+ * MinCommand now has fields for reply parent and root post IDs to
+   support replying to posts with commands such as /me.
+ * CommandResponse's commandResponseType is now Maybe to permit optional
+   types.
+ * PreferenceCategory got a new constructor, PreferenceCategoryLast,
+   mapping to the "last" preference category.
+ * Added functions for bulk fetching for channel/user data:
+   * mmGetAllChannelsForUser
+   * mmGetAllChannelDataForUser
+   * mmGetAllChannelsWithDataForUser
+
 40000.0.1
 =========
 
