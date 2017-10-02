@@ -273,8 +273,8 @@ mmGetTeams sess =
 
 -- |
 -- route: @\/api\/v3\/teams\/create@
-mmCreateTeam :: Session -> TeamsCreate -> IO Team
-mmCreateTeam sess payload = do
+mmCreateTeam :: TeamsCreate -> Session -> IO Team
+mmCreateTeam payload sess = do
   let path = "/api/v3/teams/create"
   uri <- mmPath path
   runLoggerS sess "mmCreateTeam" $
@@ -289,16 +289,16 @@ mmCreateTeam sess payload = do
 -- for a given team of which the user is a member
 --
 -- route: @\/api\/v3\/teams\/{team_id}\/channels\/@
-mmGetChannels :: Session -> TeamId -> IO Channels
-mmGetChannels sess teamid = mmDoRequest sess "mmGetChannels" $
+mmGetChannels :: TeamId -> Session -> IO Channels
+mmGetChannels teamid sess = mmDoRequest sess "mmGetChannels" $
   printf "/api/v3/teams/%s/channels/" (idString teamid)
 
 -- | Requires an authenticated user. Returns the channels for a team of
 -- which the user is not already a member
 --
 -- route: @\/api\/v3\/teams\/{team_id}\/channels\/more\/{offset}\/{limit}@
-mmGetMoreChannels :: Session -> TeamId -> Int -> Int -> IO Channels
-mmGetMoreChannels sess teamid offset limit =
+mmGetMoreChannels :: TeamId -> Int -> Int -> Session -> IO Channels
+mmGetMoreChannels teamid offset limit sess =
   mmDoRequest sess "mmGetMoreChannels" $
     printf "/api/v3/teams/%s/channels/more/%d/%d"
            (idString teamid)
@@ -309,11 +309,11 @@ mmGetMoreChannels sess teamid offset limit =
 -- specific channel.
 --
 -- route: @\/api\/v3\/teams\/{team_id}\/channels\/{channel_id}@
-mmGetChannel :: Session
-             -> TeamId
+mmGetChannel :: TeamId
              -> ChannelId
+             -> Session
              -> IO ChannelWithData
-mmGetChannel sess teamid chanid = mmWithRequest sess "mmGetChannel"
+mmGetChannel teamid chanid sess = mmWithRequest sess "mmGetChannel"
   (printf "/api/v3/teams/%s/channels/%s/"
           (idString teamid)
           (idString chanid))
@@ -355,12 +355,12 @@ mmGetAllChannelsWithDataForUser sess teamid userid = do
 
 -- |
 -- route: @\/api\/v3\/teams\/{team_id}\/channels\/view@
-mmViewChannel :: Session
-              -> TeamId
+mmViewChannel :: TeamId
               -> ChannelId       -- ^ channel to view
               -> Maybe ChannelId -- ^ previous channel
+              -> Session
               -> IO ()
-mmViewChannel sess teamid chanid previd = do
+mmViewChannel teamid chanid previd sess = do
   let path    = printf "/api/v3/teams/%s/channels/view"
                        (idString teamid)
       prev    = maybeToList (("prev_channel_id" :: T.Text,) <$> previd)
@@ -375,11 +375,11 @@ mmViewChannel sess teamid chanid previd = do
 
 -- |
 -- route: @\/api\/v3\/teams\/{team_id}\/channels\/{channel_id}\/join@
-mmJoinChannel :: Session
-              -> TeamId
+mmJoinChannel :: TeamId
               -> ChannelId
+              -> Session
               -> IO ()
-mmJoinChannel sess teamid chanid = do
+mmJoinChannel teamid chanid sess = do
   let path = printf "/api/v3/teams/%s/channels/%s/join"
                    (idString teamid)
                    (idString chanid)
@@ -394,11 +394,11 @@ mmJoinChannel sess teamid chanid = do
 
 -- |
 -- route: @\/api\/v3\/teams\/{team_id}\/channels\/{channel_id}\/leave@
-mmLeaveChannel :: Session
-               -> TeamId
+mmLeaveChannel :: TeamId
                -> ChannelId
+               -> Session
                -> IO ()
-mmLeaveChannel sess teamid chanid = do
+mmLeaveChannel teamid chanid sess = do
   let path = printf "/api/v3/teams/%s/channels/%s/leave"
                    (idString teamid)
                    (idString chanid)
@@ -414,13 +414,13 @@ mmLeaveChannel sess teamid chanid = do
 
 -- |
 -- route: @\/api\/v3\/teams\/{team_id}\/channels\/{channel_id}\/posts\/page\/{offset}\/{limit}@
-mmGetPosts :: Session
-           -> TeamId
+mmGetPosts :: TeamId
            -> ChannelId
            -> Int -- offset in the backlog, 0 is most recent
            -> Int -- try to fetch this many
+           -> Session
            -> IO Posts
-mmGetPosts sess teamid chanid offset limit =
+mmGetPosts teamid chanid offset limit sess =
   mmDoRequest sess "mmGetPosts" $
   printf "/api/v3/teams/%s/channels/%s/posts/page/%d/%d"
          (idString teamid)
@@ -430,12 +430,12 @@ mmGetPosts sess teamid chanid offset limit =
 
 -- |
 -- route: @\/api\/v3\/teams\/{team_id}\/channels\/{channel_id}\/posts\/since\/{utc_time}@
-mmGetPostsSince :: Session
-           -> TeamId
-           -> ChannelId
-           -> UTCTime
-           -> IO Posts
-mmGetPostsSince sess teamid chanid since =
+mmGetPostsSince :: TeamId
+                -> ChannelId
+                -> UTCTime
+                -> Session
+                -> IO Posts
+mmGetPostsSince teamid chanid since sess =
   mmDoRequest sess "mmGetPostsSince" $
   printf "/api/v3/teams/%s/channels/%s/posts/since/%d"
          (idString teamid)
@@ -444,12 +444,12 @@ mmGetPostsSince sess teamid chanid since =
 
 -- |
 -- route: @\/api\/v3\/teams\/{team_id}\/channels\/{channel_id}\/posts\/{post_id}\/get@
-mmGetPost :: Session
-          -> TeamId
+mmGetPost :: TeamId
           -> ChannelId
           -> PostId
+          -> Session
           -> IO Posts
-mmGetPost sess teamid chanid postid = do
+mmGetPost teamid chanid postid sess = do
   let path = printf "/api/v3/teams/%s/channels/%s/posts/%s/get"
              (idString teamid)
              (idString chanid)
@@ -463,14 +463,14 @@ mmGetPost sess teamid chanid postid = do
 
 -- |
 -- route: @\/api\/v3\/teams\/{team_id}\/channels\/{channel_id}\/posts\/{post_id}\/after\/{offset}\/{limit}@
-mmGetPostsAfter :: Session
-                -> TeamId
+mmGetPostsAfter :: TeamId
                 -> ChannelId
                 -> PostId
                 -> Int -- offset in the backlog, 0 is most recent
                 -> Int -- try to fetch this many
+                -> Session
                 -> IO Posts
-mmGetPostsAfter sess teamid chanid postid offset limit =
+mmGetPostsAfter teamid chanid postid offset limit sess =
   mmDoRequest sess "mmGetPosts" $
   printf "/api/v3/teams/%s/channels/%s/posts/%s/after/%d/%d"
          (idString teamid)
@@ -481,14 +481,14 @@ mmGetPostsAfter sess teamid chanid postid offset limit =
 
 -- |
 -- route: @\/api\/v3\/teams\/{team_id}\/channels\/{channel_id}\/posts\/{post_id}\/before\/{offset}\/{limit}@
-mmGetPostsBefore :: Session
-                -> TeamId
-                -> ChannelId
-                -> PostId
-                -> Int -- offset in the backlog, 0 is most recent
-                -> Int -- try to fetch this many
-                -> IO Posts
-mmGetPostsBefore sess teamid chanid postid offset limit =
+mmGetPostsBefore :: TeamId
+                 -> ChannelId
+                 -> PostId
+                 -> Int -- offset in the backlog, 0 is most recent
+                 -> Int -- try to fetch this many
+                 -> Session
+                 -> IO Posts
+mmGetPostsBefore teamid chanid postid offset limit sess =
   mmDoRequest sess "mmGetPosts" $
   printf "/api/v3/teams/%s/channels/%s/posts/%s/before/%d/%d"
          (idString teamid)
@@ -499,19 +499,19 @@ mmGetPostsBefore sess teamid chanid postid offset limit =
 
 -- |
 -- route: @\/api\/v3\/files\/{file_id}\/get_info@
-mmGetFileInfo :: Session
-              -> FileId
+mmGetFileInfo :: FileId
+              -> Session
               -> IO FileInfo
-mmGetFileInfo sess fileId =
+mmGetFileInfo fileId sess =
   mmDoRequest sess "mmGetFileInfo" $
   printf "/api/v3/files/%s/get_info" (idString fileId)
 
 -- |
 -- route: @\/api\/v4\/files\/{file_id}@
-mmGetFile :: Session
-          -> FileId
+mmGetFile :: FileId
+          -> Session
           -> IO B.ByteString
-mmGetFile sess@(Session cd _) fileId = do
+mmGetFile fileId sess@(Session cd _) = do
   let path = printf "/api/v4/files/%s" (idString fileId)
   uri  <- mmPath path
   runLogger cd "mmGetFile" $
@@ -521,32 +521,32 @@ mmGetFile sess@(Session cd _) fileId = do
 
 -- |
 -- route: @\/api\/v3\/users\/{user_id}\/get@
-mmGetUser :: Session -> UserId -> IO User
-mmGetUser sess userid = mmDoRequest sess "mmGetUser" $
+mmGetUser :: UserId -> Session -> IO User
+mmGetUser userid sess = mmDoRequest sess "mmGetUser" $
   printf "/api/v3/users/%s/get" (idString userid)
 
 -- |
 -- route: @\/api\/v3\/users\/{offset}\/{limit}@
-mmGetUsers :: Session -> Int -> Int -> IO (HashMap UserId User)
-mmGetUsers sess offset limit =
+mmGetUsers :: Int -> Int -> Session -> IO (HashMap UserId User)
+mmGetUsers offset limit sess =
   mmDoRequest sess "mmGetUsers" $
     printf "/api/v3/users/%d/%d" offset limit
 
 -- |
 -- route: @\/api\/v3\/teams\/members\/{team_id}@
-mmGetTeamMembers :: Session -> TeamId -> IO (Seq.Seq TeamMember)
-mmGetTeamMembers sess teamid = mmDoRequest sess "mmGetTeamMembers" $
+mmGetTeamMembers :: TeamId -> Session -> IO (Seq.Seq TeamMember)
+mmGetTeamMembers teamid sess = mmDoRequest sess "mmGetTeamMembers" $
   printf "/api/v3/teams/members/%s" (idString teamid)
 
 -- |
 -- route: @\/api\/v3\/teams\/{team_id}\/channels\/{channel_id}\/users\/{offset}\/{limit}@
-mmGetChannelMembers :: Session
-                    -> TeamId
+mmGetChannelMembers :: TeamId
                     -> ChannelId
                     -> Int
                     -> Int
+                    -> Session
                     -> IO (HashMap UserId User)
-mmGetChannelMembers sess teamid chanid offset limit = mmDoRequest sess "mmGetChannelMembers" $
+mmGetChannelMembers teamid chanid offset limit sess = mmDoRequest sess "mmGetChannelMembers" $
   printf "/api/v3/teams/%s/channels/%s/users/%d/%d"
          (idString teamid)
          (idString chanid)
@@ -555,9 +555,10 @@ mmGetChannelMembers sess teamid chanid offset limit = mmDoRequest sess "mmGetCha
 
 -- |
 -- route: @\/api\/v3\/users\/profiles_for_dm_list\/{team_id}@
-mmGetProfilesForDMList :: Session -> TeamId
+mmGetProfilesForDMList :: TeamId
+                       -> Session
                        -> IO (HashMap UserId User)
-mmGetProfilesForDMList sess teamid =
+mmGetProfilesForDMList teamid sess =
   mmDoRequest sess "mmGetProfilesForDMList" $
     printf "/api/v3/users/profiles_for_dm_list/%s" (idString teamid)
 
@@ -568,12 +569,12 @@ mmGetMe sess = mmDoRequest sess "mmGetMe" "/api/v3/users/me"
 
 -- |
 -- route: @\/api\/v3\/teams\/{team_id}\/users\/{offset}\/{limit}@
-mmGetProfiles :: Session
-              -> TeamId
+mmGetProfiles :: TeamId
               -> Int
               -> Int
+              -> Session
               -> IO (HashMap UserId User)
-mmGetProfiles sess teamid offset limit = mmDoRequest sess "mmGetProfiles" $
+mmGetProfiles teamid offset limit sess = mmDoRequest sess "mmGetProfiles" $
   printf "/api/v3/teams/%s/users/%d/%d"
          (idString teamid)
          offset
@@ -587,8 +588,8 @@ mmGetStatuses sess = mmDoRequest sess "mmGetStatuses" $
 
 -- |
 -- route: @\/api\/v3\/teams\/{team_id}\/channels\/create_direct@
-mmCreateDirect :: Session -> TeamId -> UserId -> IO Channel
-mmCreateDirect sess teamid userid = do
+mmCreateDirect :: TeamId -> UserId -> Session -> IO Channel
+mmCreateDirect teamid userid sess = do
   let path = printf "/api/v3/teams/%s/channels/create_direct" (idString teamid)
       payload = HM.fromList [("user_id" :: T.Text, userid)]
   uri <- mmPath path
@@ -603,8 +604,8 @@ mmCreateDirect sess teamid userid = do
 -- { name, display_name, purpose, header }
 -- |
 -- route: @\/api\/v3\/teams\/{team_id}\/channels\/create@
-mmCreateChannel :: Session -> TeamId -> MinChannel -> IO Channel
-mmCreateChannel sess teamid payload = do
+mmCreateChannel :: TeamId -> MinChannel -> Session -> IO Channel
+mmCreateChannel teamid payload sess = do
   let path = printf "/api/v3/teams/%s/channels/create" (idString teamid)
   uri <- mmPath path
   runLoggerS sess "mmCreateChannel" $
@@ -617,8 +618,8 @@ mmCreateChannel sess teamid payload = do
 
 -- |
 -- route: @\/api\/v3\/teams\/{team_id}\/channels\/{channel_id}\/delete@
-mmDeleteChannel :: Session -> TeamId -> ChannelId -> IO ()
-mmDeleteChannel sess teamid chanid = do
+mmDeleteChannel :: TeamId -> ChannelId -> Session -> IO ()
+mmDeleteChannel teamid chanid sess = do
   let path = printf "/api/v3/teams/%s/channels/%s/delete"
                (idString teamid) (idString chanid)
   uri <- mmPath path
@@ -631,12 +632,12 @@ mmDeleteChannel sess teamid chanid = do
 
 -- |
 -- route: @\/api\/v3\/teams\/{team_id}\/channels\/{channel_id}\/posts\/{post_id}\/delete@
-mmDeletePost :: Session
-             -> TeamId
+mmDeletePost :: TeamId
              -> ChannelId
              -> PostId
+             -> Session
              -> IO ()
-mmDeletePost sess teamid chanid postid = do
+mmDeletePost teamid chanid postid sess = do
   let path   = printf "/api/v3/teams/%s/channels/%s/posts/%s/delete"
                       (idString teamid)
                       (idString chanid)
@@ -652,11 +653,11 @@ mmDeletePost sess teamid chanid postid = do
 
 -- |
 -- route: @\/api\/v3\/teams\/{team_id}\/channels\/{channel_id}\/posts\/update@
-mmUpdatePost :: Session
-             -> TeamId
+mmUpdatePost :: TeamId
              -> Post
+             -> Session
              -> IO Post
-mmUpdatePost sess teamid post = do
+mmUpdatePost teamid post sess = do
   let chanid = postChannelId post
       path   = printf "/api/v3/teams/%s/channels/%s/posts/update"
                       (idString teamid)
@@ -672,11 +673,11 @@ mmUpdatePost sess teamid post = do
 
 -- |
 -- route: @\/api\/v3\/teams\/{team_id}\/channels\/{channel_id}\/posts\/create@
-mmPost :: Session
-       -> TeamId
+mmPost :: TeamId
        -> PendingPost
+       -> Session
        -> IO Post
-mmPost sess teamid post = do
+mmPost teamid post sess = do
   let chanid = pendingPostChannelId post
       path   = printf "/api/v3/teams/%s/channels/%s/posts/create"
                       (idString teamid)
@@ -698,10 +699,10 @@ mmGetConfig :: Session
 mmGetConfig sess =
   mmDoRequest sess "mmGetConfig" "/api/v3/admin/config"
 
-mmSaveConfig :: Session
-             -> Value
+mmSaveConfig :: Value
+             -> Session
              -> IO ()
-mmSaveConfig sess config = do
+mmSaveConfig config sess = do
   let path = "/api/v3/admin/save_config"
   uri <- mmPath path
   runLoggerS sess "mmSaveConfig" $
@@ -713,12 +714,12 @@ mmSaveConfig sess config = do
 
 -- |
 -- route: @\/api\/v3\/teams\/{team_id}\/channels\/{channel_id}\/add@
-mmChannelAddUser :: Session
-                 -> TeamId
+mmChannelAddUser :: TeamId
                  -> ChannelId
                  -> UserId
+                 -> Session
                  -> IO ChannelData
-mmChannelAddUser sess teamid chanId uId = do
+mmChannelAddUser teamid chanId uId sess = do
   let path = printf "/api/v3/teams/%s/channels/%s/add"
                     (idString teamid)
                     (idString chanId)
@@ -734,11 +735,11 @@ mmChannelAddUser sess teamid chanId uId = do
 
 -- |
 -- route: @\/api\/v3\/teams\/{team_id}\/add_user_to_team@
-mmTeamAddUser :: Session
-              -> TeamId
+mmTeamAddUser :: TeamId
               -> UserId
+              -> Session
               -> IO ()
-mmTeamAddUser sess teamid uId = do
+mmTeamAddUser teamid uId sess = do
   let path = printf "/api/v3/teams/%s/add_user_to_team"
                     (idString teamid)
       req  = object ["user_id" .= uId]
@@ -752,11 +753,11 @@ mmTeamAddUser sess teamid uId = do
 
 -- |
 -- route: @\/api\/v3\/teams\/{team_id}\/commands\/execute@
-mmExecute :: Session
-          -> TeamId
+mmExecute :: TeamId
           -> MinCommand
+          -> Session
           -> IO CommandResponse
-mmExecute sess teamid command = do
+mmExecute teamid command sess = do
   let path   = printf "/api/v3/teams/%s/commands/execute"
                       (idString teamid)
   uri <- mmPath path
@@ -786,10 +787,10 @@ mmUsersCreate cd usersCreate = do
 
 -- |
 -- route: @\/api\/v3\/users\/create@
-mmUsersCreateWithSession :: Session
-                         -> UsersCreate
+mmUsersCreateWithSession :: UsersCreate
+                         -> Session
                          -> IO User
-mmUsersCreateWithSession sess usersCreate = do
+mmUsersCreateWithSession usersCreate sess = do
   let path = "/api/v3/users/create"
   uri <- mmPath path
   runLoggerS sess "mmUsersCreateWithToken" $
@@ -802,12 +803,12 @@ mmUsersCreateWithSession sess usersCreate = do
 
 -- |
 -- route: @\/api\/v3\/teams\/{team_id}\/channels\/{channel_id}\/posts\/{post_id}\/reactions@
-mmGetReactionsForPost :: Session
-                      -> TeamId
+mmGetReactionsForPost :: TeamId
                       -> ChannelId
                       -> PostId
+                      -> Session
                       -> IO [Reaction]
-mmGetReactionsForPost sess tId cId pId = do
+mmGetReactionsForPost tId cId pId sess = do
   let path = printf "/api/v3/teams/%s/channels/%s/posts/%s/reactions"
                     (idString tId)
                     (idString cId)
@@ -816,20 +817,20 @@ mmGetReactionsForPost sess tId cId pId = do
 
 -- |
 -- route: @\/api\/v3\/preferences\/save@
-mmSavePreferences :: Session
-                  -> Seq.Seq Preference
+mmSavePreferences :: Seq.Seq Preference
+                  -> Session
                   -> IO ()
-mmSavePreferences sess pref = do
+mmSavePreferences pref sess = do
   uri <- mmPath "/api/v3/preferences/save"
   _ <- mmPOST sess uri pref
   return ()
 
 -- |
 -- route: @\/api\/v3\/preferences\/save@
-mmDeletePreferences :: Session
-                  -> Seq.Seq Preference
-                  -> IO ()
-mmDeletePreferences sess pref = do
+mmDeletePreferences :: Seq.Seq Preference
+                    -> Session
+                    -> IO ()
+mmDeletePreferences pref sess = do
   uri <- mmPath "/api/v3/preferences/delete"
   _ <- mmPOST sess uri pref
   return ()
@@ -839,11 +840,11 @@ mmDeletePreferences sess pref = do
 --
 -- This is a convenience function for a particular use of
 -- 'mmSavePreference'
-mmFlagPost :: Session
-           -> UserId
+mmFlagPost :: UserId
            -> PostId
+           -> Session
            -> IO ()
-mmFlagPost sess uId pId = do
+mmFlagPost uId pId sess = do
   let flaggedPost =
         FlaggedPost
           { flaggedPostUserId = uId
@@ -862,11 +863,11 @@ mmFlagPost sess uId pId = do
 --
 -- This is a convenience function for a particular use of
 -- 'mmSavePreference'
-mmUnflagPost :: Session
-             -> UserId
+mmUnflagPost :: UserId
              -> PostId
+             -> Session
              -> IO ()
-mmUnflagPost sess uId pId = do
+mmUnflagPost uId pId sess = do
   let flaggedPost =
         FlaggedPost
           { flaggedPostUserId = uId
@@ -880,10 +881,10 @@ mmUnflagPost sess uId pId = do
   _ <- mmPOST sess uri (Seq.singleton flaggedPost)
   return ()
 
-mmGetFlaggedPosts :: Session
-                  -> UserId
+mmGetFlaggedPosts :: UserId
+                  -> Session
                   -> IO Posts
-mmGetFlaggedPosts sess uId =
+mmGetFlaggedPosts uId sess =
   let path = printf "/api/v4/users/%s/posts/flagged" (idString uId)
   in mmDoRequest sess "mmGetFlaggedPosts" path
 
@@ -942,8 +943,8 @@ mmPOST sess path json =
 
 -- |
 -- route: @\/api\/v3\/teams\/{team_id}\/channels\/update_header@
-mmSetChannelHeader :: Session -> TeamId -> ChannelId -> T.Text -> IO Channel
-mmSetChannelHeader sess teamid chanid header = do
+mmSetChannelHeader :: TeamId -> ChannelId -> T.Text -> Session -> IO Channel
+mmSetChannelHeader teamid chanid header sess = do
   let path = printf "/api/v3/teams/%s/channels/update_header"
                     (idString teamid)
   uri <- mmPath path

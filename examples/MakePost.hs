@@ -91,10 +91,10 @@ main = do
     pPrint i
   forM_ (initialLoadTeams i) $ \t -> do
     when (teamName t == configTeam config) $ do
-      userMap <- mmGetProfiles session (getId t) 0 10000
+      userMap <- mmGetProfiles (getId t) 0 10000 session
       when (optVerbose opts) $ do
         pPrint userMap
-      chans <- mmGetChannels session (getId t)
+      chans <- mmGetChannels (getId t) session
       forM_ chans $ \chan -> do
         when (optVerbose opts) $ do
           pPrint chan
@@ -103,5 +103,5 @@ main = do
             pendingPost <- mkPendingPost (optMessage opts)
                                          (getId mmUser)
                                          (getId chan)
-            post <- mmPost session (getId t) pendingPost
+            post <- mmPost (getId t) pendingPost session
             when (optVerbose opts) (pPrint post)

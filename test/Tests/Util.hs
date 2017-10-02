@@ -82,6 +82,11 @@ mmTestCase testName cfg act =
       (reportJSONExceptions $ evalStateT act initState) `E.finally`
         (putMVar mv ())
 
+mm :: (Session -> IO a) -> TestM a
+mm act = do
+  sess <- getSession
+  liftIO $ act sess
+
 print_ :: String -> TestM ()
 print_ s = do
     dbg <- gets tsDebug
@@ -280,15 +285,13 @@ loginAdminAccount = do
 
 createAccount :: UsersCreate -> TestM User
 createAccount account = do
-  session <- getSession
-  newUser <- liftIO $ mmUsersCreateWithSession session account
+  newUser <- mm $ mmUsersCreateWithSession account
   print_ $ "account created for " <> (T.unpack $ usersCreateUsername account)
   return newUser
 
 createTeam :: TeamsCreate -> TestM Team
 createTeam tc = do
-  session <- getSession
-  team <- liftIO $ mmCreateTeam session tc
+  team <- mm $ mmCreateTeam tc
   print_ $ "Team created: " <> (T.unpack $ teamsCreateName tc)
   return team
 
@@ -328,8 +331,7 @@ getInitialLoad = do
 
 getUserByName :: T.Text -> TestM (Maybe User)
 getUserByName uname = do
-    session <- getSession
-    allUserMap <- liftIO $ mmGetUsers session 0 10000
+    allUserMap <- mm $ mmGetUsers 0 10000
     -- Find the user matching the username and get its ID
     let matches = HM.filter matchingUser allUserMap
         matchingUser u = userUsername u == uname
@@ -339,55 +341,43 @@ getUserByName uname = do
         True -> do
             let uId = fst $ HM.toList matches !! 0
             -- Then load the User record
-            Just <$> (liftIO $ mmGetUser session uId)
+            Just <$> (mm $ mmGetUser uId)
 
 createChannel :: Team -> MinChannel -> TestM Channel
 createChannel team mc = do
-  session <- getSession
-  liftIO $ mmCreateChannel session (teamId team) mc
+  mm $ mmCreateChannel (teamId team) mc
 
 deleteChannel :: Team -> Channel -> TestM ()
 deleteChannel team ch = do
-  session <- getSession
-  liftIO $ mmDeleteChannel session (teamId team) (channelId ch)
+  mm $ mmDeleteChannel (teamId team) (channelId ch)
 
 joinChannel :: Team -> Channel -> TestM ()
 joinChannel team chan = do
-  session <- getSession
-  liftIO $ mmJoinChannel session (teamId team) (channelId chan)
+  mm $ mmJoinChannel (teamId team) (channelId chan)
 
 getMoreChannels :: Team -> TestM Channels
 getMoreChannels team = do
-  session <- getSession
-  liftIO $ mmGetMoreChannels session (teamId team) 0 100
+  mm $ mmGetMoreChannels (teamId team) 0 100
 
 leaveChannel :: Team -> Channel -> TestM ()
 leaveChannel team chan = do
-  session <- getSession
-  liftIO $ mmLeaveChannel session (teamId team) (channelId chan)
+  mm $ mmLeaveChannel (teamId team) (channelId chan)
 
 getChannelMembers :: Team -> Channel -> TestM [User]
 getChannelMembers team chan = do
-  session <- getSession
   (snd <$>) <$> HM.toList <$>
-      (liftIO $ mmGetChannelMembers session (teamId team) (channelId chan) 0 10000)
+      (mm $ mmGetChannelMembers (teamId team) (channelId chan) 0 10000)
 
 getChannels :: Team -> TestM Channels
-getChannels team = do
-  session <- getSession
-  liftIO $ mmGetChannels session (teamId team)
+getChannels team = mm $ mmGetChannels (teamId team)
 
 getConfig :: TestM A.Value
-getConfig = do
-  session <- getSession
-  liftIO $ mmGetConfig session
+getConfig = mm mmGetConfig
 
 saveConfig :: A.Value -> TestM ()
 saveConfig newConfig = do
-  session <- getSession
-  liftIO $ mmSaveConfig session newConfig
+  mm $ mmSaveConfig newConfig
 
 teamAddUser :: Team -> User -> TestM ()
 teamAddUser team user = do
-  session <- getSession
-  liftIO $ mmTeamAddUser session (teamId team) (userId user)
+  mm $ mmTeamAddUser (teamId team) (userId user)
