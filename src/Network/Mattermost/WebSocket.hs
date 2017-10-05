@@ -13,7 +13,7 @@ module Network.Mattermost.WebSocket
 
 import           Control.Concurrent (ThreadId, forkIO, myThreadId, threadDelay)
 import qualified Control.Concurrent.STM.TQueue as Queue
-import           Control.Exception (Exception, SomeException, catch, throwIO, throwTo)
+import           Control.Exception (Exception, SomeException, catch, throwIO, throwTo, try)
 import           Control.Monad (forever)
 import           Control.Monad.STM (atomically)
 import           Data.Aeson (toJSON)
@@ -105,7 +105,7 @@ pingThread onPingAction conn = loop 0
           loop (n+1)
 
 mmWithWebSocket :: Session
-                -> (WebsocketEvent -> IO ())
+                -> (Either String WebsocketEvent -> IO ())
                 -> (MMWebSocket -> IO ())
                 -> IO ()
 mmWithWebSocket (Session cd (Token tk)) recv body = do
@@ -118,9 +118,16 @@ mmWithWebSocket (Session cd (Token tk)) recv body = do
   let action c = do
         pId <- forkIO (pingThread onPing c `catch` cleanup)
         mId <- forkIO $ flip catch cleanup $ forever $ do
-          p <- WS.receiveData c
-          doLog (WebSocketResponse (toJSON p))
-          recv p
+          result <- try $ do
+              v <- WS.receiveData c
+              v `seq` return v
+          let val = case result of
+                Left (e::SomeException) -> Left $ show e
+                Right ws -> Right ws
+          doLog (WebSocketResponse $ case val of
+                Left s -> Left s
+                Right v -> Right $ toJSON v)
+          recv val
         body (MMWS c health) `catch` propagate [mId, pId]
   WS.runClientWithStream stream
                       (T.unpack $ cdHostname cd)

@@ -27,7 +27,9 @@ data LogEventType
   = HttpRequest RequestMethod String (Maybe A.Value)
   | HttpResponse Int String (Maybe A.Value)
   | WebSocketRequest A.Value
-  | WebSocketResponse A.Value
+  | WebSocketResponse (Either String A.Value)
+  -- ^ Left means we got an exception trying to parse the response;
+  -- Right means we succeeded and here it is.
   | WebSocketPing
   | WebSocketPong
     deriving (Eq, Show)
