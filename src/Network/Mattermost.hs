@@ -95,6 +95,7 @@ module Network.Mattermost
 , mmSaveConfig
 , mmSetChannelHeader
 , mmChannelAddUser
+, mmChannelRemoveUser
 , mmTeamAddUser
 , mmUsersCreate
 , mmUsersCreateWithSession
@@ -892,6 +893,30 @@ mmGetMyPreferences :: Session
 mmGetMyPreferences sess =
   mmDoRequest sess "mmMyPreferences" "/api/v4/users/me/preferences"
 
+-- | Remove the specified user from the specified channel.
+mmChannelRemoveUser :: Session
+                    -> ChannelId
+                    -> UserId
+                    -> IO ()
+mmChannelRemoveUser sess cId uId =
+  let path = printf "/api/v4/channels/%s/members/%s" (idString cId) (idString uId)
+  in mmDeleteRequest sess =<< mmPath path
+
+mmDeleteRequest :: Session -> URI -> IO ()
+mmDeleteRequest (Session cd token) path = do
+  rawRsp <- withConnection cd $ \con -> do
+    let request = Request
+          { rqURI     = path
+          , rqMethod  = DELETE
+          , rqHeaders = [ mkHeader HdrAuthorization ("Bearer " ++ getTokenString token)
+                        , mkHeader HdrHost          (T.unpack $ cdHostname cd)
+                        , mkHeader HdrUserAgent     defaultUserAgent
+                        ] ++ autoCloseToHeader (cdAutoClose cd)
+          , rqBody    = ""
+          }
+    simpleHTTP_ con request
+  rsp <- hoistE $ left ConnectionException rawRsp
+  assert200Response path rsp
 
 -- | This is for making a generic authenticated request.
 mmRequest :: Session -> URI -> IO Response_String
