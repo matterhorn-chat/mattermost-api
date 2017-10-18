@@ -121,9 +121,10 @@ mmWithWebSocket (Session cd (Token tk)) recv body = do
           result <- try $ do
               v <- WS.receiveData c
               v `seq` return v
-          let val = case result of
-                Left (e::SomeException) -> Left $ show e
-                Right ws -> Right ws
+          val <- case result of
+                Left (WS.ParseException e) -> return $ Left e
+                Left e -> throwIO e
+                Right ws -> return $ Right ws
           doLog (WebSocketResponse $ case val of
                 Left s -> Left s
                 Right v -> Right $ toJSON v)
