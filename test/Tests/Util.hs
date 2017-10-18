@@ -124,8 +124,9 @@ loginAccount login = do
   print_ $ "Authenticated as " ++ T.unpack (username login)
   chan <- gets tsWebsocketChan
   doneMVar <- gets tsDone
+  printFunc <- gets tsPrinter
   void $ liftIO $ forkIO $ mmWithWebSocket session
-                           (STM.atomically . STM.writeTChan chan)
+                           (either printFunc (STM.atomically . STM.writeTChan chan))
                            (const $ takeMVar doneMVar)
   modify $ \ts -> ts { tsSession = Just session }
 
