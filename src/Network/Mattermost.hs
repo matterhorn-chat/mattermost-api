@@ -236,6 +236,10 @@ mmUnauthenticatedHTTPPost cd path json = do
 --
 -- route: @\/api\/v3\/users\/login@
 mmLogin :: ConnectionData -> Login -> IO (Either LoginFailureException (Session, User))
+mmLogin cd (Login "MMAUTHTOKEN" token) = do
+  let sess = Session cd (Token $ T.unpack token)
+  value <- mmDoRequest sess "mmLogin with MMAUTHTOKEN" "/api/v3/users/me"
+  return (Right (sess, value))
 mmLogin cd login = do
   let rawPath = "/api/v3/users/login"
   path <- mmPath rawPath
