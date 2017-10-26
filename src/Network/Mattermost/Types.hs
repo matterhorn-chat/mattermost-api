@@ -254,27 +254,40 @@ instance A.FromJSON NotifyOption where
   parseJSON (A.String "none")    = return NotifyOptionNone
   parseJSON xs                   = fail ("Unknown NotifyOption value: " ++ show xs)
 
-data NotifyProps = NotifyProps
-  { notifyPropsMentionKeys  :: [Text]
-  , notifyPropsEmail        :: WithDefault Bool
-  , notifyPropsPush         :: WithDefault NotifyOption
-  , notifyPropsDesktop      :: WithDefault NotifyOption
-  , notifyPropsDesktopSound :: WithDefault Bool
-  , notifyPropsChannel      :: WithDefault Bool
-  , notifyPropsFirstName    :: WithDefault Bool
-  , notifyPropsMarkUnread   :: WithDefault NotifyOption
+data UserNotifyProps = UserNotifyProps
+  { userNotifyPropsMentionKeys  :: [Text]
+  , userNotifyPropsEmail        :: Bool
+  , userNotifyPropsPush         :: NotifyOption
+  , userNotifyPropsDesktop      :: NotifyOption
+  , userNotifyPropsDesktopSound :: Bool
+  , userNotifyPropsChannel      :: Bool
+  , userNotifyPropsFirstName    :: Bool
   } deriving (Eq, Show, Read, Ord)
 
-emptyNotifyProps :: NotifyProps
-emptyNotifyProps = NotifyProps
-  { notifyPropsMentionKeys  = []
-  , notifyPropsEmail        = IsValue False
-  , notifyPropsPush         = IsValue NotifyOptionNone
-  , notifyPropsDesktop      = IsValue NotifyOptionNone
-  , notifyPropsDesktopSound = IsValue False
-  , notifyPropsChannel      = IsValue False
-  , notifyPropsFirstName    = IsValue False
-  , notifyPropsMarkUnread   = IsValue NotifyOptionNone
+data ChannelNotifyProps = ChannelNotifyProps
+  { channelNotifyPropsEmail      :: WithDefault Bool
+  , channelNotifyPropsDesktop    :: WithDefault NotifyOption
+  , channelNotifyPropsPush       :: WithDefault NotifyOption
+  , channelNotifyPropsMarkUnread :: WithDefault NotifyOption
+  } deriving (Eq, Show, Read, Ord)
+
+emptyUserNotifyProps :: UserNotifyProps
+emptyUserNotifyProps = UserNotifyProps
+  { userNotifyPropsMentionKeys  = []
+  , userNotifyPropsEmail        = False
+  , userNotifyPropsPush         = NotifyOptionNone
+  , userNotifyPropsDesktop      = NotifyOptionNone
+  , userNotifyPropsDesktopSound = False
+  , userNotifyPropsChannel      = False
+  , userNotifyPropsFirstName    = False
+  }
+
+emptyChannelNotifyProps :: ChannelNotifyProps
+emptyChannelNotifyProps = ChannelNotifyProps
+  { channelNotifyPropsEmail      = Default
+  , channelNotifyPropsPush       = Default
+  , channelNotifyPropsDesktop    = Default
+  , channelNotifyPropsMarkUnread = Default
   }
 
 newtype BoolString = BoolString { fromBoolString :: Bool }
@@ -286,22 +299,26 @@ instance A.FromJSON BoolString where
       "false" -> return (BoolString False)
       _       -> fail "Expected \"true\" or \"false\""
 
-instance A.FromJSON NotifyProps where
-  parseJSON = A.withObject "NotifyProps" $ \v -> do
-    notifyPropsMentionKeys  <- T.split (==',') <$>
-                                 (v .:? "mention_keys" .!= "")
-    notifyPropsEmail        <- fmap fromBoolString <$>
-                                 (v .:? "email" .!= IsValue (BoolString True))
-    notifyPropsPush         <- v .:? "push" .!= IsValue NotifyOptionMention
-    notifyPropsDesktop      <- v .:? "desktop" .!= IsValue NotifyOptionAll
-    notifyPropsDesktopSound <- fmap fromBoolString <$>
-                                 (v .:? "desktop_sound" .!= IsValue (BoolString True))
-    notifyPropsChannel      <- fmap fromBoolString <$>
-                                 (v .:? "channel" .!= IsValue (BoolString True))
-    notifyPropsFirstName    <- fmap fromBoolString <$>
-                                 (v .:? "first_name" .!= IsValue (BoolString False))
-    notifyPropsMarkUnread   <- v .:? "mark_unread" .!= IsValue NotifyOptionAll
-    return NotifyProps { .. }
+instance A.FromJSON UserNotifyProps where
+  parseJSON = A.withObject "UserNotifyProps" $ \v -> do
+    userNotifyPropsMentionKeys  <- T.split (==',') <$>
+                                     (v .:? "mention_keys" .!= "")
+    userNotifyPropsPush         <- v .:? "push" .!= NotifyOptionMention
+    userNotifyPropsDesktop      <- v .:? "desktop" .!= NotifyOptionAll
+    userNotifyPropsEmail        <- fromBoolString <$> (v .:? "email"         .!= BoolString True)
+    userNotifyPropsDesktopSound <- fromBoolString <$> (v .:? "desktop_sound" .!= BoolString True)
+    userNotifyPropsChannel      <- fromBoolString <$> (v .:? "channel"       .!= BoolString True)
+    userNotifyPropsFirstName    <- fromBoolString <$> (v .:? "first_name"    .!= BoolString False)
+    return UserNotifyProps { .. }
+
+instance A.FromJSON ChannelNotifyProps where
+  parseJSON = A.withObject "ChannelNotifyProps" $ \v -> do
+    channelNotifyPropsEmail      <- fmap fromBoolString <$>
+                                    (v .:? "email" .!= IsValue (BoolString True))
+    channelNotifyPropsPush       <- v .:? "push" .!= IsValue NotifyOptionMention
+    channelNotifyPropsDesktop    <- v .:? "desktop" .!= IsValue NotifyOptionAll
+    channelNotifyPropsMarkUnread <- v .:? "mark_unread" .!= IsValue NotifyOptionAll
+    return ChannelNotifyProps { .. }
 
 --
 
@@ -373,7 +390,7 @@ data ChannelData
   , channelDataLastViewedAt :: UTCTime
   , channelDataMsgCount     :: Int
   , channelDataMentionCount :: Int
-  , channelDataNotifyProps  :: NotifyProps
+  , channelDataNotifyProps  :: ChannelNotifyProps
   , channelDataLastUpdateAt :: UTCTime
   } deriving (Read, Show, Eq)
 
@@ -461,7 +478,7 @@ data User
   , userFirstName          :: Text
   , userLastName           :: Text
   , userRoles              :: Text
-  , userNotifyProps        :: NotifyProps
+  , userNotifyProps        :: UserNotifyProps
   , userLastPasswordUpdate :: Maybe UTCTime
   , userLastPictureUpdate  :: Maybe UTCTime
   , userLocale             :: Text
@@ -482,7 +499,7 @@ instance A.FromJSON User where
     userFirstName          <- o .:  "first_name"
     userLastName           <- o .:  "last_name"
     userRoles              <- o .:  "roles"
-    userNotifyProps        <- o .:? "notify_props" .!= emptyNotifyProps
+    userNotifyProps        <- o .:? "notify_props" .!= emptyUserNotifyProps
     userLastPasswordUpdate <- (millisecondsToUTCTime <$>) <$>
                               (o .:? "last_password_update")
     userLastPictureUpdate  <- (millisecondsToUTCTime <$>) <$> (o .:? "last_picture_update")
