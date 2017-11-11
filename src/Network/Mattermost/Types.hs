@@ -966,6 +966,7 @@ instance A.ToJSON Reaction where
 
 data PreferenceCategory
   = PreferenceCategoryDirectChannelShow
+  | PreferenceCategoryGroupChannelShow
   | PreferenceCategoryTutorialStep
   | PreferenceCategoryAdvancedSettings
   | PreferenceCategoryFlaggedPost
@@ -980,6 +981,7 @@ data PreferenceCategory
 instance A.FromJSON PreferenceCategory where
   parseJSON = A.withText "PreferenceCategory" $ \t -> return $ case t of
     "direct_channel_show" -> PreferenceCategoryDirectChannelShow
+    "group_channel_show"  -> PreferenceCategoryGroupChannelShow
     "tutorial_step"       -> PreferenceCategoryTutorialStep
     "advanced_settings"   -> PreferenceCategoryAdvancedSettings
     "flagged_post"        -> PreferenceCategoryFlaggedPost
@@ -993,6 +995,7 @@ instance A.FromJSON PreferenceCategory where
 instance A.ToJSON PreferenceCategory where
   toJSON cat = A.String $ case cat of
     PreferenceCategoryDirectChannelShow  -> "direct_channel_show"
+    PreferenceCategoryGroupChannelShow   -> "group_channel_show"
     PreferenceCategoryTutorialStep       -> "tutorial_step"
     PreferenceCategoryAdvancedSettings   -> "advanced_settings"
     PreferenceCategoryFlaggedPost        -> "flagged_post"
@@ -1046,6 +1049,24 @@ instance A.ToJSON Preference where
     , "name"     .= preferenceName
     , "value"    .= preferenceValue
     ]
+
+data GroupChannelPreference =
+    GroupChannelPreference { groupChannelId :: ChannelId
+                           , groupChannelShow :: Bool
+                           } deriving (Read, Show, Eq)
+
+-- | Attempt to expose a 'Preference' as a 'FlaggedPost'
+preferenceToGroupChannelPreference :: Preference -> Maybe GroupChannelPreference
+preferenceToGroupChannelPreference
+  Preference
+    { preferenceCategory = PreferenceCategoryGroupChannelShow
+    , preferenceName     = PreferenceName name
+    , preferenceValue    = PreferenceValue value
+    } = Just GroupChannelPreference
+          { groupChannelId = CI (Id name)
+          , groupChannelShow = value == "true"
+          }
+preferenceToGroupChannelPreference _ = Nothing
 
 data FlaggedPost = FlaggedPost
   { flaggedPostUserId :: UserId
