@@ -103,6 +103,7 @@ module Network.Mattermost
 , mmUpdatePost
 , mmExecute
 , mmGetConfig
+, mmSetPreferences
 , mmSavePreferences
 , mmDeletePreferences
 , mmFlagPost
@@ -815,6 +816,15 @@ mmGetReactionsForPost sess tId cId pId = do
                     (idString pId)
   mmDoRequest sess "mmGetReactionsForPost" path
 
+mmSetPreferences :: Session
+                 -> UserId
+                 -> Seq.Seq Preference
+                 -> IO ()
+mmSetPreferences sess uId prefs = do
+  uri <- mmPath $ printf "/api/v4/users/%s/preferences" (idString uId)
+  _ <- mmPUT sess uri prefs
+  return ()
+
 -- |
 -- route: @\/api\/v3\/preferences\/save@
 mmSavePreferences :: Session
@@ -965,6 +975,10 @@ mmPOST :: ToJSON t => Session -> URI -> t -> IO Response_String
 mmPOST sess path json =
   mmRawPOST sess path (BL.toStrict (encode json))
 
+mmPUT :: ToJSON t => Session -> URI -> t -> IO Response_String
+mmPUT sess path json =
+  mmRawPUT sess path (BL.toStrict (encode json))
+
 -- |
 -- route: @\/api\/v3\/teams\/{team_id}\/channels\/update_header@
 mmSetChannelHeader :: Session -> TeamId -> ChannelId -> T.Text -> IO Channel
@@ -986,6 +1000,26 @@ mmRawPOST (Session cd token) path content = do
         request       = Request
           { rqURI     = path
           , rqMethod  = POST
+          , rqHeaders = [ mkHeader HdrAuthorization ("Bearer " ++ getTokenString token)
+                        , mkHeader HdrHost          (T.unpack $ cdHostname cd)
+                        , mkHeader HdrUserAgent     defaultUserAgent
+                        , mkHeader HdrContentType   "application/json"
+                        , mkHeader HdrContentLength (show contentLength)
+                        ] ++ autoCloseToHeader (cdAutoClose cd)
+          , rqBody    = B.unpack content
+          }
+    simpleHTTP_ con request
+  rsp <- hoistE $ left ConnectionException rawRsp
+  assert200Response path rsp
+  return rsp
+
+mmRawPUT :: Session -> URI -> B.ByteString -> IO Response_String
+mmRawPUT (Session cd token) path content = do
+  rawRsp <- withConnection cd $ \con -> do
+    let contentLength = B.length content
+        request       = Request
+          { rqURI     = path
+          , rqMethod  = PUT
           , rqHeaders = [ mkHeader HdrAuthorization ("Bearer " ++ getTokenString token)
                         , mkHeader HdrHost          (T.unpack $ cdHostname cd)
                         , mkHeader HdrUserAgent     defaultUserAgent
