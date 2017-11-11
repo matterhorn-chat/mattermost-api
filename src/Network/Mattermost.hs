@@ -62,6 +62,7 @@ module Network.Mattermost
 , mmLogin
 , mmCreateDirect
 , mmCreateChannel
+, mmCreateGroupChannel
 , mmCreateTeam
 , mmDeleteChannel
 , mmLeaveChannel
@@ -912,6 +913,23 @@ mmChannelRemoveUser sess cId uId =
   let path = printf "/api/v4/channels/%s/members/%s" (idString cId) (idString uId)
   in mmDeleteRequest sess =<< mmPath path
 
+-- | Create a group channel containing the specified users in addition
+-- to the user making the request.
+mmCreateGroupChannel :: Session
+                     -> [UserId]
+                     -> IO Channel
+mmCreateGroupChannel sess@(Session cd _) uIds = do
+  let path = "/api/v4/channels/group"
+      fnname = "mmCreateGroupChannel"
+  uri <- mmPath path
+  runLoggerS sess fnname $
+    HttpRequest POST path (Just (toJSON uIds))
+  rsp <- mmPOST sess uri uIds
+  (raw, json) <- mmGetJSONBody fnname rsp
+  runLogger cd fnname $
+    HttpResponse 200 path (Just raw)
+  return json
+
 mmDeleteRequest :: Session -> URI -> IO ()
 mmDeleteRequest (Session cd token) path = do
   rawRsp <- withConnection cd $ \con -> do
@@ -1035,7 +1053,9 @@ mmRawPUT (Session cd token) path content = do
 
 assert200Response :: URI -> Response_String -> IO ()
 assert200Response path rsp =
-    when (rspCode rsp /= (2,0,0)) $
+    let is20x (2, 0, _) = True
+        is20x _ = False
+    in when (not $ is20x $ rspCode rsp) $
         let httpExc = HTTPResponseException $ "mmRequest: expected 200 response, got " <>
                                               (show $ rspCode rsp)
         in case eitherDecode $ BL.pack $ rspBody rsp of
