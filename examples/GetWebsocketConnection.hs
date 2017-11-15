@@ -68,7 +68,7 @@ main = do
 
   mmWithWebSocket session printEvent checkForExit
 
-printEvent :: WebsocketEvent -> IO ()
+printEvent :: Either String WebsocketEvent -> IO ()
 printEvent we = pPrint we
 
 checkForExit :: MMWebSocket -> IO ()
