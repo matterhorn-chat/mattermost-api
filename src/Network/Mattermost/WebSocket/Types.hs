@@ -63,6 +63,7 @@ data WebsocketEventType
   | WMChannelViewed
   | WMChannelUpdated
   | WMEmojiAdded
+  | WMUserRoleUpdated
   deriving (Read, Show, Eq, Ord)
 
 instance FromJSON WebsocketEventType where
@@ -94,6 +95,7 @@ instance FromJSON WebsocketEventType where
     "channel_viewed"     -> return WMChannelViewed
     "channel_updated"    -> return WMChannelUpdated
     "emoji_added"        -> return WMEmojiAdded
+    "user_role_updated"  -> return WMUserRoleUpdated
     _                    -> fail ("Unknown websocket message: " ++ show s)
 
 instance ToJSON WebsocketEventType where
@@ -124,6 +126,7 @@ instance ToJSON WebsocketEventType where
   toJSON WMChannelViewed           = "channel_viewed"
   toJSON WMChannelUpdated          = "channel_updated"
   toJSON WMEmojiAdded              = "emoji_added"
+  toJSON WMUserRoleUpdated   = "user_role_updated"
 
 --
 
