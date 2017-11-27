@@ -117,6 +117,17 @@ instance A.ToJSON SetChannelHeader where
                ,"channel_header" A..= p
                ]
 
+data SearchPosts = SearchPosts
+ { searchPostsTerms      :: Text
+ , searchPostsIsOrSearch :: Bool
+ }
+
+instance A.ToJSON SearchPosts where
+ toJSON (SearchPosts t os) =
+     A.object ["terms" A..= t
+              ,"is_or_search" A..= os
+              ]
+
 data Type = Ordinary
           | Direct
           | Private
