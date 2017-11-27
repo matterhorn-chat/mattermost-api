@@ -8,7 +8,7 @@
 module Network.Mattermost.Types where
 
 import           Control.Applicative
-import           Text.Printf ( printf )
+import           Text.Printf ( PrintfArg(..), printf )
 import           Data.Hashable ( Hashable )
 import qualified Data.Aeson as A
 import           Data.Aeson ( (.:), (.=), (.:?), (.!=) )
@@ -178,6 +178,9 @@ instance IsId TeamId where
   toId   = unTI
   fromId = TI
 
+instance PrintfArg TeamId where
+  formatArg = formatArg . idString
+
 data Team
   = Team
   { teamId              :: TeamId
@@ -329,6 +332,9 @@ instance IsId ChannelId where
   toId   = unCI
   fromId = CI
 
+instance PrintfArg ChannelId where
+  formatArg = formatArg . idString
+
 data Channel
   = Channel
   { channelId            :: ChannelId
@@ -441,6 +447,9 @@ newtype UserId = UI { unUI :: Id }
 instance IsId UserId where
   toId   = unUI
   fromId = UI
+
+instance PrintfArg UserId where
+  formatArg = formatArg . idString
 
 --
 
@@ -602,12 +611,18 @@ instance IsId PostId where
   toId   = unPI
   fromId = PI
 
+instance PrintfArg PostId where
+  formatArg = formatArg . idString
+
 newtype FileId = FI { unFI :: Id }
   deriving (Read, Show, Eq, Ord, Hashable, ToJSON, ToJSONKey, FromJSONKey, FromJSON)
 
 instance IsId FileId where
   toId = unFI
   fromId = FI
+
+instance PrintfArg FileId where
+  formatArg = formatArg . idString
 
 urlForFile :: FileId -> Text
 urlForFile fId =
@@ -782,6 +797,9 @@ data FileInfo
   , fileInfoHasPreview :: Bool
   } deriving (Read, Show, Eq)
 
+instance ToJSON FileInfo where
+  toJSON = undefined
+
 instance FromJSON FileInfo where
   parseJSON = A.withObject "file_info" $ \o -> do
     fileInfoId         <- o .: "id"
@@ -871,6 +889,9 @@ instance IsId CommandId where
 
 instance HasId Command CommandId where
   getId = commandId
+
+instance PrintfArg CommandId where
+  formatArg = formatArg . idString
 
 data CommandResponseType
   = CommandResponseInChannel
@@ -1100,3 +1121,95 @@ instance A.ToJSON FlaggedPost where
           , preferenceValue    = PreferenceValue (if status then "true" else "false")
           , preferenceUserId   = userId
           }
+
+--
+
+newtype HookId = HI { unHI :: Id }
+  deriving (Read, Show, Eq, Ord, Hashable, ToJSON, ToJSONKey, FromJSONKey, FromJSON)
+
+instance IsId HookId where
+  toId   = unHI
+  fromId = HI
+
+instance PrintfArg HookId where
+  formatArg = formatArg . idString
+
+--
+
+newtype InviteId = II { unII :: Id }
+  deriving (Read, Show, Eq, Ord, Hashable, ToJSON, ToJSONKey, FromJSONKey, FromJSON)
+
+instance IsId InviteId where
+  toId   = unII
+  fromId = II
+
+instance PrintfArg InviteId where
+  formatArg = formatArg . idString
+
+--
+
+newtype TokenId = TkI { unTkI :: Id }
+  deriving (Read, Show, Eq, Ord, Hashable, ToJSON, ToJSONKey, FromJSONKey, FromJSON)
+
+instance IsId TokenId where
+  toId   = unTkI
+  fromId = TkI
+
+instance PrintfArg TokenId where
+  formatArg = formatArg . idString
+
+--
+
+newtype AppId = AI { unAI :: Id }
+  deriving (Read, Show, Eq, Ord, Hashable, ToJSON, ToJSONKey, FromJSONKey, FromJSON)
+
+instance IsId AppId where
+  toId   = unAI
+  fromId = AI
+
+instance PrintfArg AppId where
+  formatArg = formatArg . idString
+
+--
+
+newtype JobId = JI { unJI :: Id }
+  deriving (Read, Show, Eq, Ord, Hashable, ToJSON, ToJSONKey, FromJSONKey, FromJSON)
+
+instance IsId JobId where
+  toId   = unJI
+  fromId = JI
+
+instance PrintfArg JobId where
+  formatArg = formatArg . idString
+
+--
+
+newtype EmojiId = EI { unEI :: Id }
+  deriving (Read, Show, Eq, Ord, Hashable, ToJSON, ToJSONKey, FromJSONKey, FromJSON)
+
+instance IsId EmojiId where
+  toId   = unEI
+  fromId = EI
+
+instance PrintfArg EmojiId where
+  formatArg = formatArg . idString
+
+--
+
+newtype ReportId = RI { unRI :: Id }
+  deriving (Read, Show, Eq, Ord, Hashable, ToJSON, ToJSONKey, FromJSONKey, FromJSON)
+
+instance IsId ReportId where
+  toId   = unRI
+  fromId = RI
+
+instance PrintfArg ReportId where
+  formatArg = formatArg . idString
+
+-- FIXMES
+
+instance A.ToJSON User where toJSON = undefined
+instance A.ToJSON TeamMember where toJSON = undefined
+instance A.ToJSON Team where toJSON = undefined
+instance A.FromJSON Command where parseJSON = undefined
+instance A.ToJSON Command where toJSON = undefined

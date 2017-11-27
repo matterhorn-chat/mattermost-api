@@ -33,6 +33,7 @@ library
                        Network.Mattermost.Types
                        Network.Mattermost.Types.Base
                        Network.Mattermost.Types.Internal
+                       Network.Mattermost.Endpoints
   other-modules:       Network.Mattermost.TH
                        Paths_mattermost_api
   -- other-extensions:
