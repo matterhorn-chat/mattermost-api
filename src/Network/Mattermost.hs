@@ -81,6 +81,7 @@ module Network.Mattermost
 , mmGetPostsSince
 , mmGetPostsBefore
 , mmGetPostsAfter
+, mmSearchPosts
 , mmGetReactionsForPost
 , mmGetFileInfo
 , mmGetFile
@@ -499,6 +500,25 @@ mmGetPostsBefore sess teamid chanid postid offset limit =
          (idString postid)
          offset
          limit
+
+-- |
+-- route: @\/api\/v4\/teams\/{team_id}\/posts\/search@
+mmSearchPosts :: Session
+              -> TeamId
+              -> T.Text
+              -> Bool
+              -> IO Posts
+mmSearchPosts sess teamid terms isOrSearch = do
+  let path = printf "/api/v4/teams/%s/posts/search" $ idString teamid
+  uri <- mmPath path
+  let req = SearchPosts terms isOrSearch
+  runLoggerS sess "mmSearchPosts" $
+    HttpRequest POST path (Just (toJSON req))
+  rsp <- mmPOST sess uri req
+  (raw, value) <- mmGetJSONBody "SearchPostsResult" rsp
+  runLoggerS sess "mmSearchPosts" $
+    HttpResponse 200 path (Just raw)
+  return value
 
 -- |
 -- route: @\/api\/v3\/files\/{file_id}\/get_info@
