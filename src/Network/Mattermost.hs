@@ -105,6 +105,7 @@ module Network.Mattermost
 , mmUpdatePost
 , mmExecute
 , mmGetConfig
+, mmGetClientConfig
 , mmSetPreferences
 , mmSavePreferences
 , mmDeletePreferences
@@ -720,6 +721,16 @@ mmGetConfig :: Session
             -> IO Value
 mmGetConfig sess =
   mmDoRequest sess "mmGetConfig" "/api/v3/admin/config"
+
+-- | Get a subset of the server configuration needed by the client. Does not
+-- require administrative permission. The format query parameter is currently
+-- required with the value of "old".
+--
+-- route: @\/api\/v4\/config\/client@
+mmGetClientConfig :: Session
+                  -> IO Value
+mmGetClientConfig sess =
+  mmDoRequest sess "mmGetClientConfig" "/api/v4/config/client?format=old"
 
 mmSaveConfig :: Session
              -> Value
