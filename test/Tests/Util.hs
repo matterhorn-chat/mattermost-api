@@ -13,6 +13,7 @@ module Tests.Util
   , getChannelMembers
   , getUserByName
   , getConfig
+  , getClientConfig
   , saveConfig
   , teamAddUser
   , reportJSONExceptions
@@ -382,6 +383,11 @@ getConfig :: TestM A.Value
 getConfig = do
   session <- getSession
   liftIO $ mmGetConfig session
+
+getClientConfig :: TestM A.Value
+getClientConfig = do
+  session <- getSession
+  liftIO $ mmGetClientConfig session
 
 saveConfig :: A.Value -> TestM ()
 saveConfig newConfig = do

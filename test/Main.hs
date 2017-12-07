@@ -4,7 +4,7 @@ module Main (
 ) where
 
 import           Control.Exception
-import           Control.Monad (when)
+import           Control.Monad (when, unless)
 
 import           System.Exit
 
@@ -14,6 +14,7 @@ import           Data.Aeson
 import           Data.Monoid ((<>))
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Sequence as Seq
+import qualified Data.Text as T (unpack)
 
 import           Test.Tasty
 
@@ -91,6 +92,7 @@ unitTests = testGroup "Units"
     , leaveChannelTest
     , joinChannelTest
     , deleteChannelTest
+    , clientConfigTest
     ]
 
 -- Test definitions
@@ -264,3 +266,26 @@ deleteChannelTest =
             (isChannelDeleteEvent toDelete)
 
         expectWSDone
+
+clientConfigTest :: TestTree
+clientConfigTest =
+    mmTestCase "Client Config Test" testConfig $ do
+        loginAccount testUserLogin
+
+        print_ "Getting Client Config"
+        configObj <- getClientConfig
+
+        let Object config = configObj
+
+        keyAssert "AboutLink" config
+        keyAssert "EnableSignInWithEmail" config
+        keyAssert "RestrictPrivateChannelCreation" config
+        keyAssert "SiteName" config
+        keyAssert "TermsOfServiceLink" config
+        keyAssert "WebsocketSecurePort" config
+
+    where
+        keyAssert k c = unless (HM.member k c) $
+            let m = T.unpack k <> " key not present"
+            in print_ m
+               >> error m
