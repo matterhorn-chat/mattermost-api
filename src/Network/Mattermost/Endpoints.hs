@@ -136,9 +136,6 @@ inDelete uri payload k session = doRequest HTTP.DELETE uri payload session >>= k
 -- , mmPost
 -- , mmExecute
 -- , mmGetConfig
--- , mmSetPreferences
--- , mmSavePreferences
--- , mmDeletePreferences
 -- , mmFlagPost
 -- , mmUnflagPost
 -- , mmGetMyPreferences
@@ -731,14 +728,14 @@ mmGetMetadataForFile fileId =
 
 -- -- * Posts
 
--- -- | Create a new post in a channel. To create the post as a comment on
--- -- | another post, provide @root_id@.
--- -- |
--- -- | /Permissions/: Must have @create_post@ permission for the channel the
--- -- | post is being created in.
--- mmCreatePost :: XX7 -> Session -> IO Post
--- mmCreatePost body =
---   inPost "/posts" (jsonBody body) jsonResponse
+-- | Create a new post in a channel. To create the post as a comment on
+-- | another post, provide @root_id@.
+-- |
+-- | /Permissions/: Must have @create_post@ permission for the channel the
+-- | post is being created in.
+mmCreatePost :: RawPost -> Session -> IO Post
+mmCreatePost body =
+  inPost "/posts" (jsonBody body) jsonResponse
 
 -- -- | Search posts in the team and from the provided terms string.
 -- -- |
@@ -771,7 +768,7 @@ mmGetMetadataForFile fileId =
 -- |
 -- | /Permissions/: Must have @edit_post@ permission for the channel the
 -- | post is in.
-mmUpdatePost :: PostId -> XX16 -> Session -> IO Post
+mmUpdatePost :: PostId -> PostUpdate -> Session -> IO Post
 mmUpdatePost postId body =
   inPut (printf "/posts/%s" postId) (jsonBody body) jsonResponse
 
@@ -847,46 +844,46 @@ mmGetListOfFlaggedPosts userId teamId channelId page perPage =
 
 -- -- * Preferences
 
--- -- | Gets a single preference for the current user with the given category
--- -- | and name.
--- -- |
--- -- | /Permissions/: Must be logged in as the user being updated or have the
--- -- | @edit_other_users@ permission.
--- mmGetSpecificUserPreference :: UserId -> Text -> Text -> Session -> IO Preference
--- mmGetSpecificUserPreference userId category preferenceName =
---   inGet (printf "/users/%s/preferences/%s/name/%s" userId category preferenceName) noBody jsonResponse
+-- | Gets a single preference for the current user with the given category
+-- | and name.
+-- |
+-- | /Permissions/: Must be logged in as the user being updated or have the
+-- | @edit_other_users@ permission.
+mmGetSpecificUserPreference :: UserId -> Text -> Text -> Session -> IO Preference
+mmGetSpecificUserPreference userId category preferenceName =
+  inGet (printf "/users/%s/preferences/%s/name/%s" userId category preferenceName) noBody jsonResponse
 
--- -- | Save a list of the user's preferences.
--- -- |
--- -- | /Permissions/: Must be logged in as the user being updated or have the
--- -- | @edit_other_users@ permission.
--- mmSaveUsersPreferences :: UserId -> (Seq Preference) -> Session -> IO ()
--- mmSaveUsersPreferences userId body =
---   inPut (printf "/users/%s/preferences" userId) (jsonBody body) jsonResponse
+-- | Save a list of the user's preferences.
+-- |
+-- | /Permissions/: Must be logged in as the user being updated or have the
+-- | @edit_other_users@ permission.
+mmSaveUsersPreferences :: UserId -> (Seq Preference) -> Session -> IO ()
+mmSaveUsersPreferences userId body =
+  inPut (printf "/users/%s/preferences" userId) (jsonBody body) jsonResponse
 
--- -- | Get a list of the user's preferences.
--- -- |
--- -- | /Permissions/: Must be logged in as the user being updated or have the
--- -- | @edit_other_users@ permission.
--- mmGetUsersPreferences :: UserId -> Session -> IO (Seq Preference)
--- mmGetUsersPreferences userId =
---   inGet (printf "/users/%s/preferences" userId) noBody jsonResponse
+-- | Get a list of the user's preferences.
+-- |
+-- | /Permissions/: Must be logged in as the user being updated or have the
+-- | @edit_other_users@ permission.
+mmGetUsersPreferences :: UserId -> Session -> IO (Seq Preference)
+mmGetUsersPreferences userId =
+  inGet (printf "/users/%s/preferences" userId) noBody jsonResponse
 
--- -- | Delete a list of the user's preferences.
--- -- |
--- -- | /Permissions/: Must be logged in as the user being updated or have the
--- -- | @edit_other_users@ permission.
--- mmDeleteUsersPreferences :: UserId -> (Seq Preference) -> Session -> IO ()
--- mmDeleteUsersPreferences userId body =
---   inPost (printf "/users/%s/preferences/delete" userId) (jsonBody body) jsonResponse
+-- | Delete a list of the user's preferences.
+-- |
+-- | /Permissions/: Must be logged in as the user being updated or have the
+-- | @edit_other_users@ permission.
+mmDeleteUsersPreferences :: UserId -> (Seq Preference) -> Session -> IO ()
+mmDeleteUsersPreferences userId body =
+  inPost (printf "/users/%s/preferences/delete" userId) (jsonBody body) jsonResponse
 
--- -- | Lists the current user's stored preferences in the given category.
--- -- |
--- -- | /Permissions/: Must be logged in as the user being updated or have the
--- -- | @edit_other_users@ permission.
--- mmListUsersPreferencesByCategory :: UserId -> Text -> Session -> IO (Seq Preference)
--- mmListUsersPreferencesByCategory userId category =
---   inGet (printf "/users/%s/preferences/%s" userId category) noBody jsonResponse
+-- | Lists the current user's stored preferences in the given category.
+-- |
+-- | /Permissions/: Must be logged in as the user being updated or have the
+-- | @edit_other_users@ permission.
+mmListUsersPreferencesByCategory :: UserId -> Text -> Session -> IO (Seq Preference)
+mmListUsersPreferencesByCategory userId category =
+  inGet (printf "/users/%s/preferences/%s" userId category) noBody jsonResponse
 
 
 
@@ -983,9 +980,7 @@ mmGetListOfFlaggedPosts userId teamId channelId page perPage =
 
 -- -- | Upload a license to enable enterprise features.
 -- -- |
--- -- |
 -- -- | /Minimum server version/: 4.0
--- -- |
 -- -- |
 -- -- | /Permissions/: Must have @manage_system@ permission.
 -- mmUploadLicenseFile :: Session -> IO ()
@@ -995,9 +990,7 @@ mmGetListOfFlaggedPosts userId teamId channelId page perPage =
 -- -- | Remove the license file from the server. This will disable all
 -- -- | enterprise features.
 -- -- |
--- -- |
 -- -- | /Minimum server version/: 4.0
--- -- |
 -- -- |
 -- -- | /Permissions/: Must have @manage_system@ permission.
 -- mmRemoveLicenseFile :: Session -> IO ()
@@ -3848,34 +3841,34 @@ instance A.ToJSON InitialTeamData where
 
 -- --
 
-data XX16 = XX16
-  { xx16IsPinned :: Bool
-  , xx16Message :: Text
+data PostUpdate = PostUpdate
+  { postUpdateIsPinned :: Bool
+  , postUpdateMessage :: Text
     -- ^ The message text of the post
-  , xx16HasReactions :: UnknownType
+  , postUpdateHasReactions :: Bool
     -- ^ Set to `true` if the post has reactions to it
-  , xx16FileIds :: (Seq UnknownType)
+  , postUpdateFileIds :: (Seq FileId)
     -- ^ The list of files attached to this post
-  , xx16Props :: Text
+  , postUpdateProps :: Text
     -- ^ A general JSON property bag to attach to the post
   } deriving (Read, Show, Eq)
 
-instance A.FromJSON XX16 where
-  parseJSON = A.withObject "xx16" $ \v -> do
-    xx16IsPinned <- v A..: "is_pinned"
-    xx16Message <- v A..: "message"
-    xx16HasReactions <- v A..: "has_reactions"
-    xx16FileIds <- v A..: "file_ids"
-    xx16Props <- v A..: "props"
-    return XX16 { .. }
+instance A.FromJSON PostUpdate where
+  parseJSON = A.withObject "postUpdate" $ \v -> do
+    postUpdateIsPinned <- v A..: "is_pinned"
+    postUpdateMessage <- v A..: "message"
+    postUpdateHasReactions <- v A..: "has_reactions"
+    postUpdateFileIds <- v A..: "file_ids"
+    postUpdateProps <- v A..: "props"
+    return PostUpdate { .. }
 
-instance A.ToJSON XX16 where
-  toJSON XX16 { .. } = A.object
-    [ "is_pinned" A..= xx16IsPinned
-    , "message" A..= xx16Message
-    , "has_reactions" A..= xx16HasReactions
-    , "file_ids" A..= xx16FileIds
-    , "props" A..= xx16Props
+instance A.ToJSON PostUpdate where
+  toJSON PostUpdate { .. } = A.object
+    [ "is_pinned" A..= postUpdateIsPinned
+    , "message" A..= postUpdateMessage
+    , "has_reactions" A..= postUpdateHasReactions
+    , "file_ids" A..= postUpdateFileIds
+    , "props" A..= postUpdateProps
     ]
 
 -- --
@@ -3900,22 +3893,22 @@ instance A.ToJSON XX16 where
 
 -- --
 
-data XX18 = XX18
-  { xx18ChannelId :: Text
-  , xx18Command :: Text
+data MinCommand = MinCommand
+  { commandChannelId :: Text
+  , commandCommand :: Text
     -- ^ The slash command to execute
   } deriving (Read, Show, Eq)
 
-instance A.FromJSON XX18 where
-  parseJSON = A.withObject "xx18" $ \v -> do
-    xx18ChannelId <- v A..: "channel_id"
-    xx18Command <- v A..: "command"
-    return XX18 { .. }
+instance A.FromJSON MinCommand where
+  parseJSON = A.withObject "command" $ \v -> do
+    commandChannelId <- v A..: "channel_id"
+    commandCommand <- v A..: "command"
+    return MinCommand { .. }
 
-instance A.ToJSON XX18 where
-  toJSON XX18 { .. } = A.object
-    [ "channel_id" A..= xx18ChannelId
-    , "command" A..= xx18Command
+instance A.ToJSON MinCommand where
+  toJSON MinCommand { .. } = A.object
+    [ "channel_id" A..= commandChannelId
+    , "command" A..= commandCommand
     ]
 
 -- --
@@ -4648,31 +4641,31 @@ instance A.ToJSON InitialChannelData where
 
 -- --
 
--- data XX7 = XX7
---   { xx7ChannelId :: Text
---   , xx7Message :: Text
---     -- ^ The message contents, can be formatted with Markdown
---   , xx7FileIds :: (Seq Text)
---     -- ^ A list of file IDs to associate with the post
---   , xx7RootId :: Text
---     -- ^ The post ID to comment on
---   } deriving (Read, Show, Eq)
+data RawPost = RawPost
+  { rawPostChannelId :: Text
+  , rawPostMessage :: Text
+    -- ^ The message contents, can be formatted with Markdown
+  , rawPostFileIds :: (Seq FileId)
+    -- ^ A list of file IDs to associate with the post
+  , rawPostRootId :: PostId
+    -- ^ The post ID to comment on
+  } deriving (Read, Show, Eq)
 
--- instance A.FromJSON XX7 where
---   parseJSON = A.withObject "xx7" $ \v -> do
---     xx7ChannelId <- v A..: "channel_id"
---     xx7Message <- v A..: "message"
---     xx7FileIds <- v A..: "file_ids"
---     xx7RootId <- v A..: "root_id"
---     return XX7 { .. }
+instance A.FromJSON RawPost where
+  parseJSON = A.withObject "rawPost" $ \v -> do
+    rawPostChannelId <- v A..: "channel_id"
+    rawPostMessage <- v A..: "message"
+    rawPostFileIds <- v A..: "file_ids"
+    rawPostRootId <- v A..: "root_id"
+    return RawPost { .. }
 
--- instance A.ToJSON XX7 where
---   toJSON XX7 { .. } = A.object
---     [ "channel_id" A..= xx7ChannelId
---     , "message" A..= xx7Message
---     , "file_ids" A..= xx7FileIds
---     , "root_id" A..= xx7RootId
---     ]
+instance A.ToJSON RawPost where
+  toJSON RawPost { .. } = A.object
+    [ "channel_id" A..= rawPostChannelId
+    , "message" A..= rawPostMessage
+    , "file_ids" A..= rawPostFileIds
+    , "root_id" A..= rawPostRootId
+    ]
 
 -- --
 
