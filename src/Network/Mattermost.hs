@@ -126,7 +126,6 @@ import           Data.Monoid ((<>))
 import           Text.Printf ( printf )
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as BL
-import           Data.Time.Clock ( UTCTime )
 import           Network.Connection ( Connection
                                     , connectionGetLine
                                     , connectionPut
@@ -438,14 +437,14 @@ mmGetPosts sess teamid chanid offset limit =
 mmGetPostsSince :: Session
            -> TeamId
            -> ChannelId
-           -> UTCTime
+           -> ServerTime
            -> IO Posts
 mmGetPostsSince sess teamid chanid since =
   mmDoRequest sess "mmGetPostsSince" $
   printf "/api/v3/teams/%s/channels/%s/posts/since/%d"
          (idString teamid)
          (idString chanid)
-         (utcTimeToMilliseconds since :: Int)
+         (timeToServer since)
 
 -- |
 -- route: @\/api\/v3\/teams\/{team_id}\/channels\/{channel_id}\/posts\/{post_id}\/get@

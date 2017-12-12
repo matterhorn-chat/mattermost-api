@@ -5,7 +5,11 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-module Network.Mattermost.Types where
+module Network.Mattermost.Types
+    ( module Network.Mattermost.Types
+    , module Network.Mattermost.Types.Base
+    )
+    where
 
 import           Control.Applicative
 import           Text.Printf ( printf )
@@ -26,7 +30,7 @@ import           Data.Sequence (Seq)
 import qualified Data.Sequence as S
 import           Data.Text (Text)
 import qualified Data.Text as T
-import           Data.Time.Clock ( UTCTime, getCurrentTime )
+import           Data.Time.Clock ( getCurrentTime )
 import           Data.Time.Clock.POSIX ( posixSecondsToUTCTime
                                        , utcTimeToPOSIXSeconds )
 import           Network.Connection (ConnectionContext, initConnectionContext)
@@ -192,9 +196,9 @@ instance IsId TeamId where
 data Team
   = Team
   { teamId              :: TeamId
-  , teamCreateAt        :: UTCTime
-  , teamUpdateAt        :: UTCTime
-  , teamDeleteAt        :: UTCTime
+  , teamCreateAt        :: ServerTime
+  , teamUpdateAt        :: ServerTime
+  , teamDeleteAt        :: ServerTime
   , teamDisplayName     :: Text
   , teamName            :: Text
   , teamEmail           :: Text
@@ -212,9 +216,9 @@ instance HasId Team TeamId where
 instance A.FromJSON Team where
   parseJSON = A.withObject "Team" $ \v -> do
     teamId              <- v .: "id"
-    teamCreateAt        <- millisecondsToUTCTime <$> v .: "create_at"
-    teamUpdateAt        <- millisecondsToUTCTime <$> v .: "update_at"
-    teamDeleteAt        <- millisecondsToUTCTime <$> v .: "delete_at"
+    teamCreateAt        <- timeFromServer <$> v .: "create_at"
+    teamUpdateAt        <- timeFromServer <$> v .: "update_at"
+    teamDeleteAt        <- timeFromServer <$> v .: "delete_at"
     teamDisplayName     <- v .: "display_name"
     teamName            <- v .: "name"
     teamEmail           <- v .: "email"
@@ -343,18 +347,18 @@ instance IsId ChannelId where
 data Channel
   = Channel
   { channelId            :: ChannelId
-  , channelCreateAt      :: UTCTime
-  , channelUpdateAt      :: UTCTime
-  , channelDeleteAt      :: UTCTime
+  , channelCreateAt      :: ServerTime
+  , channelUpdateAt      :: ServerTime
+  , channelDeleteAt      :: ServerTime
   , channelTeamId        :: Maybe TeamId
   , channelType          :: Type
   , channelDisplayName   :: Text
   , channelName          :: Text
   , channelHeader        :: Text
   , channelPurpose       :: Text
-  , channelLastPostAt    :: UTCTime
+  , channelLastPostAt    :: ServerTime
   , channelTotalMsgCount :: Int
-  , channelExtraUpdateAt :: UTCTime
+  , channelExtraUpdateAt :: ServerTime
   , channelCreatorId     :: Maybe UserId
   } deriving (Read, Show, Eq, Ord)
 
@@ -364,18 +368,18 @@ instance HasId Channel ChannelId where
 instance A.FromJSON Channel where
   parseJSON = A.withObject "Channel" $ \v -> do
     channelId              <- v .: "id"
-    channelCreateAt        <- millisecondsToUTCTime <$> v .: "create_at"
-    channelUpdateAt        <- millisecondsToUTCTime <$> v .: "update_at"
-    channelDeleteAt        <- millisecondsToUTCTime <$> v .: "delete_at"
+    channelCreateAt        <- timeFromServer <$> v .: "create_at"
+    channelUpdateAt        <- timeFromServer <$> v .: "update_at"
+    channelDeleteAt        <- timeFromServer <$> v .: "delete_at"
     channelTeamId          <- maybeFail (v .: "team_id")
     channelType            <- v .: "type"
     channelDisplayName     <- v .: "display_name"
     channelName            <- v .: "name"
     channelHeader          <- v .: "header"
     channelPurpose         <- v .: "purpose"
-    channelLastPostAt      <- millisecondsToUTCTime <$> v .: "last_post_at"
+    channelLastPostAt      <- timeFromServer <$> v .: "last_post_at"
     channelTotalMsgCount   <- v .: "total_msg_count"
-    channelExtraUpdateAt   <- millisecondsToUTCTime <$> v .: "extra_update_at"
+    channelExtraUpdateAt   <- timeFromServer <$> v .: "extra_update_at"
     channelCreatorId       <- maybeFail (v .: "creator_id")
     return Channel { .. }
 
@@ -398,11 +402,11 @@ data ChannelData
   { channelDataChannelId    :: ChannelId
   , channelDataUserId       :: UserId
   , channelDataRoles        :: Text
-  , channelDataLastViewedAt :: UTCTime
+  , channelDataLastViewedAt :: ServerTime
   , channelDataMsgCount     :: Int
   , channelDataMentionCount :: Int
   , channelDataNotifyProps  :: ChannelNotifyProps
-  , channelDataLastUpdateAt :: UTCTime
+  , channelDataLastUpdateAt :: ServerTime
   } deriving (Read, Show, Eq)
 
 instance A.FromJSON ChannelData where
@@ -410,11 +414,11 @@ instance A.FromJSON ChannelData where
     channelDataChannelId <- o .: "channel_id"
     channelDataUserId    <- o .: "user_id"
     channelDataRoles     <- o .: "roles"
-    channelDataLastViewedAt <- millisecondsToUTCTime <$> o .: "last_viewed_at"
+    channelDataLastViewedAt <- timeFromServer <$> o .: "last_viewed_at"
     channelDataMsgCount     <- o .: "msg_count"
     channelDataMentionCount <- o .: "mention_count"
     channelDataNotifyProps  <- o .: "notify_props"
-    channelDataLastUpdateAt <- millisecondsToUTCTime <$> o .: "last_update_at"
+    channelDataLastUpdateAt <- timeFromServer <$> o .: "last_update_at"
     return ChannelData { .. }
 
 data ChannelWithData = ChannelWithData Channel ChannelData
@@ -477,9 +481,9 @@ instance HasId User UserId where
 data User
   = User
   { userId                 :: UserId
-  , userCreateAt           :: UTCTime
-  , userUpdateAt           :: UTCTime
-  , userDeleteAt           :: UTCTime
+  , userCreateAt           :: ServerTime
+  , userUpdateAt           :: ServerTime
+  , userDeleteAt           :: ServerTime
   , userUsername           :: Text
   , userAuthData           :: Text
   , userAuthService        :: Text
@@ -490,17 +494,17 @@ data User
   , userLastName           :: Text
   , userRoles              :: Text
   , userNotifyProps        :: UserNotifyProps
-  , userLastPasswordUpdate :: Maybe UTCTime
-  , userLastPictureUpdate  :: Maybe UTCTime
+  , userLastPasswordUpdate :: Maybe ServerTime
+  , userLastPictureUpdate  :: Maybe ServerTime
   , userLocale             :: Text
   } deriving (Read, Show, Eq)
 
 instance A.FromJSON User where
   parseJSON = A.withObject "User" $ \o -> do
     userId                 <- o .: "id"
-    userCreateAt           <- millisecondsToUTCTime <$> o .: "create_at"
-    userUpdateAt           <- millisecondsToUTCTime <$> o .: "update_at"
-    userDeleteAt           <- millisecondsToUTCTime <$> o .: "delete_at"
+    userCreateAt           <- timeFromServer <$> o .: "create_at"
+    userUpdateAt           <- timeFromServer <$> o .: "update_at"
+    userDeleteAt           <- timeFromServer <$> o .: "delete_at"
     userUsername           <- o .:  "username"
     userAuthData           <- o .:  "auth_data"
     userAuthService        <- o .:  "auth_service"
@@ -511,9 +515,9 @@ instance A.FromJSON User where
     userLastName           <- o .:  "last_name"
     userRoles              <- o .:  "roles"
     userNotifyProps        <- o .:? "notify_props" .!= emptyUserNotifyProps
-    userLastPasswordUpdate <- (millisecondsToUTCTime <$>) <$>
+    userLastPasswordUpdate <- (timeFromServer <$>) <$>
                               (o .:? "last_password_update")
-    userLastPictureUpdate  <- (millisecondsToUTCTime <$>) <$> (o .:? "last_picture_update")
+    userLastPictureUpdate  <- (timeFromServer <$>) <$> (o .:? "last_picture_update")
     userLocale             <- o .: "locale"
     return User { .. }
 
@@ -673,11 +677,11 @@ data Post
   , postId            :: PostId
   , postType          :: PostType
   , postMessage       :: Text
-  , postDeleteAt      :: Maybe UTCTime
+  , postDeleteAt      :: Maybe ServerTime
   , postHashtags      :: Text
-  , postUpdateAt      :: UTCTime
+  , postUpdateAt      :: ServerTime
   , postUserId        :: Maybe UserId
-  , postCreateAt      :: UTCTime
+  , postCreateAt      :: ServerTime
   , postParentId      :: Maybe PostId
   , postChannelId     :: ChannelId
   , postHasReactions  :: Bool
@@ -696,11 +700,11 @@ instance A.FromJSON Post where
     postId            <- v .: "id"
     postType          <- v .: "type"
     postMessage       <- v .: "message"
-    postDeleteAt      <- (millisecondsToUTCTime <$>) <$> v .:? "delete_at"
+    postDeleteAt      <- (timeFromServer <$>) <$> v .:? "delete_at"
     postHashtags      <- v .: "hashtags"
-    postUpdateAt      <- millisecondsToUTCTime <$> v .: "update_at"
+    postUpdateAt      <- timeFromServer <$> v .: "update_at"
     postUserId        <- maybeFail (v .: "user_id")
-    postCreateAt      <- millisecondsToUTCTime <$> v .: "create_at"
+    postCreateAt      <- timeFromServer <$> v .: "create_at"
     postParentId      <- maybeFail (v .: "parent_id")
     postChannelId     <- v .: "channel_id"
     postHasReactions  <- (v .: "has_reactions") <|> (return False)
@@ -716,11 +720,11 @@ instance A.ToJSON Post where
     , "id"              .= postId
     , "type"            .= postType
     , "message"         .= postMessage
-    , "delete_at"       .= (utcTimeToMilliseconds <$> postDeleteAt)
+    , "delete_at"       .= (timeToServer <$> postDeleteAt)
     , "hashtags"        .= postHashtags
-    , "update_at"       .= utcTimeToMilliseconds postUpdateAt
+    , "update_at"       .= timeToServer postUpdateAt
     , "user_id"         .= postUserId
-    , "create_at"       .= utcTimeToMilliseconds postCreateAt
+    , "create_at"       .= timeToServer postCreateAt
     , "parent_id"       .= postParentId
     , "channel_id"      .= postChannelId
     , "has_reactions"   .= postHasReactions
@@ -729,7 +733,7 @@ instance A.ToJSON Post where
 data PendingPost
   = PendingPost
   { pendingPostChannelId :: ChannelId
-  , pendingPostCreateAt  :: Maybe UTCTime
+  , pendingPostCreateAt  :: Maybe ServerTime
   , pendingPostFilenames :: Seq FilePath
   , pendingPostMessage   :: Text
   , pendingPostId        :: PendingPostId
@@ -741,7 +745,7 @@ data PendingPost
 instance A.ToJSON PendingPost where
   toJSON post = A.object
     [ "channel_id"      .= pendingPostChannelId post
-    , "create_at"       .= maybe 0 utcTimeToMilliseconds (pendingPostCreateAt post)
+    , "create_at"       .= maybe 0 timeToServer (pendingPostCreateAt post)
     , "filenames"       .= pendingPostFilenames post
     , "message"         .= pendingPostMessage   post
     , "pending_post_id" .= pendingPostId        post
@@ -762,8 +766,10 @@ instance HasId PendingPost PendingPostId where
 
 mkPendingPost :: Text -> UserId -> ChannelId -> IO PendingPost
 mkPendingPost msg userid channelid = do
+  -- locally generating a ServerTime: ok because it's just used for an
+  -- initial string ID for this post and not an actual time value.
   now <- getCurrentTime
-  let ms  = utcTimeToMilliseconds now :: Int
+  let ms  = timeToServer (ServerTime now) :: Int
       pid = T.pack $ printf "%s:%d" (idString userid) ms
   return PendingPost
     { pendingPostId        = PPI (Id pid)
@@ -781,9 +787,9 @@ data FileInfo
   { fileInfoId         :: FileId
   , fileInfoUserId     :: UserId
   , fileInfoPostId     :: Maybe PostId
-  , fileInfoCreateAt   :: UTCTime
-  , fileInfoUpdateAt   :: UTCTime
-  , fileInfoDeleteAt   :: UTCTime
+  , fileInfoCreateAt   :: ServerTime
+  , fileInfoUpdateAt   :: ServerTime
+  , fileInfoDeleteAt   :: ServerTime
   , fileInfoName       :: Text
   , fileInfoExtension  :: Text
   , fileInfoSize       :: Int
@@ -798,9 +804,9 @@ instance FromJSON FileInfo where
     fileInfoId         <- o .: "id"
     fileInfoUserId     <- o .: "user_id"
     fileInfoPostId     <- o .: "post_id"
-    fileInfoCreateAt   <- millisecondsToUTCTime <$> o .: "create_at"
-    fileInfoUpdateAt   <- millisecondsToUTCTime <$> o .: "update_at"
-    fileInfoDeleteAt   <- millisecondsToUTCTime <$> o .: "delete_at"
+    fileInfoCreateAt   <- timeFromServer <$> o .: "create_at"
+    fileInfoUpdateAt   <- timeFromServer <$> o .: "update_at"
+    fileInfoDeleteAt   <- timeFromServer <$> o .: "delete_at"
     fileInfoName       <- o .: "name"
     fileInfoExtension  <- o .: "extension"
     fileInfoSize       <- o .: "size"
@@ -826,11 +832,15 @@ instance A.FromJSON Posts where
 
 --
 
-millisecondsToUTCTime :: Integer -> UTCTime
-millisecondsToUTCTime ms = posixSecondsToUTCTime (fromRational (ms%1000))
+-- The JSON specification of times exchaned with the server are in
+-- integer milliSeconds; convert to and from the local ServerTime
+-- internal value.
 
-utcTimeToMilliseconds :: UTCTime -> Int
-utcTimeToMilliseconds utc = truncate ((utcTimeToPOSIXSeconds utc)*1000)
+timeFromServer :: Integer -> ServerTime
+timeFromServer ms = ServerTime $ posixSecondsToUTCTime (fromRational (ms%1000))
+
+timeToServer :: ServerTime -> Int
+timeToServer time = truncate ((utcTimeToPOSIXSeconds $ withServerTime time)*1000)
 
 --
 
@@ -856,9 +866,9 @@ data Command
   = Command
   { commandId               :: CommandId
   , commandToken            :: Token
-  , commandCreateAt         :: UTCTime
-  , commandUpdateAt         :: UTCTime
-  , commandDeleteAt         :: UTCTime
+  , commandCreateAt         :: ServerTime
+  , commandUpdateAt         :: ServerTime
+  , commandDeleteAt         :: ServerTime
   , commandCreatorId        :: UserId
   , commandTeamId           :: TeamId
   , commandTrigger          :: Text
@@ -954,7 +964,7 @@ data Reaction
   { reactionUserId    :: UserId
   , reactionPostId    :: PostId
   , reactionEmojiName :: Text
-  , reactionCreateAt  :: UTCTime
+  , reactionCreateAt  :: ServerTime
   } deriving (Read, Show, Eq)
 
 instance A.FromJSON Reaction where
@@ -962,7 +972,7 @@ instance A.FromJSON Reaction where
     reactionUserId    <- v .: "user_id"
     reactionPostId    <- v .: "post_id"
     reactionEmojiName <- v .: "emoji_name"
-    reactionCreateAt  <- millisecondsToUTCTime <$> v .: "create_at"
+    reactionCreateAt  <- timeFromServer <$> v .: "create_at"
     return Reaction { .. }
 
 instance A.ToJSON Reaction where
@@ -970,7 +980,7 @@ instance A.ToJSON Reaction where
     [ "user_id"    .= reactionUserId
     , "post_id"    .= reactionPostId
     , "emoji_name" .= reactionEmojiName
-    , "create_at"  .= utcTimeToMilliseconds reactionCreateAt
+    , "create_at"  .= timeToServer reactionCreateAt
     ]
 
 -- * Preferences

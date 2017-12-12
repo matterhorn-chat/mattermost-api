@@ -7,6 +7,7 @@ module Network.Mattermost.Types.Base where
 
 import qualified Data.Aeson as A
 import           Data.Text (Text)
+import           Data.Time.Clock ( UTCTime )
 import           Network.HTTP.Base (RequestMethod)
 
 type Hostname = Text
@@ -33,3 +34,11 @@ data LogEventType
   | WebSocketPing
   | WebSocketPong
     deriving (Eq, Show)
+
+
+-- | The time as provided by the Server.  This is a wrapper designed
+-- to warn against naive comparisons to local times: the server's time
+-- and local times are not necessarily synchronized.
+
+newtype ServerTime = ServerTime { withServerTime :: UTCTime }
+    deriving (Eq, Ord, Read, Show)
