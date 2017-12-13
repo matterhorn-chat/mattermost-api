@@ -832,7 +832,7 @@ instance A.FromJSON Posts where
 
 --
 
--- The JSON specification of times exchaned with the server are in
+-- The JSON specification of times exchanged with the server are in
 -- integer milliSeconds; convert to and from the local ServerTime
 -- internal value.
 
