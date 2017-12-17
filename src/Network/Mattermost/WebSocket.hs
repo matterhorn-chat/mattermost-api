@@ -7,6 +7,7 @@ module Network.Mattermost.WebSocket
 , MMWebSocketTimeoutException
 , mmWithWebSocket
 , mmCloseWebSocket
+, mmSendWSAction
 , mmGetConnectionHealth
 , module Network.Mattermost.WebSocket.Types
 ) where
@@ -142,3 +143,8 @@ mmWithWebSocket (Session cd (Token tk)) recv body = do
         propagate ts e = do
           sequence_ [ throwTo t e | t <- ts ]
           throwIO e
+
+mmSendWSAction :: ConnectionData -> MMWebSocket -> WebsocketAction -> IO ()
+mmSendWSAction cd (MMWS ws _) a = do
+  runLogger cd "websocket" $ WebSocketRequest $ toJSON a
+  WS.sendTextData ws a
