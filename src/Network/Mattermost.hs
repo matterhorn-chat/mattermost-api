@@ -59,6 +59,7 @@ module Network.Mattermost
 , mkConnectionData
 , initConnectionData
 , initConnectionDataInsecure
+, mmCloseSession
 , mmLogin
 , mmCreateDirect
 , mmCreateChannel
@@ -1096,3 +1097,6 @@ assert200Response path rsp =
                         in throwIO $ MattermostServerError newMsg
                     _ -> throwIO $ httpExc
             _ -> throwIO $ httpExc
+
+mmCloseSession :: Session -> IO ()
+mmCloseSession (Session cd _) = destroyConnectionData cd

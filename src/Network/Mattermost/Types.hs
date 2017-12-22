@@ -25,17 +25,21 @@ import           Data.Aeson.Types ( ToJSONKey
                                   )
 import qualified Data.HashMap.Strict as HM
 import           Data.Monoid ( (<>) )
+import           Data.Pool (Pool, createPool, destroyAllResources)
 import           Data.Ratio ( (%) )
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as S
+import           Data.Time (NominalDiffTime)
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Time.Clock ( getCurrentTime )
 import           Data.Time.Clock.POSIX ( posixSecondsToUTCTime
                                        , utcTimeToPOSIXSeconds )
-import           Network.Connection (ConnectionContext, initConnectionContext)
+import           Network.Connection (ConnectionContext, Connection
+                                    , initConnectionContext, connectionClose)
 import           Network.Mattermost.Types.Base
 import           Network.Mattermost.Types.Internal
+import           Network.Mattermost.Util (mkConnection)
 
 runLogger :: ConnectionData -> String -> LogEventType -> IO ()
 runLogger ConnectionData { cdLogger = Just l } n ev =
@@ -49,38 +53,56 @@ maybeFail :: Parser a -> Parser (Maybe a)
 maybeFail p = (Just <$> p) <|> (return Nothing)
 
 -- | Creates a structure representing a TLS connection to the server.
-mkConnectionData :: Hostname -> Port -> ConnectionContext -> ConnectionData
-mkConnectionData host port ctx = ConnectionData
-  { cdHostname      = host
-  , cdPort          = port
-  , cdConnectionCtx = ctx
-  , cdAutoClose     = Yes
-  , cdToken         = Nothing
-  , cdLogger        = Nothing
-  , cdUseTLS        = True
+mkConnectionData :: Hostname -> Port -> Pool Connection -> ConnectionContext -> ConnectionData
+mkConnectionData host port pool ctx = ConnectionData
+  { cdHostname       = host
+  , cdPort           = port
+  , cdConnectionCtx  = ctx
+  , cdAutoClose      = No
+  , cdConnectionPool = pool
+  , cdToken          = Nothing
+  , cdLogger         = Nothing
+  , cdUseTLS         = True
   }
 
 -- | Plaintext HTTP instead of a TLS connection.
-mkConnectionDataInsecure :: Hostname -> Port -> ConnectionContext -> ConnectionData
-mkConnectionDataInsecure host port ctx = ConnectionData
-  { cdHostname      = host
-  , cdPort          = port
-  , cdConnectionCtx = ctx
-  , cdAutoClose     = Yes
-  , cdToken         = Nothing
-  , cdLogger        = Nothing
-  , cdUseTLS        = False
+mkConnectionDataInsecure :: Hostname -> Port ->  Pool Connection -> ConnectionContext -> ConnectionData
+mkConnectionDataInsecure host port pool ctx = ConnectionData
+  { cdHostname       = host
+  , cdPort           = port
+  , cdConnectionCtx  = ctx
+  , cdAutoClose      = No
+  , cdConnectionPool = pool
+  , cdToken          = Nothing
+  , cdLogger         = Nothing
+  , cdUseTLS         = False
   }
+
+stripesCount :: Int
+stripesCount = 1
+
+idleConnTimeout :: NominalDiffTime
+idleConnTimeout = 30
+
+maxConnCount :: Int
+maxConnCount = 5
 
 initConnectionData :: Hostname -> Port -> IO ConnectionData
 initConnectionData host port = do
   ctx <- initConnectionContext
-  return (mkConnectionData host port ctx)
+  pool <- createPool (mkConnection ctx host port True) connectionClose
+                     stripesCount idleConnTimeout maxConnCount
+  return (mkConnectionData host port pool ctx)
 
 initConnectionDataInsecure :: Hostname -> Port -> IO ConnectionData
 initConnectionDataInsecure host port = do
   ctx <- initConnectionContext
-  return (mkConnectionDataInsecure host port ctx)
+  pool <- createPool (mkConnection ctx host port False) connectionClose
+                     stripesCount idleConnTimeout maxConnCount
+  return (mkConnectionDataInsecure host port pool ctx)
+
+destroyConnectionData :: ConnectionData -> IO ()
+destroyConnectionData = destroyAllResources . cdConnectionPool
 
 withLogger :: ConnectionData -> Logger -> ConnectionData
 withLogger cd logger = cd { cdLogger = Just logger }
