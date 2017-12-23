@@ -310,8 +310,8 @@ findChannel chans name =
 
 connectFromConfig :: Config -> IO ConnectionData
 connectFromConfig cfg =
-  initConnectionDataInsecure (configHostname cfg)
-                             (fromIntegral (configPort cfg))
+  initConnectionDataInsecure (configHostname cfg) (fromIntegral (configPort cfg))
+                             defaultConnectionPoolConfig
 
 getConnection :: TestM ConnectionData
 getConnection = gets tsConnectionData
