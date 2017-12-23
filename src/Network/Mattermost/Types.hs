@@ -25,7 +25,7 @@ import           Data.Aeson.Types ( ToJSONKey
                                   )
 import qualified Data.HashMap.Strict as HM
 import           Data.Monoid ( (<>) )
-import           Data.Pool (Pool, createPool, destroyAllResources)
+import qualified Data.Pool as Pool
 import           Data.Ratio ( (%) )
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as S
@@ -53,7 +53,7 @@ maybeFail :: Parser a -> Parser (Maybe a)
 maybeFail p = (Just <$> p) <|> (return Nothing)
 
 -- | Creates a structure representing a TLS connection to the server.
-mkConnectionData :: Hostname -> Port -> Pool Connection -> ConnectionContext -> ConnectionData
+mkConnectionData :: Hostname -> Port -> Pool.Pool Connection -> ConnectionContext -> ConnectionData
 mkConnectionData host port pool ctx = ConnectionData
   { cdHostname       = host
   , cdPort           = port
@@ -66,7 +66,7 @@ mkConnectionData host port pool ctx = ConnectionData
   }
 
 -- | Plaintext HTTP instead of a TLS connection.
-mkConnectionDataInsecure :: Hostname -> Port ->  Pool Connection -> ConnectionContext -> ConnectionData
+mkConnectionDataInsecure :: Hostname -> Port -> Pool.Pool Connection -> ConnectionContext -> ConnectionData
 mkConnectionDataInsecure host port pool ctx = ConnectionData
   { cdHostname       = host
   , cdPort           = port
@@ -78,37 +78,40 @@ mkConnectionDataInsecure host port pool ctx = ConnectionData
   , cdUseTLS         = False
   }
 
-stripesCount :: Int
-stripesCount = 1
+createPool :: Hostname -> Port -> ConnectionContext -> ConnectionPoolConfig -> IO (Pool.Pool Connection)
+createPool host port ctx cpc =
+  Pool.createPool (mkConnection ctx host port True) connectionClose
+                  (cpStripesCount cpc) (cpIdleConnTimeout cpc) (cpMaxConnCount cpc)
 
-idleConnTimeout :: NominalDiffTime
-idleConnTimeout = 30
-
-maxConnCount :: Int
-maxConnCount = 5
-
-initConnectionData :: Hostname -> Port -> IO ConnectionData
-initConnectionData host port = do
-  ctx <- initConnectionContext
-  pool <- createPool (mkConnection ctx host port True) connectionClose
-                     stripesCount idleConnTimeout maxConnCount
+initConnectionData :: Hostname -> Port -> ConnectionPoolConfig -> IO ConnectionData
+initConnectionData host port cpc = do
+  ctx  <- initConnectionContext
+  pool <- createPool host port ctx cpc
   return (mkConnectionData host port pool ctx)
 
-initConnectionDataInsecure :: Hostname -> Port -> IO ConnectionData
-initConnectionDataInsecure host port = do
-  ctx <- initConnectionContext
-  pool <- createPool (mkConnection ctx host port False) connectionClose
-                     stripesCount idleConnTimeout maxConnCount
+initConnectionDataInsecure :: Hostname -> Port -> ConnectionPoolConfig -> IO ConnectionData
+initConnectionDataInsecure host port cpc = do
+  ctx  <- initConnectionContext
+  pool <- createPool host port ctx cpc
   return (mkConnectionDataInsecure host port pool ctx)
 
 destroyConnectionData :: ConnectionData -> IO ()
-destroyConnectionData = destroyAllResources . cdConnectionPool
+destroyConnectionData = Pool.destroyAllResources . cdConnectionPool
 
 withLogger :: ConnectionData -> Logger -> ConnectionData
 withLogger cd logger = cd { cdLogger = Just logger }
 
 noLogger :: ConnectionData -> ConnectionData
 noLogger cd = cd { cdLogger = Nothing }
+
+data ConnectionPoolConfig = ConnectionPoolConfig
+  { cpStripesCount    :: Int
+  , cpIdleConnTimeout :: NominalDiffTime
+  , cpMaxConnCount    :: Int
+  }
+
+defaultConnectionPoolConfig :: ConnectionPoolConfig
+defaultConnectionPoolConfig = ConnectionPoolConfig 1 30 5
 
 data Session = Session
   { sessConn :: ConnectionData

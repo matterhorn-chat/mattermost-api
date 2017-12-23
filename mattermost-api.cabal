@@ -42,7 +42,7 @@ library
                      , aeson >= 1.0.0.0
                      , connection
                      , memory <0.14.3
-                     , resource-pool
+                     , resource-pool >= 0.2.3
                      -- To prevent broken websockets versions from using
                      -- incompatible versions of binary (for details, see
                      -- https://github.com/matterhorn-chat/mattermost-api/issues/36):
