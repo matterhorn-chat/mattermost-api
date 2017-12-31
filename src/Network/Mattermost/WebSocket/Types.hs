@@ -264,8 +264,8 @@ data WebsocketAction =
                , waChannelId    :: ChannelId
                , waParentPostId :: Maybe PostId
                }
-  -- | GetStatuses { waSeq :: Int64 }
-  -- | GetStatusesByIds { waSeq :: Int64, waUserIds :: [UserId] }
+  -- --  | GetStatuses { waSeq :: Int64 }
+  -- --  | GetStatusesByIds { waSeq :: Int64, waUserIds :: [UserId] }
   deriving (Read, Show, Eq, Ord)
 
 instance ToJSON WebsocketAction where
