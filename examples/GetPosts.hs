@@ -19,7 +19,8 @@ import           Control.Monad ( when, join )
 import           System.Console.GetOpt
 import           System.Environment ( getArgs, getProgName )
 
-import           Network.Mattermost
+import           Network.Mattermost.Endpoints
+import           Network.Mattermost.Types
 import           Network.Mattermost.Logging
 import           Network.Mattermost.Util
 
@@ -113,20 +114,23 @@ main = do
     putStrLn "Authenticated as:"
     pPrint mmUser
 
-  i <- mmGetInitialLoad session
+  teams <- mmGetUsersTeams UserMe session
   when (optVerbose opts) $ do
-    pPrint i
-  forM_ (initialLoadTeams i) $ \t -> do
+    pPrint teams
+  forM_ teams $ \t -> do
     when (teamName t == configTeam config) $ do
-      userMap <- mmGetProfiles session (getId t) 0 10000
+      users <- mmGetUsers (defaultUserQuery { userQueryInTeam = Just (getId t), userQueryPerPage = Just 1000 }) session
+      let userMap = HM.fromList [ (getId u, u) | u <- toList users ]
       when (optVerbose opts) $ do
         pPrint userMap
-      chans <- mmGetChannels session (getId t)
+      chans <- mmGetChannelsForUser UserMe (getId t) session
       forM_ chans $ \chan -> do
         when (optVerbose opts) $ do
           pPrint chan
         when (channelName chan == optChannel opts) $ do
-          posts <- mmGetPosts session (getId t) (getId chan) (optOffset opts) (optLimit opts)
+          posts <- mmGetPostsForChannel (getId chan) defaultPostQuery { postQueryPage = Just (optOffset opts)
+                                                                      , postQueryPerPage = Just (optLimit opts)
+                                                                      } session
           forM_ (reverse (toList (postsOrder posts))) $ \postId -> do
             -- this is just a toy program, so we don't care about
             -- this pattern match failure

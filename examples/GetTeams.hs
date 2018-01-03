@@ -6,7 +6,9 @@ import           Text.Show.Pretty ( pPrint )
 import           Network.Connection
 import           System.Process ( readProcess )
 
-import           Network.Mattermost
+import           Network.Mattermost.Endpoints
+import           Network.Mattermost.Types
+import           Network.Mattermost.Util
 
 import           Config
 import           LocalConfig -- You will need to define a function:
@@ -27,5 +29,5 @@ main = do
   (session, mmUser) <- join (hoistE <$> mmLogin cd login)
   putStrLn "Authenticated as: "
   pPrint mmUser
-  i <- mmGetInitialLoad session
-  pPrint $ initialLoadTeams i
+  teams <- mmGetUsersTeams UserMe session
+  pPrint $ teams

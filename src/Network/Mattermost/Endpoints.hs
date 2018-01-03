@@ -8,9 +8,11 @@ import qualified Data.Aeson as A
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as BL
 import qualified Data.List as List
+import qualified Data.HashMap.Strict as HM
 import           Data.Sequence (Seq)
 import           Data.Text (Text)
 import qualified Data.Text as T
+import           Data.Time.Clock ( UTCTime )
 import qualified Network.HTTP.Base as HTTP
 import qualified Network.HTTP.Headers as HTTP
 import qualified Network.HTTP.Stream as HTTP
@@ -19,12 +21,10 @@ import           Text.Printf (printf)
 
 import Network.Mattermost.Exceptions
 import Network.Mattermost ()
-import Network.Mattermost.Types
+import Network.Mattermost.Types hiding (MinCommand)
 import Network.Mattermost.Types.Internal
 import Network.Mattermost.Util
 
-type UnknownType = A.Value
-type UnknownObject = A.Value
 
 -- | Parse a path, failing if we cannot.
 mmPath :: String -> IO URI.URI
@@ -56,6 +56,24 @@ mmGetHeader :: HTTP.Response_String -> HTTP.HeaderName -> IO String
 mmGetHeader rsp hdr =
   noteE (HTTP.lookupHeader hdr (HTTP.rspHeaders rsp))
         (HeaderNotFoundException ("mmGetHeader: " ++ show hdr))
+
+-- | Parse the JSON body out of a request, failing if it isn't an
+--   'application/json' response, or if the parsing failed
+mmGetJSONBody :: A.FromJSON t => String -> HTTP.Response_String -> IO (t)
+mmGetJSONBody label rsp = do
+  contentType <- mmGetHeader rsp HTTP.HdrContentType
+  assertE (contentType ~= "application/json")
+          (ContentTypeException
+            ("mmGetJSONBody: " ++ label ++ ": " ++
+             "Expected content type 'application/json'" ++
+             " found " ++ contentType))
+
+  let value = left (\s -> JSONDecodeException ("mmGetJSONBody: " ++ label ++ ": " ++ s)
+                                              (HTTP.rspBody rsp))
+                   (A.eitherDecode (BL.pack (HTTP.rspBody rsp)))
+  hoistE $ do
+    y <- value
+    return (y)
 
 
 doRequest :: HTTP.RequestMethod -> String -> B.ByteString -> Session -> IO HTTP.Response_String
@@ -90,28 +108,76 @@ noBody :: B.ByteString
 noBody = B.empty
 
 
-inPost :: String -> B.ByteString -> (HTTP.Response_String -> IO o) -> Session -> IO o
-inPost uri payload k session = doRequest HTTP.POST uri payload session >>= k
+inPost
+  :: String
+  -> B.ByteString
+  -> (HTTP.Response_String -> IO o)
+  -> Session
+  -> IO o
+inPost uri payload k session =
+  doRequest HTTP.POST uri payload session >>= k
 
-inPut :: String -> B.ByteString -> (HTTP.Response_String -> IO o) -> Session -> IO o
-inPut uri payload k session = doRequest HTTP.PUT uri payload session >>= k
+inPut
+  :: String
+  -> B.ByteString
+  -> (HTTP.Response_String -> IO o)
+  -> Session
+  -> IO o
+inPut uri payload k session =
+  doRequest HTTP.PUT uri payload session >>= k
 
-inGet :: String -> B.ByteString -> (HTTP.Response_String -> IO o) -> Session -> IO o
-inGet uri payload k session = doRequest HTTP.GET uri payload session >>= k
+inGet
+  :: String
+  -> B.ByteString
+  -> (HTTP.Response_String -> IO o)
+  -> Session
+  -> IO o
+inGet uri payload k session =
+  doRequest HTTP.GET uri payload session >>= k
 
-inDelete :: String -> B.ByteString -> (HTTP.Response_String -> IO o) -> Session -> IO o
-inDelete uri payload k session = doRequest HTTP.DELETE uri payload session >>= k
+inDelete
+  :: String
+  -> B.ByteString
+  -> (HTTP.Response_String -> IO o)
+  -> Session
+  -> IO o
+inDelete uri payload k session =
+  doRequest HTTP.DELETE uri payload session >>= k
+
+mmLogin :: ConnectionData -> Login -> IO (Either LoginFailureException (Session, User))
+mmLogin cd login = do
+  let rawPath = "/api/v4/users/login"
+  path <- mmPath rawPath
+  rsp <- withConnection cd $ \ con -> do
+    let content = BL.toStrict (A.encode login)
+        contentLength = B.length content
+        request = HTTP.Request
+          { rqURI = path
+          , rqMethod = HTTP.POST
+          , rqHeaders = [ HTTP.mkHeader HTTP.HdrHost (T.unpack (cdHostname cd))
+                        , HTTP.mkHeader HTTP.HdrUserAgent HTTP.defaultUserAgent
+                        , HTTP.mkHeader HTTP.HdrContentType "application/json"
+                        , HTTP.mkHeader HTTP.HdrContentLength (show contentLength)
+                        ] ++ autoCloseToHeader (cdAutoClose cd)
+          , rqBody = B.unpack content
+          }
+    HTTP.simpleHTTP_ con request
+  rsp' <- hoistE (left ConnectionException rsp)
+  if HTTP.rspCode rsp' /= (2,0,0)
+    then let eMsg = "Server returned unexpected " ++ show (HTTP.rspCode rsp') ++ " response"
+         in return (Left (LoginFailureException eMsg))
+    else do
+      token <- mmGetHeader rsp' (HTTP.HdrCustom "Token")
+      value <- mmGetJSONBody "User" rsp'
+      return (Right (Session cd (Token token), value))
+
 
 -- NECESSARY ENDPOINTS
 -- , mmLogin
--- , mmLeaveChannel
--- , mmJoinChannel
--- , mmGetChannels
 -- , mmGetAllChannelsForUser
 -- , mmGetAllChannelDataForUser
 -- , mmGetAllChannelsWithDataForUser
 -- , mmGetMoreChannels
--- , mmViewChannel
 -- , mmGetPosts
 -- , mmGetPostsSince
 -- , mmGetPostsBefore
@@ -128,22 +194,18 @@ inDelete uri payload k session = doRequest HTTP.DELETE uri payload session >>= k
 -- , mmGetInitialLoad
 -- , mmSaveConfig
 -- , mmSetChannelHeader
--- , mmChannelAddUser
--- , mmChannelRemoveUser
 -- , mmTeamAddUser
 -- , mmUsersCreate
 -- , mmUsersCreateWithSession
 -- , mmPost
--- , mmExecute
 -- , mmGetConfig
 -- , mmFlagPost
 -- , mmUnflagPost
--- , mmGetMyPreferences
 -- , mkPendingPost
 
--- -- * Endpoints
+-- * Endpoints
 
--- -- * Brand
+-- * Brand
 
 -- -- | Uploads a brand image.
 -- -- |
@@ -162,7 +224,7 @@ inDelete uri payload k session = doRequest HTTP.DELETE uri payload session >>= k
 
 
 
--- -- * Channels
+-- * Channels
 
 -- -- | Get all channel members on a team for a user.
 -- -- |
@@ -173,13 +235,13 @@ inDelete uri payload k session = doRequest HTTP.DELETE uri payload session >>= k
 -- mmGetChannelMembersForUser userId teamId =
 --   inGet (printf "/users/%s/teams/%s/channels/members" userId teamId) noBody jsonResponse
 
--- -- | Get all the channels on a team for a user.
--- -- |
--- -- | /Permissions/: Logged in as the user, or have @edit_other_users@
--- -- | permission, and @view_team@ permission for the team.
--- mmGetChannelsForUser :: UserId -> TeamId -> Session -> IO (Seq Channel)
--- mmGetChannelsForUser userId teamId =
---   inGet (printf "/users/%s/teams/%s/channels" userId teamId) noBody jsonResponse
+-- | Get all the channels on a team for a user.
+-- |
+-- | /Permissions/: Logged in as the user, or have @edit_other_users@
+-- | permission, and @view_team@ permission for the team.
+mmGetChannelsForUser :: UserParam -> TeamId -> Session -> IO (Seq Channel)
+mmGetChannelsForUser userId teamId =
+  inGet (printf "/users/%s/teams/%s/channels" userId teamId) noBody jsonResponse
 
 -- -- | Get a list of channel members based on the provided user ids.
 -- -- |
@@ -188,15 +250,20 @@ inDelete uri payload k session = doRequest HTTP.DELETE uri payload session >>= k
 -- mmGetChannelMembersByIds channelId body =
 --   inPost (printf "/channels/%s/members/ids" channelId) (jsonBody body) jsonResponse
 
--- -- | Perform all the actions involved in viewing a channel. This includes
--- -- | marking channels as read, clearing push notifications, and updating
--- -- | the active channel.
--- -- |
--- -- | /Permissions/: Must be logged in as user or have @edit_other_users@
--- -- | permission.
--- mmViewChannel :: UserId -> XX9 -> Session -> IO ()
--- mmViewChannel userId body =
---   inPost (printf "/channels/members/%s/view" userId) (jsonBody body) jsonResponse
+-- | Perform all the actions involved in viewing a channel. This includes
+-- | marking channels as read, clearing push notifications, and updating
+-- | the active channel.
+-- |
+-- | /Permissions/: Must be logged in as user or have @edit_other_users@
+-- | permission.
+mmViewChannel :: UserParam -> ChannelId -> Maybe ChannelId -> Session -> IO ()
+mmViewChannel userId chanId prevChanIdMb =
+  inPost (printf "/channels/members/%s/view" userId) (jsonBody body) jsonResponse
+  where body = HM.fromList $
+          ("channel_id" :: T.Text, chanId)
+          : case prevChanIdMb of
+              Just prevChanId -> [ ("prev_channel_id", prevChanId) ]
+              Nothing         -> []
 
 -- | Create a new group message channel to group of users. If the logged in
 -- | user's id is not included in the list, it will be appended to the end.
@@ -255,12 +322,12 @@ mmCreateDirectMessageChannel body =
 -- mmGetChannelsPinnedPosts channelId =
 --   inGet (printf "/channels/%s/pinned" channelId) noBody jsonResponse
 
--- -- | Get statistics for a channel.
--- -- |
--- -- | /Permissions/: Must have the @read_channel@ permission.
--- mmGetChannelStatistics :: ChannelId -> Session -> IO ChannelStats
--- mmGetChannelStatistics channelId =
---   inGet (printf "/channels/%s/stats" channelId) noBody jsonResponse
+-- | Get statistics for a channel.
+-- |
+-- | /Permissions/: Must have the @read_channel@ permission.
+mmGetChannelStatistics :: ChannelId -> Session -> IO ChannelStats
+mmGetChannelStatistics channelId =
+  inGet (printf "/channels/%s/stats" channelId) noBody jsonResponse
 
 -- -- | Update a user's notification properties for a channel. Only the
 -- -- | provided fields are updated.
@@ -271,10 +338,10 @@ mmCreateDirectMessageChannel body =
 -- mmUpdateChannelNotifications channelId userId body =
 --   inPut (printf "/channels/%s/members/%s/notify_props" channelId userId) (jsonBody body) jsonResponse
 
--- -- | Add a user to the channel.
--- mmAddUser :: ChannelId -> ChannelMember -> Session -> IO ChannelMember
--- mmAddUser channelId body =
---   inPost (printf "/channels/%s/members" channelId) (jsonBody body) jsonResponse
+-- | Add a user to the channel.
+mmAddUser :: ChannelId -> ChannelMember -> Session -> IO ChannelMember
+mmAddUser channelId body =
+  inPost (printf "/channels/%s/members" channelId) (jsonBody body) jsonResponse
 
 -- -- | Get a page of members for a channel.
 -- -- |
@@ -292,12 +359,12 @@ mmCreateChannel :: InitialChannelData -> Session -> IO Channel
 mmCreateChannel body =
   inPost "/channels" (jsonBody body) jsonResponse
 
--- -- | Gets channel from the provided team id and channel name strings.
--- -- |
--- -- | /Permissions/: @read_channel@ permission for the channel.
--- mmGetChannelByName :: TeamId -> Text -> Session -> IO Channel
--- mmGetChannelByName teamId channelName =
---   inGet (printf "/teams/%s/channels/name/%s" teamId channelName) noBody jsonResponse
+-- | Gets channel from the provided team id and channel name strings.
+-- |
+-- | /Permissions/: @read_channel@ permission for the channel.
+mmGetChannelByName :: TeamId -> Text -> Session -> IO Channel
+mmGetChannelByName teamId channelName =
+  inGet (printf "/teams/%s/channels/name/%s" teamId channelName) noBody jsonResponse
 
 -- -- | Update a user's roles for a channel.
 -- -- |
@@ -348,26 +415,26 @@ mmDeleteChannel channelId =
 -- mmRestoreChannel channelId =
 --   inPost (printf "/channels/%s/restore" channelId) noBody jsonResponse
 
--- -- | Get a channel member.
--- -- |
--- -- | /Permissions/: @read_channel@ permission for the channel.
--- mmGetChannelMember :: ChannelId -> UserId -> Session -> IO ChannelMember
--- mmGetChannelMember channelId userId =
---   inGet (printf "/channels/%s/members/%s" channelId userId) noBody jsonResponse
+-- | Get a channel member.
+-- |
+-- | /Permissions/: @read_channel@ permission for the channel.
+mmGetChannelMember :: ChannelId -> UserParam -> Session -> IO ChannelMember
+mmGetChannelMember channelId userId =
+  inGet (printf "/channels/%s/members/%s" channelId userId) noBody jsonResponse
 
--- -- | Delete a channel member, effectively removing them from a channel.
--- -- |
--- -- | /Permissions/: @manage_public_channel_members@ permission if the
--- -- | channel is public.
--- -- |
--- -- | @manage_private_channel_members@ permission if the channel is private.
--- mmRemoveUserFromChannel :: ChannelId -> UserId -> Session -> IO ()
--- mmRemoveUserFromChannel channelId userId =
---   inDelete (printf "/channels/%s/members/%s" channelId userId) noBody jsonResponse
+-- | Delete a channel member, effectively removing them from a channel.
+-- |
+-- | /Permissions/: @manage_public_channel_members@ permission if the
+-- | channel is public.
+-- |
+-- | @manage_private_channel_members@ permission if the channel is private.
+mmRemoveUserFromChannel :: ChannelId -> UserParam -> Session -> IO ()
+mmRemoveUserFromChannel channelId userId =
+  inDelete (printf "/channels/%s/members/%s" channelId userId) noBody jsonResponse
 
 
 
--- -- * Cluster
+-- * Cluster
 
 -- -- | Get a set of information for each node in the cluster, useful for
 -- -- | checking the status and health of each node.
@@ -379,7 +446,7 @@ mmDeleteChannel channelId =
 
 
 
--- -- * Commands
+-- * Commands
 
 -- -- | Generate a new token for the command based on command id string.
 -- -- |
@@ -393,7 +460,7 @@ mmDeleteChannel channelId =
 -- |
 -- | /Permissions/: Must have @use_slash_commands@ permission for the team
 -- | the command is in.
-mmExecuteCommand :: XX18 -> Session -> IO CommandResponse
+mmExecuteCommand :: MinCommand -> Session -> IO CommandResponse
 mmExecuteCommand body =
   inPost "/commands/execute" (jsonBody body) jsonResponse
 
@@ -436,7 +503,7 @@ mmExecuteCommand body =
 
 
 
--- -- * Compliance
+-- * Compliance
 
 -- -- | Get a compliance reports previously created.
 -- -- |
@@ -469,7 +536,7 @@ mmExecuteCommand body =
 
 
 
--- -- * Elasticsearch
+-- * Elasticsearch
 
 -- -- | Deletes all Elasticsearch indexes and their contents. After calling
 -- -- | this endpoint, it is
@@ -502,7 +569,7 @@ mmExecuteCommand body =
 
 
 
--- -- * Emoji
+-- * Emoji
 
 -- -- | Create a custom emoji for the team.
 -- -- |
@@ -542,20 +609,20 @@ mmExecuteCommand body =
 
 
 
--- -- * Files
+-- * Files
 
 -- -- | Gets a public link for a file that can be accessed without logging
 -- mmGetPublicFileLink :: FileId -> Session -> IO Text
 -- mmGetPublicFileLink fileId =
 --   inGet (printf "/files/%s/link" fileId) noBody jsonResponse
 
--- -- | Gets a file that has been uploaded previously.
--- -- |
--- -- | /Permissions/: Must have @read_channel@ permission or be uploader of
--- -- | the file.
--- mmGetFile :: FileId -> Session -> IO ()
--- mmGetFile fileId =
---   inGet (printf "/files/%s" fileId) noBody jsonResponse
+-- | Gets a file that has been uploaded previously.
+-- |
+-- | /Permissions/: Must have @read_channel@ permission or be uploader of
+-- | the file.
+mmGetFile :: FileId -> Session -> IO ()
+mmGetFile fileId =
+  inGet (printf "/files/%s" fileId) noBody jsonResponse
 
 -- -- | Uploads a file that can later be attached to a post.
 -- -- |
@@ -590,7 +657,7 @@ mmGetMetadataForFile fileId =
 
 
 
--- -- * Jobs
+-- * Jobs
 
 -- -- | Create a new job.
 -- -- |
@@ -641,7 +708,7 @@ mmGetMetadataForFile fileId =
 
 
 
--- -- * LDAP
+-- * LDAP
 
 -- -- | Test the current AD\/LDAP configuration to see if the AD\/LDAP server
 -- -- | can be contacted successfully.
@@ -661,7 +728,7 @@ mmGetMetadataForFile fileId =
 
 
 
--- -- * OAuth
+-- * OAuth
 
 -- -- | Register an OAuth 2.0 client application with Mattermost as the
 -- -- | service provider.
@@ -726,7 +793,7 @@ mmGetMetadataForFile fileId =
 
 
 
--- -- * Posts
+-- * Posts
 
 -- | Create a new post in a channel. To create the post as a comment on
 -- | another post, provide @root_id@.
@@ -794,7 +861,7 @@ mmDeletePost postId =
 -- | from a channel, team or all flagged posts by a user.
 -- |
 -- | /Permissions/: Must be user or have @manage_system@ permission.
-mmGetListOfFlaggedPosts :: UserId -> TeamId -> ChannelId -> Maybe Integer -> Maybe Integer -> Session -> IO (Seq PostList)
+mmGetListOfFlaggedPosts :: UserParam -> TeamId -> ChannelId -> Maybe Integer -> Maybe Integer -> Session -> IO (Seq Posts)
 mmGetListOfFlaggedPosts userId teamId channelId page perPage =
   inGet (printf "/users/%s/posts/flagged?%s" userId
          (mkQueryString [ Just ("team_id", T.unpack (idString teamId))
@@ -822,14 +889,41 @@ mmGetListOfFlaggedPosts userId teamId channelId page perPage =
 -- mmPatchPost postId body =
 --   inPut (printf "/posts/%s/patch" postId) (jsonBody body) jsonResponse
 
--- -- | Get a page of posts in a channel. Use the query parameters to modify
--- -- | the behaviour of this endpoint. The parameters @since@, @before@ and
--- -- | @after@ must not be used together.
--- -- |
--- -- | /Permissions/: Must have @read_channel@ permission for the channel.
--- mmGetPostsForChannel :: ChannelId -> Maybe Integer -> Maybe Integer -> Integer -> Text -> Text -> Session -> IO PostList
--- mmGetPostsForChannel channelId page perPage since before after =
---   inGet (printf "/channels/%s/posts?%s" channelId (mkQueryString [ sequence ("page", fmap show page) , sequence ("per_page", fmap show perPage) , Just ("since", show since) , Just ("before", T.unpack before) , Just ("after", T.unpack after) ])) noBody jsonResponse
+data PostQuery = PostQuery
+  { postQueryPage    :: Maybe Int
+  , postQueryPerPage :: Maybe Int
+  , postQuerySince   :: Maybe UTCTime
+  , postQueryBefore  :: Maybe PostId
+  , postQueryAfter   :: Maybe PostId
+  }
+
+defaultPostQuery :: PostQuery
+defaultPostQuery = PostQuery
+  { postQueryPage    = Nothing
+  , postQueryPerPage = Nothing
+  , postQuerySince   = Nothing
+  , postQueryBefore  = Nothing
+  , postQueryAfter   = Nothing
+  }
+
+postQueryToQueryString :: PostQuery -> String
+postQueryToQueryString PostQuery { .. } =
+  mkQueryString
+    [ sequence ("page", fmap show postQueryPage)
+    , sequence ("per_page", fmap show postQueryPerPage)
+    , sequence ("since", fmap show postQuerySince)
+    , sequence ("before", fmap show postQueryBefore)
+    , sequence ("after", fmap show postQueryAfter)
+    ]
+
+-- | Get a page of posts in a channel. Use the query parameters to modify
+-- | the behaviour of this endpoint. The parameters @since@, @before@ and
+-- | @after@ must not be used together.
+-- |
+-- | /Permissions/: Must have @read_channel@ permission for the channel.
+mmGetPostsForChannel :: ChannelId -> PostQuery -> Session -> IO Posts
+mmGetPostsForChannel channelId postQuery =
+  inGet (printf "/channels/%s/posts?%s" channelId (postQueryToQueryString postQuery)) noBody jsonResponse
 
 -- -- | Gets a list of file information objects for the files attached to a
 -- -- | post.
@@ -842,14 +936,14 @@ mmGetListOfFlaggedPosts userId teamId channelId page perPage =
 
 
 
--- -- * Preferences
+-- * Preferences
 
 -- | Gets a single preference for the current user with the given category
 -- | and name.
 -- |
 -- | /Permissions/: Must be logged in as the user being updated or have the
 -- | @edit_other_users@ permission.
-mmGetSpecificUserPreference :: UserId -> Text -> Text -> Session -> IO Preference
+mmGetSpecificUserPreference :: UserParam -> Text -> Text -> Session -> IO Preference
 mmGetSpecificUserPreference userId category preferenceName =
   inGet (printf "/users/%s/preferences/%s/name/%s" userId category preferenceName) noBody jsonResponse
 
@@ -857,7 +951,7 @@ mmGetSpecificUserPreference userId category preferenceName =
 -- |
 -- | /Permissions/: Must be logged in as the user being updated or have the
 -- | @edit_other_users@ permission.
-mmSaveUsersPreferences :: UserId -> (Seq Preference) -> Session -> IO ()
+mmSaveUsersPreferences :: UserParam -> (Seq Preference) -> Session -> IO ()
 mmSaveUsersPreferences userId body =
   inPut (printf "/users/%s/preferences" userId) (jsonBody body) jsonResponse
 
@@ -865,7 +959,7 @@ mmSaveUsersPreferences userId body =
 -- |
 -- | /Permissions/: Must be logged in as the user being updated or have the
 -- | @edit_other_users@ permission.
-mmGetUsersPreferences :: UserId -> Session -> IO (Seq Preference)
+mmGetUsersPreferences :: UserParam -> Session -> IO (Seq Preference)
 mmGetUsersPreferences userId =
   inGet (printf "/users/%s/preferences" userId) noBody jsonResponse
 
@@ -873,7 +967,7 @@ mmGetUsersPreferences userId =
 -- |
 -- | /Permissions/: Must be logged in as the user being updated or have the
 -- | @edit_other_users@ permission.
-mmDeleteUsersPreferences :: UserId -> (Seq Preference) -> Session -> IO ()
+mmDeleteUsersPreferences :: UserParam -> (Seq Preference) -> Session -> IO ()
 mmDeleteUsersPreferences userId body =
   inPost (printf "/users/%s/preferences/delete" userId) (jsonBody body) jsonResponse
 
@@ -881,13 +975,13 @@ mmDeleteUsersPreferences userId body =
 -- |
 -- | /Permissions/: Must be logged in as the user being updated or have the
 -- | @edit_other_users@ permission.
-mmListUsersPreferencesByCategory :: UserId -> Text -> Session -> IO (Seq Preference)
+mmListUsersPreferencesByCategory :: UserParam -> Text -> Session -> IO (Seq Preference)
 mmListUsersPreferencesByCategory userId category =
   inGet (printf "/users/%s/preferences/%s" userId category) noBody jsonResponse
 
 
 
--- -- * SAML
+-- * SAML
 
 -- -- | Upload the private key to be used for encryption with your SAML
 -- -- | configuration. This will also set the filename for the PrivateKeyFile
@@ -960,7 +1054,7 @@ mmListUsersPreferencesByCategory userId category =
 
 
 
--- -- * System
+-- * System
 
 -- -- | Get a page of audits for all users on the system, selected with @page@
 -- -- | and @per_page@ query parameters.
@@ -1114,24 +1208,24 @@ mmListUsersPreferencesByCategory userId category =
 
 
 
--- -- * Teams
+-- * Teams
 
--- -- | Get a team member on the system.
--- -- |
--- -- | /Permissions/: Must be authenticated and have the @view_team@
--- -- | permission.
--- mmGetTeamMember :: TeamId -> UserId -> Session -> IO TeamMember
--- mmGetTeamMember teamId userId =
---   inGet (printf "/teams/%s/members/%s" teamId userId) noBody jsonResponse
+-- | Get a team member on the system.
+-- |
+-- | /Permissions/: Must be authenticated and have the @view_team@
+-- | permission.
+mmGetTeamMember :: TeamId -> UserParam -> Session -> IO TeamMember
+mmGetTeamMember teamId userId =
+  inGet (printf "/teams/%s/members/%s" teamId userId) noBody jsonResponse
 
--- -- | Delete the team member object for a user, effectively removing them
--- -- | from a team.
--- -- |
--- -- | /Permissions/: Must be logged in as the user or have the
--- -- | @remove_user_from_team@ permission.
--- mmRemoveUserFromTeam :: TeamId -> UserId -> Session -> IO ()
--- mmRemoveUserFromTeam teamId userId =
---   inDelete (printf "/teams/%s/members/%s" teamId userId) noBody jsonResponse
+-- | Delete the team member object for a user, effectively removing them
+-- | from a team.
+-- |
+-- | /Permissions/: Must be logged in as the user or have the
+-- | @remove_user_from_team@ permission.
+mmRemoveUserFromTeam :: TeamId -> UserParam -> Session -> IO ()
+mmRemoveUserFromTeam teamId userId =
+  inDelete (printf "/teams/%s/members/%s" teamId userId) noBody jsonResponse
 
 -- -- | Get a page of deleted channels on a team based on query string
 -- -- | parameters - team_id, page and per_page.
@@ -1191,14 +1285,14 @@ mmGetTeams page perPage =
                          , sequence ("per_page", fmap show perPage)
                          ])) noBody jsonResponse
 
--- -- | Search teams based on search term provided in the request body.
--- -- |
--- -- | /Permissions/: Logged in user only shows open teams
--- -- |
--- -- | Logged in user with "manage_system" permission shows all teams
--- mmSearchTeams :: Text -> Session -> IO (Seq Team)
--- mmSearchTeams term =
---   inPost "/teams/search" (jsonBody (A.object [ "term" A..= term ])) jsonResponse
+-- | Search teams based on search term provided in the request body.
+-- |
+-- | /Permissions/: Logged in user only shows open teams
+-- |
+-- | Logged in user with "manage_system" permission shows all teams
+mmSearchTeams :: Text -> Session -> IO (Seq Team)
+mmSearchTeams term =
+  inPost "/teams/search" (jsonBody (A.object [ "term" A..= term ])) jsonResponse
 
 -- -- | Invite users to the existing team usign the user's email.
 -- -- |
@@ -1207,13 +1301,13 @@ mmGetTeams page perPage =
 -- mmInviteUsersToTeamByEmail teamId body =
 --   inPost (printf "/teams/%s/invite/email" teamId) (jsonBody body) jsonResponse
 
--- -- | Search public channels on a team based on the search term provided in
--- -- | the request body.
--- -- |
--- -- | /Permissions/: Must have the @list_team_channels@ permission.
--- mmSearchChannels :: TeamId -> Text -> Session -> IO (Seq Channel)
--- mmSearchChannels teamId term =
---   inPost (printf "/teams/%s/channels/search" teamId) (jsonBody (A.object [ "term" A..= term ])) jsonResponse
+-- | Search public channels on a team based on the search term provided in
+-- | the request body.
+-- |
+-- | /Permissions/: Must have the @list_team_channels@ permission.
+mmSearchChannels :: TeamId -> Text -> Session -> IO (Seq Channel)
+mmSearchChannels teamId term =
+  inPost (printf "/teams/%s/channels/search" teamId) (jsonBody (A.object [ "term" A..= term ])) jsonResponse
 
 -- -- | Get the count for unread messages and mentions in the teams the user
 -- -- | is a member of.
@@ -1223,13 +1317,13 @@ mmGetTeams page perPage =
 -- mmGetTeamUnreadsForUser userId excludeTeam =
 --   inGet (printf "/users/%s/teams/unread?%s" userId (mkQueryString [ Just ("exclude_team", T.unpack excludeTeam) ])) noBody jsonResponse
 
--- -- | Get a list of teams that a user is on.
--- -- |
--- -- | /Permissions/: Must be authenticated as the user or have the
--- -- | @manage_system@ permission.
--- mmGetUsersTeams :: UserId -> Session -> IO (Seq Team)
--- mmGetUsersTeams userId =
---   inGet (printf "/users/%s/teams" userId) noBody jsonResponse
+-- | Get a list of teams that a user is on.
+-- |
+-- | /Permissions/: Must be authenticated as the user or have the
+-- | @manage_system@ permission.
+mmGetUsersTeams :: UserParam -> Session -> IO (Seq Team)
+mmGetUsersTeams userId =
+  inGet (printf "/users/%s/teams" userId) noBody jsonResponse
 
 -- -- | Using either an invite id or hash\/data pair from an email invite
 -- -- | link, add a user to a team.
@@ -1247,12 +1341,12 @@ mmGetTeams page perPage =
 -- mmGetTeamStats teamId =
 --   inGet (printf "/teams/%s/stats" teamId) noBody jsonResponse
 
--- -- | Get a list of team members based on a provided array of user ids.
--- -- |
--- -- | /Permissions/: Must have @view_team@ permission for the team.
--- mmGetTeamMembersByIds :: TeamId -> (Seq Text) -> Session -> IO (Seq TeamMember)
--- mmGetTeamMembersByIds teamId body =
---   inPost (printf "/teams/%s/members/ids" teamId) (jsonBody body) jsonResponse
+-- | Get a list of team members based on a provided array of user ids.
+-- |
+-- | /Permissions/: Must have @view_team@ permission for the team.
+mmGetTeamMembersByIds :: TeamId -> Seq UserId -> Session -> IO (Seq TeamMember)
+mmGetTeamMembersByIds teamId body =
+  inPost (printf "/teams/%s/members/ids" teamId) (jsonBody body) jsonResponse
 
 -- -- | Partially update a team by providing only the fields you want to
 -- -- | update. Omitted fields will not be updated. The fields that can be
@@ -1264,23 +1358,23 @@ mmGetTeams page perPage =
 -- mmPatchTeam teamId body =
 --   inPut (printf "/teams/%s/patch" teamId) (jsonBody body) jsonResponse
 
--- -- | Get a list of team members for a user. Useful for getting the ids of
--- -- | teams the user is on and the roles they have in those teams.
--- -- |
--- -- | /Permissions/: Must be logged in as the user or have the
--- -- | @edit_other_users@ permission.
--- mmGetTeamMembersForUser :: UserId -> Session -> IO (Seq TeamMember)
--- mmGetTeamMembersForUser userId =
---   inGet (printf "/users/%s/teams/members" userId) noBody jsonResponse
+-- | Get a list of team members for a user. Useful for getting the ids of
+-- | teams the user is on and the roles they have in those teams.
+-- |
+-- | /Permissions/: Must be logged in as the user or have the
+-- | @edit_other_users@ permission.
+mmGetTeamMembersForUser :: UserParam -> Session -> IO (Seq TeamMember)
+mmGetTeamMembersForUser userId =
+  inGet (printf "/users/%s/teams/members" userId) noBody jsonResponse
 
--- -- | Add user to the team by user_id.
--- -- |
--- -- | /Permissions/: Must be authenticated and team be open to add self. For
--- -- | adding another user, authenticated user must have the
--- -- | @add_user_to_team@ permission.
--- mmAddUserToTeam :: TeamId -> TeamMember -> Session -> IO TeamMember
--- mmAddUserToTeam teamId body =
---   inPost (printf "/teams/%s/members" teamId) (jsonBody body) jsonResponse
+-- | Add user to the team by user_id.
+-- |
+-- | /Permissions/: Must be authenticated and team be open to add self. For
+-- | adding another user, authenticated user must have the
+-- | @add_user_to_team@ permission.
+mmAddUserToTeam :: TeamId -> TeamMember -> Session -> IO TeamMember
+mmAddUserToTeam teamId body =
+  inPost (printf "/teams/%s/members" teamId) (jsonBody body) jsonResponse
 
 -- -- | Get a page team members list based on query string parameters - team
 -- -- | id, page and per page.
@@ -1328,13 +1422,13 @@ mmGetTeams page perPage =
 -- mmGetInviteInfoForTeam inviteId =
 --   inGet (printf "/teams/invite/%s" inviteId) noBody jsonResponse
 
--- -- | Get a team based on provided name string
--- -- |
--- -- | /Permissions/: Must be authenticated, team type is open and have the
--- -- | @view_team@ permission.
--- mmGetTeamByName :: Text -> Session -> IO Team
--- mmGetTeamByName name =
---   inGet (printf "/teams/name/%s" name) noBody jsonResponse
+-- | Get a team based on provided name string
+-- |
+-- | /Permissions/: Must be authenticated, team type is open and have the
+-- | @view_team@ permission.
+mmGetTeamByName :: Text -> Session -> IO Team
+mmGetTeamByName name =
+  inGet (printf "/teams/name/%s" name) noBody jsonResponse
 
 -- -- | Update a team by providing the team object. The fields that can be
 -- -- | updated are defined in the request body, all other provided fields
@@ -1345,13 +1439,13 @@ mmGetTeams page perPage =
 -- mmUpdateTeam teamId body =
 --   inPut (printf "/teams/%s" teamId) (jsonBody body) jsonResponse
 
--- -- | Get a team on the system.
--- -- |
--- -- | /Permissions/: Must be authenticated and have the @view_team@
--- -- | permission.
--- mmGetTeam :: TeamId -> Session -> IO Team
--- mmGetTeam teamId =
---   inGet (printf "/teams/%s" teamId) noBody jsonResponse
+-- | Get a team on the system.
+-- |
+-- | /Permissions/: Must be authenticated and have the @view_team@
+-- | permission.
+mmGetTeam :: TeamId -> Session -> IO Team
+mmGetTeam teamId =
+  inGet (printf "/teams/%s" teamId) noBody jsonResponse
 
 -- -- | Delete a team softly and put in archived only.
 -- -- |
@@ -1362,25 +1456,25 @@ mmGetTeams page perPage =
 
 
 
--- -- * Users
+-- * Users
 
--- -- | Get a list of users based on search criteria provided in the request
--- -- | body. Searches are typically done against username, full name,
--- -- | nickname and email unless otherwise configured by the server.
--- -- |
--- -- | /Permissions/: Requires an active session and @read_channel@ and\/or
--- -- | @view_team@ permissions for any channels or teams specified in the
--- -- | request body.
--- mmSearchUsers :: XX6 -> Session -> IO (Seq User)
--- mmSearchUsers body =
---   inPost "/users/search" (jsonBody body) jsonResponse
+-- | Get a list of users based on search criteria provided in the request
+-- | body. Searches are typically done against username, full name,
+-- | nickname and email unless otherwise configured by the server.
+-- |
+-- | /Permissions/: Requires an active session and @read_channel@ and\/or
+-- | @view_team@ permissions for any channels or teams specified in the
+-- | request body.
+mmSearchUsers :: UserSearch -> Session -> IO (Seq User)
+mmSearchUsers body =
+  inPost "/users/search" (jsonBody body) jsonResponse
 
--- -- | Get a list of users based on a provided list of usernames.
--- -- |
--- -- | /Permissions/: Requires an active session but no other permissions.
--- mmGetUsersByUsernames :: (Seq Text) -> Session -> IO (Seq User)
--- mmGetUsersByUsernames body =
---   inPost "/users/usernames" (jsonBody body) jsonResponse
+-- | Get a list of users based on a provided list of usernames.
+-- |
+-- | /Permissions/: Requires an active session but no other permissions.
+mmGetUsersByUsernames :: (Seq Text) -> Session -> IO (Seq User)
+mmGetUsersByUsernames body =
+  inPost "/users/usernames" (jsonBody body) jsonResponse
 
 -- -- | Revokes a user session from the provided user id and session id
 -- -- | strings.
@@ -1634,17 +1728,17 @@ mmGetTeams page perPage =
 -- | Get a user a object. Sensitive information will be sanitized out.
 -- |
 -- | /Permissions/: Requires an active session but no other permissions.
-mmGetUser :: UserId -> Session -> IO User
+mmGetUser :: UserParam -> Session -> IO User
 mmGetUser userId =
   inGet (printf "/users/%s" userId) noBody jsonResponse
 
--- -- | Deactivates the user by archiving its user object.
--- -- |
--- -- | /Permissions/: Must be logged in as the user being deactivated or have
--- -- | the @edit_other_users@ permission.
--- mmDeactivateUserAccount :: UserId -> Session -> IO ()
--- mmDeactivateUserAccount userId =
---   inDelete (printf "/users/%s" userId) noBody jsonResponse
+-- | Deactivates the user by archiving its user object.
+-- |
+-- | /Permissions/: Must be logged in as the user being deactivated or have
+-- | the @edit_other_users@ permission.
+mmDeactivateUserAccount :: UserParam -> Session -> IO ()
+mmDeactivateUserAccount userId =
+  inDelete (printf "/users/%s" userId) noBody jsonResponse
 
 -- -- | Create a new user on the system.
 -- -- |
@@ -1654,20 +1748,72 @@ mmGetUser userId =
 -- mmCreateUser body =
 --   inPost "/users" (jsonBody body) jsonResponse
 
--- -- | Get a page of a list of users. Based on query string parameters,
--- -- | select users from a team, channel, or select users not in a specific
--- -- | channel.
--- -- |
--- -- |
--- -- | Since server version 4.0, some basic sorting is available using the
--- -- | @sort@ query parameter. Sorting is currently only supported when
--- -- | selecting users on a team.
--- -- |
--- -- | /Permissions/: Requires an active session and (if specified)
--- -- | membership to the channel or team being selected from.
--- mmGetUsers :: Maybe Integer -> Maybe Integer -> Text -> Text -> Text -> Text -> Bool -> Text -> Session -> IO (Seq User)
--- mmGetUsers page perPage inTeam notInTeam inChannel notInChannel withoutTeam sort =
---   inGet (printf "/users?%s" (mkQueryString [ sequence ("page", fmap show page) , sequence ("per_page", fmap show perPage) , Just ("in_team", T.unpack inTeam) , Just ("not_in_team", T.unpack notInTeam) , Just ("in_channel", T.unpack inChannel) , Just ("not_in_channel", T.unpack notInChannel) , Just ("without_team", if withoutTeam then "true" else "false") , Just ("sort", T.unpack sort) ])) noBody jsonResponse
+data UserQuery = UserQuery
+  { userQueryPage         :: Maybe Int
+  , userQueryPerPage      :: Maybe Int
+  , userQueryInTeam       :: Maybe TeamId
+  , userQueryNotInTeam    :: Maybe TeamId
+  , userQueryInChannel    :: Maybe ChannelId
+  , userQueryNotInChannel :: Maybe ChannelId
+  , userQueryWithoutTeam  :: Maybe Bool
+  , userQuerySort         :: Maybe UserQuerySort
+  }
+
+defaultUserQuery :: UserQuery
+defaultUserQuery = UserQuery
+  { userQueryPage         = Nothing
+  , userQueryPerPage      = Nothing
+  , userQueryInTeam       = Nothing
+  , userQueryNotInTeam    = Nothing
+  , userQueryInChannel    = Nothing
+  , userQueryNotInChannel = Nothing
+  , userQueryWithoutTeam  = Nothing
+  , userQuerySort         = Nothing
+  }
+
+data UserQuerySort
+  = UserQuerySortByLastActivity
+  | UserQuerySortByCreation
+
+userQueryToQueryString :: UserQuery -> String
+userQueryToQueryString UserQuery { .. } =
+  mkQueryString [ sequence ("page", fmap show userQueryPage)
+                , sequence ("per_page", fmap show userQueryPerPage)
+                , sequence ("in_team", fmap (T.unpack . idString) userQueryInTeam)
+                , sequence ("not_in_team", fmap (T.unpack . idString) userQueryNotInTeam)
+                , sequence ("in_channel", fmap (T.unpack . idString) userQueryInChannel)
+                , sequence ("not_in_channel", fmap (T.unpack . idString) userQueryNotInChannel)
+                , sequence ( "without_team"
+                           , case userQueryWithoutTeam of
+                             Nothing -> Nothing
+                             Just True -> Just "true"
+                             Just False -> Just "false"
+                           )
+                , sequence ( "sort"
+                           , case userQuerySort of
+                               Nothing -> Nothing
+                               Just UserQuerySortByLastActivity -> Just "last_activity_at"
+                               Just UserQuerySortByCreation -> Just "create_at"
+                           )
+                ]
+
+-- | Get a page of a list of users. Based on query string parameters,
+-- | select users from a team, channel, or select users not in a specific
+-- | channel.
+-- |
+-- |
+-- | Since server version 4.0, some basic sorting is available using the
+-- | @sort@ query parameter. Sorting is currently only supported when
+-- | selecting users on a team.
+-- |
+-- | /Permissions/: Requires an active session and (if specified)
+-- | membership to the channel or team being selected from.
+mmGetUsers
+  :: UserQuery
+  -> Session
+  -> IO (Seq User)
+mmGetUsers userQuery =
+  inGet (printf "/users?%s" (userQueryToQueryString userQuery)) noBody jsonResponse
 
 -- -- | Generates an multi-factor authentication secret for a user and returns
 -- -- | it as a string and as base64 encoded QR code image.
@@ -1702,7 +1848,7 @@ mmGetUser userId =
 
 
 
--- -- * Webhooks
+-- * Webhooks
 
 -- -- | Update an outgoing webhook given the hook id.
 -- -- |
@@ -1899,59 +2045,59 @@ mmGetUser userId =
 
 -- --
 
--- data ChannelMember = ChannelMember
---   { channelMemberMsgCount :: Integer
---   , channelMemberUserId :: Text
---   , channelMemberRoles :: Text
---   , channelMemberMentionCount :: UnknownType
---   , channelMemberLastViewedAt :: UnknownType
---   , channelMemberChannelId :: Text
---   , channelMemberLastUpdateAt :: UnknownType
---   , channelMemberNotifyProps :: UnknownType
---   } deriving (Read, Show, Eq)
+data ChannelMember = ChannelMember
+  { channelMemberMsgCount :: Integer
+  , channelMemberUserId :: UserId
+  , channelMemberRoles :: Text
+  , channelMemberMentionCount :: Int
+  , channelMemberLastViewedAt :: UTCTime
+  , channelMemberChannelId :: ChannelId
+  , channelMemberLastUpdateAt :: UTCTime
+  , channelMemberNotifyProps :: UserNotifyProps
+  } deriving (Read, Show, Eq)
 
--- instance A.FromJSON ChannelMember where
---   parseJSON = A.withObject "channelMember" $ \v -> do
---     channelMemberMsgCount <- v A..: "msg_count"
---     channelMemberUserId <- v A..: "user_id"
---     channelMemberRoles <- v A..: "roles"
---     channelMemberMentionCount <- v A..: "mention_count"
---     channelMemberLastViewedAt <- v A..: "last_viewed_at"
---     channelMemberChannelId <- v A..: "channel_id"
---     channelMemberLastUpdateAt <- v A..: "last_update_at"
---     channelMemberNotifyProps <- v A..: "notify_props"
---     return ChannelMember { .. }
+instance A.FromJSON ChannelMember where
+  parseJSON = A.withObject "channelMember" $ \v -> do
+    channelMemberMsgCount <- v A..: "msg_count"
+    channelMemberUserId <- v A..: "user_id"
+    channelMemberRoles <- v A..: "roles"
+    channelMemberMentionCount <- v A..: "mention_count"
+    channelMemberLastViewedAt <- v A..: "last_viewed_at"
+    channelMemberChannelId <- v A..: "channel_id"
+    channelMemberLastUpdateAt <- v A..: "last_update_at"
+    channelMemberNotifyProps <- v A..: "notify_props"
+    return ChannelMember { .. }
 
--- instance A.ToJSON ChannelMember where
---   toJSON ChannelMember { .. } = A.object
---     [ "msg_count" A..= channelMemberMsgCount
---     , "user_id" A..= channelMemberUserId
---     , "roles" A..= channelMemberRoles
---     , "mention_count" A..= channelMemberMentionCount
---     , "last_viewed_at" A..= channelMemberLastViewedAt
---     , "channel_id" A..= channelMemberChannelId
---     , "last_update_at" A..= channelMemberLastUpdateAt
---     , "notify_props" A..= channelMemberNotifyProps
---     ]
+instance A.ToJSON ChannelMember where
+  toJSON ChannelMember { .. } = A.object
+    [ "msg_count" A..= channelMemberMsgCount
+    , "user_id" A..= channelMemberUserId
+    , "roles" A..= channelMemberRoles
+    , "mention_count" A..= channelMemberMentionCount
+    , "last_viewed_at" A..= channelMemberLastViewedAt
+    , "channel_id" A..= channelMemberChannelId
+    , "last_update_at" A..= channelMemberLastUpdateAt
+    , "notify_props" A..= channelMemberNotifyProps
+    ]
 
 -- --
 
--- data ChannelStats = ChannelStats
---   { channelStatsChannelId :: Text
---   , channelStatsMemberCount :: UnknownType
---   } deriving (Read, Show, Eq)
+data ChannelStats = ChannelStats
+  { channelStatsChannelId   :: Text
+  , channelStatsMemberCount :: Int
+  } deriving (Read, Show, Eq)
 
--- instance A.FromJSON ChannelStats where
---   parseJSON = A.withObject "channelStats" $ \v -> do
---     channelStatsChannelId <- v A..: "channel_id"
---     channelStatsMemberCount <- v A..: "member_count"
---     return ChannelStats { .. }
+instance A.FromJSON ChannelStats where
+  parseJSON = A.withObject "channelStats" $ \v -> do
+    channelStatsChannelId   <- v A..: "channel_id"
+    channelStatsMemberCount <- v A..: "member_count"
+    return ChannelStats { .. }
 
--- instance A.ToJSON ChannelStats where
---   toJSON ChannelStats { .. } = A.object
---     [ "channel_id" A..= channelStatsChannelId
---     , "member_count" A..= channelStatsMemberCount
---     ]
+instance A.ToJSON ChannelStats where
+  toJSON ChannelStats { .. } = A.object
+    [ "channel_id"   A..= channelStatsChannelId
+    , "member_count" A..= channelStatsMemberCount
+    ]
 
 -- --
 
@@ -2922,25 +3068,6 @@ mmGetUser userId =
 --     , "Symbol" A..= passwordSettingsSymbol
 --     , "MinimumLength" A..= passwordSettingsMinimumlength
 --     ]
-
--- --
-
-data PostList = PostList
-  { postListPosts :: UnknownObject
-  , postListOrder :: (Seq Text)
-  } deriving (Read, Show, Eq)
-
-instance A.FromJSON PostList where
-  parseJSON = A.withObject "postList" $ \v -> do
-    postListPosts <- v A..: "posts"
-    postListOrder <- v A..: "order"
-    return PostList { .. }
-
-instance A.ToJSON PostList where
-  toJSON PostList { .. } = A.object
-    [ "posts" A..= postListPosts
-    , "order" A..= postListOrder
-    ]
 
 -- --
 
@@ -4601,43 +4728,43 @@ instance A.ToJSON InitialChannelData where
 
 -- --
 
--- data XX6 = XX6
---   { xx6Term :: Text
---   , xx6AllowInactive :: UnknownType
---     -- ^ When `true`, include deactivated users in the results
---   , xx6WithoutTeam :: UnknownType
---     -- ^ Set this to `true` if you would like to search for users that are not on a team. This option takes precendence over `team_id`, `in_channel_id`, and `not_in_channel_id`.
---   , xx6InChannelId :: Text
---     -- ^ If provided, only search users in this channel
---   , xx6NotInTeamId :: Text
---     -- ^ If provided, only search users not on this team
---   , xx6NotInChannelId :: Text
---     -- ^ If provided, only search users not in this channel. Must specifiy `team_id` when using this option
---   , xx6TeamId :: Text
---     -- ^ If provided, only search users on this team
---   } deriving (Read, Show, Eq)
+data UserSearch = UserSearch
+  { userSearchTerm :: Text
+  , userSearchAllowInactive :: Bool
+    -- ^ When `true`, include deactivated users in the results
+  , userSearchWithoutTeam :: Bool
+    -- ^ Set this to `true` if you would like to search for users that are not on a team. This option takes precendence over `team_id`, `in_channel_id`, and `not_in_channel_id`.
+  , userSearchInChannelId :: Text
+    -- ^ If provided, only search users in this channel
+  , userSearchNotInTeamId :: Text
+    -- ^ If provided, only search users not on this team
+  , userSearchNotInChannelId :: Text
+    -- ^ If provided, only search users not in this channel. Must specifiy `team_id` when using this option
+  , userSearchTeamId :: Text
+    -- ^ If provided, only search users on this team
+  } deriving (Read, Show, Eq)
 
--- instance A.FromJSON XX6 where
---   parseJSON = A.withObject "xx6" $ \v -> do
---     xx6Term <- v A..: "term"
---     xx6AllowInactive <- v A..: "allow_inactive"
---     xx6WithoutTeam <- v A..: "without_team"
---     xx6InChannelId <- v A..: "in_channel_id"
---     xx6NotInTeamId <- v A..: "not_in_team_id"
---     xx6NotInChannelId <- v A..: "not_in_channel_id"
---     xx6TeamId <- v A..: "team_id"
---     return XX6 { .. }
+instance A.FromJSON UserSearch where
+  parseJSON = A.withObject "userSearch" $ \v -> do
+    userSearchTerm <- v A..: "term"
+    userSearchAllowInactive <- v A..: "allow_inactive"
+    userSearchWithoutTeam <- v A..: "without_team"
+    userSearchInChannelId <- v A..: "in_channel_id"
+    userSearchNotInTeamId <- v A..: "not_in_team_id"
+    userSearchNotInChannelId <- v A..: "not_in_channel_id"
+    userSearchTeamId <- v A..: "team_id"
+    return UserSearch { .. }
 
--- instance A.ToJSON XX6 where
---   toJSON XX6 { .. } = A.object
---     [ "term" A..= xx6Term
---     , "allow_inactive" A..= xx6AllowInactive
---     , "without_team" A..= xx6WithoutTeam
---     , "in_channel_id" A..= xx6InChannelId
---     , "not_in_team_id" A..= xx6NotInTeamId
---     , "not_in_channel_id" A..= xx6NotInChannelId
---     , "team_id" A..= xx6TeamId
---     ]
+instance A.ToJSON UserSearch where
+  toJSON UserSearch { .. } = A.object
+    [ "term" A..= userSearchTerm
+    , "allow_inactive" A..= userSearchAllowInactive
+    , "without_team" A..= userSearchWithoutTeam
+    , "in_channel_id" A..= userSearchInChannelId
+    , "not_in_team_id" A..= userSearchNotInTeamId
+    , "not_in_channel_id" A..= userSearchNotInChannelId
+    , "team_id" A..= userSearchTeamId
+    ]
 
 -- --
 
@@ -4702,25 +4829,3 @@ instance A.ToJSON RawPost where
 --     , "gateway_url" A..= xx8GatewayUrl
 --     , "turn_password" A..= xx8TurnPassword
 --     ]
-
--- --
-
--- data XX9 = XX9
---   { xx9ChannelId :: Text
---   , xx9PrevChannelId :: Text
---     -- ^ The channel ID of the previous channel, used when switching channels. Providing this ID will cause push notifications to clear on the channel being switched to.
---   } deriving (Read, Show, Eq)
-
--- instance A.FromJSON XX9 where
---   parseJSON = A.withObject "xx9" $ \v -> do
---     xx9ChannelId <- v A..: "channel_id"
---     xx9PrevChannelId <- v A..: "prev_channel_id"
---     return XX9 { .. }
-
--- instance A.ToJSON XX9 where
---   toJSON XX9 { .. } = A.object
---     [ "channel_id" A..= xx9ChannelId
---     , "prev_channel_id" A..= xx9PrevChannelId
---     ]
-
--- --

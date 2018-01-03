@@ -251,6 +251,11 @@ data NotifyOption
   | NotifyOptionNone
     deriving (Read, Show, Eq, Ord)
 
+instance A.ToJSON NotifyOption where
+  toJSON NotifyOptionAll     = A.String "all"
+  toJSON NotifyOptionMention = A.String "mention"
+  toJSON NotifyOptionNone    = A.String "none"
+
 instance A.FromJSON NotifyOption where
   parseJSON (A.String "all")     = return NotifyOptionAll
   parseJSON (A.String "mention") = return NotifyOptionMention
@@ -302,6 +307,10 @@ instance A.FromJSON BoolString where
       "false" -> return (BoolString False)
       _       -> fail "Expected \"true\" or \"false\""
 
+instance A.ToJSON BoolString where
+  toJSON (BoolString True) = A.String "true"
+  toJSON (BoolString False) = A.String "false"
+
 instance A.FromJSON UserNotifyProps where
   parseJSON = A.withObject "UserNotifyProps" $ \v -> do
     userNotifyPropsMentionKeys  <- T.split (==',') <$>
@@ -313,6 +322,17 @@ instance A.FromJSON UserNotifyProps where
     userNotifyPropsChannel      <- fromBoolString <$> (v .:? "channel"       .!= BoolString True)
     userNotifyPropsFirstName    <- fromBoolString <$> (v .:? "first_name"    .!= BoolString False)
     return UserNotifyProps { .. }
+
+instance A.ToJSON UserNotifyProps where
+  toJSON UserNotifyProps { .. } = A.object
+    [ "mention_keys"  .= T.intercalate "," userNotifyPropsMentionKeys
+    , "push"          .= userNotifyPropsPush
+    , "desktop"       .= userNotifyPropsDesktop
+    , "email"         .= BoolString userNotifyPropsEmail
+    , "desktop_sound" .= BoolString userNotifyPropsDesktopSound
+    , "channel"       .= BoolString userNotifyPropsChannel
+    , "first_name"    .= BoolString userNotifyPropsFirstName
+    ]
 
 instance A.FromJSON ChannelNotifyProps where
   parseJSON = A.withObject "ChannelNotifyProps" $ \v -> do
@@ -450,6 +470,18 @@ instance IsId UserId where
 
 instance PrintfArg UserId where
   formatArg = formatArg . idString
+
+data UserParam
+  = UserById UserId
+  | UserMe
+  deriving (Read, Show, Eq, Ord)
+
+instance PrintfArg UserParam where
+  formatArg = formatArg . userParamString
+
+userParamString :: UserParam -> Text
+userParamString (UserById uid) = idString uid
+userParamString UserMe         = "me"
 
 --
 
