@@ -1,3 +1,21 @@
+40400.0.0
+=========
+
+API changes:
+ * Added endpoints for some preference endpoints, group channels, and
+   post search:
+   * `mmChannelRemoveUser`
+   * `mmCreateGroupChannel`
+   * `mmSearchPosts`
+   * `mmSetPreferences`
+ * Added `GroupChannelPreferences` type for showing/hiding group
+   channels
+ * Separated the previous `NotifyProps` type into `UserNotifyProps`
+   and `ChannelNotifyProps`.
+ * Websocket parse failures are now captured and appear to the library
+   user as an `Either String WebsocketEvent`, where the `String`
+   represent a parse failure.
+ * Add support for `user_role_updated` websocket event type.
 
 40000.1.0
 =========

@@ -81,6 +81,7 @@ module Network.Mattermost
 , mmGetPostsSince
 , mmGetPostsBefore
 , mmGetPostsAfter
+, mmSearchPosts
 , mmGetReactionsForPost
 , mmGetFileInfo
 , mmGetFile
@@ -104,6 +105,7 @@ module Network.Mattermost
 , mmUpdatePost
 , mmExecute
 , mmGetConfig
+, mmGetClientConfig
 , mmSetPreferences
 , mmSavePreferences
 , mmDeletePreferences
@@ -124,7 +126,6 @@ import           Data.Monoid ((<>))
 import           Text.Printf ( printf )
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as BL
-import           Data.Time.Clock ( UTCTime )
 import           Network.Connection ( Connection
                                     , connectionGetLine
                                     , connectionPut
@@ -436,14 +437,14 @@ mmGetPosts sess teamid chanid offset limit =
 mmGetPostsSince :: Session
            -> TeamId
            -> ChannelId
-           -> UTCTime
+           -> ServerTime
            -> IO Posts
 mmGetPostsSince sess teamid chanid since =
   mmDoRequest sess "mmGetPostsSince" $
   printf "/api/v3/teams/%s/channels/%s/posts/since/%d"
          (idString teamid)
          (idString chanid)
-         (utcTimeToMilliseconds since :: Int)
+         (timeToServer since)
 
 -- |
 -- route: @\/api\/v3\/teams\/{team_id}\/channels\/{channel_id}\/posts\/{post_id}\/get@
@@ -499,6 +500,25 @@ mmGetPostsBefore sess teamid chanid postid offset limit =
          (idString postid)
          offset
          limit
+
+-- |
+-- route: @\/api\/v4\/teams\/{team_id}\/posts\/search@
+mmSearchPosts :: Session
+              -> TeamId
+              -> T.Text
+              -> Bool
+              -> IO Posts
+mmSearchPosts sess teamid terms isOrSearch = do
+  let path = printf "/api/v4/teams/%s/posts/search" $ idString teamid
+  uri <- mmPath path
+  let req = SearchPosts terms isOrSearch
+  runLoggerS sess "mmSearchPosts" $
+    HttpRequest POST path (Just (toJSON req))
+  rsp <- mmPOST sess uri req
+  (raw, value) <- mmGetJSONBody "SearchPostsResult" rsp
+  runLoggerS sess "mmSearchPosts" $
+    HttpResponse 200 path (Just raw)
+  return value
 
 -- |
 -- route: @\/api\/v3\/files\/{file_id}\/get_info@
@@ -700,6 +720,16 @@ mmGetConfig :: Session
             -> IO Value
 mmGetConfig sess =
   mmDoRequest sess "mmGetConfig" "/api/v3/admin/config"
+
+-- | Get a subset of the server configuration needed by the client. Does not
+-- require administrative permission. The format query parameter is currently
+-- required with the value of "old".
+--
+-- route: @\/api\/v4\/config\/client@
+mmGetClientConfig :: Session
+                  -> IO Value
+mmGetClientConfig sess =
+  mmDoRequest sess "mmGetClientConfig" "/api/v4/config/client?format=old"
 
 mmSaveConfig :: Session
              -> Value
