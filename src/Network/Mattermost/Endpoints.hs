@@ -288,12 +288,12 @@ mmCreateGroupMessageChannel body =
 -- mmGetChannelByNameAndTeamName teamName channelName =
 --   inGet (printf "/teams/name/%s/channels/name/%s" teamName channelName) noBody jsonResponse
 
--- -- | Get a list of public channels on a team by id.
--- -- |
--- -- | /Permissions/: @view_team@ for the team the channels are on.
--- mmGetListOfChannelsByIds :: TeamId -> (Seq Text) -> Session -> IO (Seq Channel)
--- mmGetListOfChannelsByIds teamId body =
---   inPost (printf "/teams/%s/channels/ids" teamId) (jsonBody body) jsonResponse
+-- | Get a list of public channels on a team by id.
+-- |
+-- | /Permissions/: @view_team@ for the team the channels are on.
+mmGetListOfChannelsByIds :: TeamId -> Seq ChannelId -> Session -> IO (Seq Channel)
+mmGetListOfChannelsByIds teamId body =
+  inPost (printf "/teams/%s/channels/ids" teamId) (jsonBody body) jsonResponse
 
 -- -- | Partially update a channel by providing only the fields you want to
 -- -- | update. Omitted fields will not be updated. The fields that can be
@@ -4769,12 +4769,12 @@ instance A.ToJSON UserSearch where
 -- --
 
 data RawPost = RawPost
-  { rawPostChannelId :: Text
+  { rawPostChannelId :: ChannelId
   , rawPostMessage :: Text
     -- ^ The message contents, can be formatted with Markdown
-  , rawPostFileIds :: (Seq FileId)
+  , rawPostFileIds :: Seq FileId
     -- ^ A list of file IDs to associate with the post
-  , rawPostRootId :: PostId
+  , rawPostRootId :: Maybe PostId
     -- ^ The post ID to comment on
   } deriving (Read, Show, Eq)
 
@@ -4783,16 +4783,18 @@ instance A.FromJSON RawPost where
     rawPostChannelId <- v A..: "channel_id"
     rawPostMessage <- v A..: "message"
     rawPostFileIds <- v A..: "file_ids"
-    rawPostRootId <- v A..: "root_id"
+    rawPostRootId <- v A..:? "root_id"
     return RawPost { .. }
 
 instance A.ToJSON RawPost where
   toJSON RawPost { .. } = A.object
-    [ "channel_id" A..= rawPostChannelId
-    , "message" A..= rawPostMessage
-    , "file_ids" A..= rawPostFileIds
-    , "root_id" A..= rawPostRootId
-    ]
+    ( "channel_id" A..= rawPostChannelId
+    : "message" A..= rawPostMessage
+    : "file_ids" A..= rawPostFileIds
+    : case rawPostRootId of
+        Nothing -> []
+        Just rId -> [("root_id" A..= rId)]
+    )
 
 -- --
 

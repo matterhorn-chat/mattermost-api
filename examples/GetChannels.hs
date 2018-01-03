@@ -9,7 +9,9 @@ import           Network.Connection
 import           Data.Foldable
 import           Control.Monad ( when, join )
 
-import           Network.Mattermost
+import           Network.Mattermost.Endpoints
+import           Network.Mattermost.Types
+import           Network.Mattermost.Util
 
 import           Config
 import           LocalConfig -- You will need to define a function:
@@ -31,11 +33,10 @@ main = do
   putStrLn "Authenticated as:"
   pPrint mmUser
 
-  i <- mmGetInitialLoad session
-  forM_ (initialLoadTeams i) $ \t -> do
+  teams <- mmGetUsersTeams UserMe session
+  forM_ teams $ \t -> do
     when (teamName t == configTeam config) $ do
-      chans <- mmGetChannels session (teamId t)
+      chans <- mmGetChannelsForUser UserMe (getId t) session
       forM_ chans $ \chan -> do
-        channel <- mmGetChannel session (teamId t) (channelId chan)
-        pPrint channel
+        pPrint chan
         putStrLn ""
