@@ -252,6 +252,10 @@ data WithDefault a
   | Default
     deriving (Read, Show, Eq, Ord)
 
+instance A.ToJSON t => A.ToJSON (WithDefault t) where
+  toJSON Default = A.String "default"
+  toJSON (IsValue x) = A.toJSON x
+
 instance A.FromJSON t => A.FromJSON (WithDefault t) where
   parseJSON (A.String "default") = return Default
   parseJSON t                    = IsValue <$> A.parseJSON t
@@ -357,6 +361,14 @@ instance A.FromJSON ChannelNotifyProps where
     channelNotifyPropsDesktop    <- v .:? "desktop" .!= IsValue NotifyOptionAll
     channelNotifyPropsMarkUnread <- v .:? "mark_unread" .!= IsValue NotifyOptionAll
     return ChannelNotifyProps { .. }
+
+instance A.ToJSON ChannelNotifyProps where
+  toJSON ChannelNotifyProps { .. } = A.object
+    [ "email"       .= fmap BoolString channelNotifyPropsEmail
+    , "push"        .= channelNotifyPropsPush
+    , "desktop"     .= channelNotifyPropsDesktop
+    , "mark_unread" .= channelNotifyPropsMarkUnread
+    ]
 
 --
 
@@ -1268,3 +1280,58 @@ instance A.ToJSON TeamMember where toJSON = undefined
 instance A.ToJSON Team where toJSON = undefined
 instance A.FromJSON Command where parseJSON = undefined
 instance A.ToJSON Command where toJSON = undefined
+
+
+-- --
+
+data MinChannelMember = MinChannelMember
+  { minChannelMemberUserId :: UserId
+  , minChannelMemberChannelId :: ChannelId
+  } deriving (Read, Show, Eq)
+
+instance A.FromJSON MinChannelMember where
+  parseJSON = A.withObject "channelMember" $ \v -> do
+    minChannelMemberUserId <- v A..: "user_id"
+    minChannelMemberChannelId <- v A..: "channel_id"
+    return MinChannelMember { .. }
+
+instance A.ToJSON MinChannelMember where
+  toJSON MinChannelMember { .. } = A.object
+    [ "user_id"    A..= minChannelMemberUserId
+    , "channel_id" A..= minChannelMemberChannelId
+    ]
+
+data ChannelMember = ChannelMember
+  { channelMemberMsgCount :: Integer
+  , channelMemberUserId :: UserId
+  , channelMemberRoles :: Text
+  , channelMemberMentionCount :: Int
+  , channelMemberLastViewedAt :: ServerTime
+  , channelMemberChannelId :: ChannelId
+  , channelMemberLastUpdateAt :: ServerTime
+  , channelMemberNotifyProps :: ChannelNotifyProps
+  } deriving (Read, Show, Eq)
+
+instance A.FromJSON ChannelMember where
+  parseJSON = A.withObject "channelMember" $ \v -> do
+    channelMemberMsgCount <- v A..: "msg_count"
+    channelMemberUserId <- v A..: "user_id"
+    channelMemberRoles <- v A..: "roles"
+    channelMemberMentionCount <- v A..: "mention_count"
+    channelMemberLastViewedAt <- timeFromServer <$> v A..: "last_viewed_at"
+    channelMemberChannelId <- v A..: "channel_id"
+    channelMemberLastUpdateAt <- timeFromServer <$> v A..: "last_update_at"
+    channelMemberNotifyProps <- v A..: "notify_props"
+    return ChannelMember { .. }
+
+instance A.ToJSON ChannelMember where
+  toJSON ChannelMember { .. } = A.object
+    [ "msg_count" A..= channelMemberMsgCount
+    , "user_id" A..= channelMemberUserId
+    , "roles" A..= channelMemberRoles
+    , "mention_count" A..= channelMemberMentionCount
+    , "last_viewed_at" A..= timeToServer channelMemberLastViewedAt
+    , "channel_id" A..= channelMemberChannelId
+    , "last_update_at" A..= timeToServer channelMemberLastUpdateAt
+    , "notify_props" A..= channelMemberNotifyProps
+    ]
