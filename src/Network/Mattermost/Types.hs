@@ -727,6 +727,7 @@ data Post
   , postDeleteAt      :: Maybe ServerTime
   , postHashtags      :: Text
   , postUpdateAt      :: ServerTime
+  , postEditAt        :: ServerTime
   , postUserId        :: Maybe UserId
   , postCreateAt      :: ServerTime
   , postParentId      :: Maybe PostId
@@ -750,6 +751,7 @@ instance A.FromJSON Post where
     postDeleteAt      <- (timeFromServer <$>) <$> v .:? "delete_at"
     postHashtags      <- v .: "hashtags"
     postUpdateAt      <- timeFromServer <$> v .: "update_at"
+    postEditAt        <- timeFromServer <$> v .: "edit_at"
     postUserId        <- maybeFail (v .: "user_id")
     postCreateAt      <- timeFromServer <$> v .: "create_at"
     postParentId      <- maybeFail (v .: "parent_id")
