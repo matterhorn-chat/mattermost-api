@@ -245,6 +245,12 @@ instance A.FromJSON TeamMember where
     teamMemberRoles  <- v .: "roles"
     return TeamMember { .. }
 
+instance A.ToJSON TeamMember where
+  toJSON TeamMember { .. } = A.object
+    [ "user_id" .= teamMemberUserId
+    , "team_id" .= teamMemberTeamId
+    , "roles"   .= teamMemberRoles
+    ]
 --
 
 data WithDefault a
@@ -476,6 +482,7 @@ data MinChannel = MinChannel
   , minChannelPurpose     :: Maybe Text
   , minChannelHeader      :: Maybe Text
   , minChannelType        :: Type
+  , minChannelTeamId      :: TeamId
   } deriving (Read, Eq, Show)
 
 instance A.ToJSON MinChannel where
@@ -483,6 +490,7 @@ instance A.ToJSON MinChannel where
     [ "name"         .= minChannelName
     , "display_name" .= minChannelDisplayName
     , "type"         .= minChannelType
+    , "team_id"      .= minChannelTeamId
     ] ++
     [ "purpose" .= p | Just p <- [minChannelPurpose] ] ++
     [ "header"  .= h | Just h <- [minChannelHeader] ]
@@ -861,7 +869,7 @@ data FileInfo
   } deriving (Read, Show, Eq)
 
 instance ToJSON FileInfo where
-  toJSON = undefined
+  toJSON = error "file info"
 
 instance FromJSON FileInfo where
   parseJSON = A.withObject "file_info" $ \o -> do
@@ -1275,11 +1283,10 @@ instance PrintfArg ReportId where
 
 -- FIXMES
 
-instance A.ToJSON User where toJSON = undefined
-instance A.ToJSON TeamMember where toJSON = undefined
-instance A.ToJSON Team where toJSON = undefined
-instance A.FromJSON Command where parseJSON = undefined
-instance A.ToJSON Command where toJSON = undefined
+instance A.ToJSON User where toJSON = error "to user"
+instance A.ToJSON Team where toJSON = error "to team"
+instance A.FromJSON Command where parseJSON = error "from command"
+instance A.ToJSON Command where toJSON = error "to command"
 
 
 -- --

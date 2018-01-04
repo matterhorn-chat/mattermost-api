@@ -14,7 +14,7 @@ import           Data.Aeson
 import           Data.Monoid ((<>))
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Sequence as Seq
-import qualified Data.Text as T (unpack)
+import qualified Data.Text as T (Text, unpack)
 
 import           Test.Tasty
 
@@ -49,14 +49,19 @@ testUserLogin = Login
   , password = "password"
   }
 
-testMinChannel :: MinChannel
-testMinChannel = MinChannel
+testMinChannel :: TeamId -> MinChannel
+testMinChannel tId = MinChannel
   { minChannelName        = "test-channel"
   , minChannelDisplayName = "Test Channel"
   , minChannelPurpose     = Just "A channel for test cases"
   , minChannelHeader      = Just "Test Header"
   , minChannelType        = Ordinary
+  , minChannelTeamId      = tId
   }
+
+testMinChannelName :: T.Text
+testMinChannelName = "test-channel"
+
 
 testTeamsCreate :: TeamsCreate
 testTeamsCreate = TeamsCreate
@@ -132,6 +137,9 @@ setup = mmTestCase "Setup" testConfig $ do
   expectWSEvent "admin joined town square"
     (isPost adminUser townSquare "testadmin has joined the channel.")
 
+  expectWSEvent "admin joined test team"
+    (isAddedToTeam adminUser testTeam)
+
   print_ "Creating test account"
   testUser <- createAccount testAccount
 
@@ -164,9 +172,8 @@ initialLoadTest =
     mmTestCase "Initial Load" testConfig $ do
         loginAccount testUserLogin
 
-        initialLoad <- getInitialLoad
-        -- print the team names
-        print_ (ppShow (fmap teamName (initialLoadTeams initialLoad)))
+        teams <- getTeams
+        print_ (ppShow (fmap teamName teams))
 
         expectWSEvent "hello" (hasWSEventType WMHello)
         expectWSDone
@@ -176,12 +183,16 @@ createChannelTest =
     mmTestCase "Create Channel" testConfig $ do
         loginAccount testUserLogin
 
-        initialLoad <- getInitialLoad
-        let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
-        chan <- createChannel team testMinChannel
+        testUser <- getMe
+        teams <- getTeams
+        let team Seq.:< _ = Seq.viewl teams
+
+        chan <- createChannel team (testMinChannel (teamId team))
         print_ (ppShow chan)
 
         expectWSEvent "hello" (hasWSEventType WMHello)
+        expectWSEvent "test user joins test channel"
+          (isPost testUser chan "test-user has joined the channel.")
         expectWSEvent "new channel event" (isChannelCreatedEvent chan)
         expectWSDone
 
@@ -189,8 +200,8 @@ getChannelsTest :: TestTree
 getChannelsTest =
     mmTestCase "Get Channels" testConfig $ do
         loginAccount testUserLogin
-        initialLoad <- getInitialLoad
-        let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
+        teams <- getTeams
+        let team Seq.:< _ = Seq.viewl teams
         chans <- getChannels team
 
         let chan Seq.:< _ = Seq.viewl chans
@@ -204,13 +215,13 @@ leaveChannelTest =
     mmTestCase "Leave Channel" testConfig $ do
         loginAccount testUserLogin
         Just testUser <- getUserByName (username testUserLogin)
-        initialLoad <- getInitialLoad
+        teams <- getTeams
 
-        let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
+        let team Seq.:< _ = Seq.viewl teams
         chans <- getChannels team
         print_ (ppShow chans)
 
-        let chan = findChannel chans $ minChannelName testMinChannel
+        let chan = findChannel chans $ testMinChannelName
         leaveChannel team chan
 
         expectWSEvent "hello" (hasWSEventType WMHello)
@@ -222,25 +233,26 @@ joinChannelTest =
     mmTestCase "Join Channel" testConfig $ do
         loginAccount testUserLogin
         Just testUser <- getUserByName (username testUserLogin)
-        initialLoad <- getInitialLoad
+        teams <- getTeams
 
-        let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
-        chans <- getMoreChannels team
+        let team Seq.:< _ = Seq.viewl teams
+        chans <- getChannels team
         print_ (ppShow chans)
 
-        let chan = findChannel chans $ minChannelName testMinChannel
-        joinChannel team chan
+        let chan = findChannel chans $ testMinChannelName
+        joinChannel testUser team chan
 
         members <- getChannelMembers team chan
         let expected :: [User]
             expected = [testUser]
-        when (members /= expected) $
-            error $ "Expected channel members: " <> show expected
+        when (fmap userId members /= fmap userId expected) $
+            error $ "Expected channel members: " <> show expected <> "\ngot: " <> show members
 
         expectWSEvent "hello" (hasWSEventType WMHello)
         expectWSEvent "join channel" (isUserJoin testUser chan)
         expectWSEvent "join post"
           (isPost testUser chan "test-user has joined the channel.")
+        expectWSEvent "view channel" isViewedChannel
         expectWSDone
 
 deleteChannelTest :: TestTree
@@ -249,11 +261,11 @@ deleteChannelTest =
         loginAccount testUserLogin
         Just testUser <- getUserByName (username testUserLogin)
 
-        initialLoad <- getInitialLoad
-        let team Seq.:< _ = Seq.viewl (initialLoadTeams initialLoad)
+        teams <- getTeams
+        let team Seq.:< _ = Seq.viewl teams
         chans <- getChannels team
 
-        let toDelete = findChannel chans (minChannelName testMinChannel)
+        let toDelete = findChannel chans (testMinChannelName)
 
         deleteChannel team toDelete
 

@@ -4,6 +4,7 @@
 module Network.Mattermost.Endpoints where
 
 import           Control.Arrow (left)
+import           Control.Exception (throwIO)
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as BL
@@ -81,7 +82,6 @@ mmGetJSONBody label rsp = do
     y <- value
     return (y)
 
-
 doRequest :: HTTP.RequestMethod -> String -> B.ByteString -> Session -> IO HTTP.Response_String
 doRequest method uri payload (Session cd token) = do
   path <- mmPath ("/api/v4" ++ uri)
@@ -100,7 +100,15 @@ doRequest method uri payload (Session cd token) = do
           , HTTP.rqBody    = B.unpack payload
           }
     HTTP.simpleHTTP_ con request
-  hoistE (left ConnectionException rawResponse)
+  rsp <- hoistE (left ConnectionException rawResponse)
+  case HTTP.rspCode rsp of
+    (2, _, _) -> return rsp
+    code -> do
+      case A.eitherDecode (BL.pack (HTTP.rspBody rsp)) of
+        Right err ->
+          throwIO (err :: MattermostError)
+        Left _ ->
+          throwIO (HTTPResponseException ("Server returned unexpected " ++ show code ++ " response"))
 
 
 mkQueryString :: [Maybe (String, String)] -> String
@@ -150,32 +158,75 @@ inDelete
 inDelete uri payload k session =
   doRequest HTTP.DELETE uri payload session >>= k
 
-mmLogin :: ConnectionData -> Login -> IO (Either LoginFailureException (Session, User))
-mmLogin cd login = do
-  let rawPath = "/api/v4/users/login"
-  path <- mmPath rawPath
-  rsp <- withConnection cd $ \ con -> do
-    let content = BL.toStrict (A.encode login)
-        contentLength = B.length content
+
+
+doUnauthRequest :: HTTP.RequestMethod -> String -> B.ByteString -> ConnectionData -> IO HTTP.Response_String
+doUnauthRequest method uri payload cd = do
+  path <- mmPath ("/api/v4" ++ uri)
+  rawResponse <- withConnection cd $ \con -> do
+    let contentLength = B.length payload
         request = HTTP.Request
-          { rqURI = path
-          , rqMethod = HTTP.POST
-          , rqHeaders = [ HTTP.mkHeader HTTP.HdrHost (T.unpack (cdHostname cd))
-                        , HTTP.mkHeader HTTP.HdrUserAgent HTTP.defaultUserAgent
-                        , HTTP.mkHeader HTTP.HdrContentType "application/json"
-                        , HTTP.mkHeader HTTP.HdrContentLength (show contentLength)
-                        ] ++ autoCloseToHeader (cdAutoClose cd)
-          , rqBody = B.unpack content
+          { HTTP.rqURI = path
+          , HTTP.rqMethod = method
+          , HTTP.rqHeaders =
+            [ HTTP.mkHeader HTTP.HdrHost          (T.unpack $ cdHostname cd)
+            , HTTP.mkHeader HTTP.HdrUserAgent     HTTP.defaultUserAgent
+            , HTTP.mkHeader HTTP.HdrContentType   "application/json"
+            , HTTP.mkHeader HTTP.HdrContentLength (show contentLength)
+            ] ++ autoCloseToHeader (cdAutoClose cd)
+          , HTTP.rqBody    = B.unpack payload
           }
     HTTP.simpleHTTP_ con request
-  rsp' <- hoistE (left ConnectionException rsp)
-  if HTTP.rspCode rsp' /= (2,0,0)
-    then let eMsg = "Server returned unexpected " ++ show (HTTP.rspCode rsp') ++ " response"
-         in return (Left (LoginFailureException eMsg))
-    else do
-      token <- mmGetHeader rsp' (HTTP.HdrCustom "Token")
-      value <- mmGetJSONBody "User" rsp'
+  rsp <- hoistE (left ConnectionException rawResponse)
+  case HTTP.rspCode rsp of
+    (2, _, _) -> return rsp
+    code -> throwIO (HTTPResponseException ("Server returned unexpected " ++ show code ++ " response"))
+
+mmLogin :: ConnectionData -> Login -> IO (Either LoginFailureException (Session, User))
+mmLogin cd login = do
+  rsp <- doUnauthRequest HTTP.POST "/users/login" (jsonBody login) cd
+  case HTTP.rspCode rsp of
+    (2, _, _) -> do
+      token <- mmGetHeader rsp (HTTP.HdrCustom "Token")
+      value <- mmGetJSONBody "User" rsp
       return (Right (Session cd (Token token), value))
+    _ ->
+      let eMsg = "Server returned unexpected " ++ show (HTTP.rspCode rsp) ++ " response"
+      in return (Left (LoginFailureException eMsg))
+
+mmInitialUser :: ConnectionData -> UsersCreate -> IO User
+mmInitialUser cd users = do
+  rsp <- doUnauthRequest HTTP.POST "/users" (jsonBody users) cd
+  case HTTP.rspCode rsp of
+    (2, _, _) -> mmGetJSONBody "User" rsp
+    _ -> error ("Server returned unexpected " ++ show (HTTP.rspCode rsp) ++ " response")
+
+-- mmLogin :: ConnectionData -> Login -> IO (Either LoginFailureException (Session, User))
+-- mmLogin cd login = do
+--   let rawPath = "/api/v4/users/login"
+--   path <- mmPath rawPath
+--   rsp <- withConnection cd $ \ con -> do
+--     let content = BL.toStrict (A.encode login)
+--         contentLength = B.length content
+--         request = HTTP.Request
+--           { rqURI = path
+--           , rqMethod = HTTP.POST
+--           , rqHeaders = [ HTTP.mkHeader HTTP.HdrHost (T.unpack (cdHostname cd))
+--                         , HTTP.mkHeader HTTP.HdrUserAgent HTTP.defaultUserAgent
+--                         , HTTP.mkHeader HTTP.HdrContentType "application/json"
+--                         , HTTP.mkHeader HTTP.HdrContentLength (show contentLength)
+--                         ] ++ autoCloseToHeader (cdAutoClose cd)
+--           , rqBody = B.unpack content
+--           }
+--     HTTP.simpleHTTP_ con request
+--   rsp' <- hoistE (left ConnectionException rsp)
+--   if HTTP.rspCode rsp' /= (2,0,0)
+--     then let eMsg = "Server returned unexpected " ++ show (HTTP.rspCode rsp') ++ " response"
+--          in return (Left (LoginFailureException eMsg))
+--     else do
+--       token <- mmGetHeader rsp' (HTTP.HdrCustom "Token")
+--       value <- mmGetJSONBody "User" rsp'
+--       return (Right (Session cd (Token token), value))
 
 
 -- NECESSARY ENDPOINTS
@@ -408,7 +459,7 @@ mmGetChannel channelId =
 -- | or have @manage_system@ permission.
 mmDeleteChannel :: ChannelId -> Session -> IO ()
 mmDeleteChannel channelId =
-  inDelete (printf "/channels/%s" channelId) noBody jsonResponse
+  inDelete (printf "/channels/%s" channelId) noBody noResponse
 
 -- -- | Restore channel from the provided channel id string.
 -- -- |
@@ -1136,12 +1187,12 @@ mmGetReactionsForPost postId =
 -- mmGetWebrtcToken =
 --   inGet "/webrtc/token" noBody jsonResponse
 
--- -- | Get a subset of the server configuration needed by the client.
--- -- |
--- -- | /Permissions/: No permission required.
--- mmGetClientConfiguration :: Text -> Session -> IO ()
--- mmGetClientConfiguration format =
---   inGet (printf "/config/client?%s" (mkQueryString [ Just ("format", T.unpack format) ])) noBody jsonResponse
+-- | Get a subset of the server configuration needed by the client.
+-- |
+-- | /Permissions/: No permission required.
+mmGetClientConfiguration :: Maybe Text -> Session -> IO A.Value
+mmGetClientConfiguration format =
+  inGet (printf "/config/client?%s" (mkQueryString [ sequence ("format", fmap T.unpack format) ])) noBody jsonResponse
 
 -- -- | Reload the configuration file to pick up on any changes made to it.
 -- -- |
@@ -1226,19 +1277,19 @@ mmGetReactionsForPost postId =
 -- mmGetAnalytics name teamId =
 --   inGet (printf "/analytics/old?%s" (mkQueryString [ sequence ("name", fmap T.unpack name) , Just ("team_id", T.unpack (idString teamId)) ])) noBody jsonResponse
 
--- -- | Submit a new configuration for the server to use.
--- -- |
--- -- | /Permissions/: Must have @manage_system@ permission.
--- mmUpdateConfiguration :: Session -> IO Config
--- mmUpdateConfiguration =
---   inPut "/config" noBody jsonResponse
+-- | Submit a new configuration for the server to use.
+-- |
+-- | /Permissions/: Must have @manage_system@ permission.
+mmUpdateConfiguration :: A.Value -> Session -> IO A.Value
+mmUpdateConfiguration body =
+  inPut "/config" (jsonBody body) jsonResponse
 
--- -- | Retrieve the current server configuration
--- -- |
--- -- | /Permissions/: Must have @manage_system@ permission.
--- mmGetConfiguration :: Session -> IO Config
--- mmGetConfiguration =
---   inGet "/config" noBody jsonResponse
+-- | Retrieve the current server configuration
+-- |
+-- | /Permissions/: Must have @manage_system@ permission.
+mmGetConfiguration :: Session -> IO A.Value
+mmGetConfiguration =
+  inGet "/config" noBody jsonResponse
 
 
 
@@ -1304,7 +1355,7 @@ mmGetPublicChannels teamId page perPage =
 -- |
 -- | /Permissions/: Must be authenticated and have the @create_team@
 -- | permission.
-mmCreateTeam :: InitialTeamData -> Session -> IO Team
+mmCreateTeam :: TeamsCreate -> Session -> IO Team
 mmCreateTeam body =
   inPost "/teams" (jsonBody body) jsonResponse
 
@@ -1521,14 +1572,14 @@ mmGetUsersByUsernames body =
 -- mmRevokeUserSession userId sessionId =
 --   inPost (printf "/users/%s/sessions/revoke" userId) (jsonBody (A.object [ "session_id" A..= sessionId ])) jsonResponse
 
--- -- | Update a user's system-level roles. Valid user roles are
--- -- | "system_user", "system_admin" or both of them. Overwrites any
--- -- | previously assigned system-level roles.
--- -- |
--- -- | /Permissions/: Must have the @manage_roles@ permission.
--- mmUpdateUsersRoles :: UserId -> Text -> Session -> IO ()
--- mmUpdateUsersRoles userId roles =
---   inPut (printf "/users/%s/roles" userId) (jsonBody (A.object [ "roles" A..= roles ])) jsonResponse
+-- | Update a user's system-level roles. Valid user roles are
+-- | "system_user", "system_admin" or both of them. Overwrites any
+-- | previously assigned system-level roles.
+-- |
+-- | /Permissions/: Must have the @manage_roles@ permission.
+mmUpdateUsersRoles :: UserId -> Text -> Session -> IO ()
+mmUpdateUsersRoles userId roles =
+  inPut (printf "/users/%s/roles" userId) (jsonBody (A.object [ "roles" A..= roles ])) noResponse
 
 -- -- | Send an email with a verification link to a user that has an email
 -- -- | matching the one in the request body. This endpoint will return
@@ -1776,13 +1827,14 @@ mmDeactivateUserAccount :: UserParam -> Session -> IO ()
 mmDeactivateUserAccount userId =
   inDelete (printf "/users/%s" userId) noBody jsonResponse
 
--- -- | Create a new user on the system.
--- -- |
--- -- | /Permissions/: No permission required but user creation can be
--- -- | controlled by server configuration.
--- mmCreateUser :: XX31 -> Session -> IO User
--- mmCreateUser body =
---   inPost "/users" (jsonBody body) jsonResponse
+-- | Create a new user on the system.
+-- |
+-- | /Permissions/: No permission required but user creation can be
+-- | controlled by server configuration.
+mmCreateUser :: UsersCreate -> Session -> IO User
+mmCreateUser body =
+  inPost "/users" (jsonBody body) jsonResponse
+  -- UsersCreate was XX31
 
 data UserQuery = UserQuery
   { userQueryPage         :: Maybe Int
@@ -4826,7 +4878,7 @@ mmFlagPost uId pId =
         , flaggedPostId     = pId
         , flaggedPostStatus = True
         }
-  in inPut (printf "/users/%s/preferences" uId) (jsonBody body) noResponse
+  in inPut (printf "/users/%s/preferences" uId) (jsonBody [body]) noResponse
 
 mmUnflagPost :: UserId -> PostId -> Session -> IO ()
 mmUnflagPost uId pId =
@@ -4835,4 +4887,4 @@ mmUnflagPost uId pId =
         , flaggedPostId     = pId
         , flaggedPostStatus = False
         }
-  in inPut (printf "/users/%s/preferences" uId) (jsonBody body) noResponse
+  in inPut (printf "/users/%s/preferences" uId) (jsonBody [body]) noResponse
