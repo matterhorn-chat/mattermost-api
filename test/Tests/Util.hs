@@ -73,7 +73,7 @@ import Network.Mattermost.Util
 
 import Tests.Types
 
-mmTestCase :: String -> Config -> TestM () -> TestTree
+mmTestCase :: String -> TestConfig -> TestM () -> TestTree
 mmTestCase testName cfg act =
     testCaseSteps testName $ \prnt -> do
       cd <- connectFromConfig cfg
@@ -109,7 +109,7 @@ reportJSONExceptions io = io
   putStrLn badJson
   E.throwIO e
 
-adminAccount :: Config -> UsersCreate
+adminAccount :: TestConfig -> UsersCreate
 adminAccount cfg =
     UsersCreate { usersCreateEmail          = configEmail    cfg
                 , usersCreatePassword       = configPassword cfg
@@ -329,7 +329,7 @@ findChannel chans name =
             in error $ "Expected to find channel by name " <>
                      show name <> " but got " <> show namePairs
 
-connectFromConfig :: Config -> IO ConnectionData
+connectFromConfig :: TestConfig -> IO ConnectionData
 connectFromConfig cfg =
   initConnectionDataInsecure (configHostname cfg)
                              (fromIntegral (configPort cfg))
@@ -417,17 +417,17 @@ getChannels team = do
   session <- getSession
   liftIO $ mmGetPublicChannels (teamId team) Nothing Nothing session
 
-getConfig :: TestM A.Value
+getConfig :: TestM Config
 getConfig = do
   session <- getSession
   liftIO $ mmGetConfiguration session
 
-getClientConfig :: TestM A.Value
+getClientConfig :: TestM ClientConfig -- A.Value
 getClientConfig = do
   session <- getSession
   liftIO $ mmGetClientConfiguration (Just (T.pack "old")) session
 
-saveConfig :: A.Value -> TestM ()
+saveConfig :: Config -> TestM ()
 saveConfig newConfig = do
   session <- getSession
   liftIO $ void $ mmUpdateConfiguration newConfig session

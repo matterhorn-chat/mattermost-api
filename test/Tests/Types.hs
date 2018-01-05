@@ -1,5 +1,5 @@
 module Tests.Types
-  ( Config(..)
+  ( TestConfig(..)
   , TestM
   , TestState(..)
   )
@@ -14,20 +14,21 @@ import Network.Mattermost.Types.Internal
 import Network.Mattermost.Types (Session)
 import Network.Mattermost.WebSocket.Types
 
-data Config
-  = Config { configUsername :: Text
-           , configHostname :: Text
-           , configTeam     :: Text
-           , configPort     :: Int
-           , configPassword :: Text
-           , configEmail    :: Text
-           }
+data TestConfig
+  = TestConfig
+        { configUsername :: Text
+        , configHostname :: Text
+        , configTeam     :: Text
+        , configPort     :: Int
+        , configPassword :: Text
+        , configEmail    :: Text
+        }
 
 type TestM a = StateT TestState IO a
 
 data TestState =
     TestState { tsPrinter        :: String -> IO ()
-              , tsConfig         :: Config
+              , tsConfig         :: TestConfig
               , tsConnectionData :: ConnectionData
               , tsSession        :: Maybe Session
               , tsDebug          :: Bool
