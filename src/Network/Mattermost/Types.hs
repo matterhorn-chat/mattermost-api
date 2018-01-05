@@ -1342,3 +1342,27 @@ instance A.ToJSON ChannelMember where
     , "last_update_at" A..= timeToServer channelMemberLastUpdateAt
     , "notify_props" A..= channelMemberNotifyProps
     ]
+
+
+data Status = Status
+  { statusUserId :: UserId
+  , statusStatus :: T.Text
+  , statusManual :: Bool
+  , statusLastActivityAt :: ServerTime
+  }
+
+instance A.FromJSON Status where
+  parseJSON = A.withObject "Status" $ \o -> do
+    statusUserId <- o A..: "user_id"
+    statusStatus <- o A..: "status"
+    statusManual <- o A..: "manual"
+    statusLastActivityAt <- timeFromServer <$> o A..: "last_activity_at"
+    return Status { .. }
+
+instance A.ToJSON Status where
+  toJSON Status { .. } = A.object
+    [ "user_id" A..= statusUserId
+    , "status"  A..= statusStatus
+    , "manual"  A..= statusManual
+    , "last_activity_at" A..= timeToServer statusLastActivityAt
+    ]

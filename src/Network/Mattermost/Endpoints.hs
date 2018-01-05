@@ -1138,6 +1138,12 @@ mmGetReactionsForPost postId =
 --   inGet "/saml/metadata" noBody jsonResponse
 
 
+-- * Statuses
+
+mmGetUserStatusByIds :: Seq UserId -> Session -> IO (Seq Status)
+mmGetUserStatusByIds body =
+  inPost "/users/status/ids" (jsonBody body) jsonResponse
+
 
 -- * System
 
@@ -1280,14 +1286,14 @@ mmGetClientConfiguration format =
 -- | Submit a new configuration for the server to use.
 -- |
 -- | /Permissions/: Must have @manage_system@ permission.
-mmUpdateConfiguration :: Config -> Session -> IO Config
+mmUpdateConfiguration :: ServerConfig -> Session -> IO ServerConfig
 mmUpdateConfiguration body =
   inPut "/config" (jsonBody body) jsonResponse
 
 -- | Retrieve the current server configuration
 -- |
 -- | /Permissions/: Must have @manage_system@ permission.
-mmGetConfiguration :: Session -> IO Config
+mmGetConfiguration :: Session -> IO ServerConfig
 mmGetConfiguration =
   inGet "/config" noBody jsonResponse
 
@@ -2321,7 +2327,7 @@ instance A.ToJSON ChannelUnread where
 
 -- --
 
-data Config = Config
+data ServerConfig = ServerConfig
   {
   -- { configSqlsettings :: UnknownObject
   -- , configPrivacysettings :: PrivacySettings
@@ -2347,7 +2353,7 @@ data Config = Config
   , configWebrtcsettings :: WebrtcSettings
   } deriving (Read, Show, Eq)
 
-instance A.FromJSON Config where
+instance A.FromJSON ServerConfig where
   parseJSON = A.withObject "config" $ \v -> do
     -- configSqlsettings <- v A..: "SqlSettings"
     -- configPrivacysettings <- v A..: "PrivacySettings"
@@ -2371,10 +2377,10 @@ instance A.FromJSON Config where
     -- configAnalyticssettings <- v A..: "AnalyticsSettings"
     -- configMetricssettings <- v A..: "MetricsSettings"
     configWebrtcsettings <- v A..: "WebrtcSettings"
-    return Config { .. }
+    return ServerConfig { .. }
 
-instance A.ToJSON Config where
-  toJSON Config { .. } = A.object
+instance A.ToJSON ServerConfig where
+  toJSON ServerConfig { .. } = A.object
     [ "EmailSettings" A..= configEmailsettings
     , "WebrtcSettings" A..= configWebrtcsettings
     ]
@@ -5079,3 +5085,4 @@ instance A.FromJSON ClientConfig where
     clientConfigDiagnosticId <- o A..: "DiagnosticId"
     clientConfigDiagnosticsEnabled <- o A..: "DiagnosticsEnabled"
     return ClientConfig { .. }
+
