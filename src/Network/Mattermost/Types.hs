@@ -922,6 +922,7 @@ data MinCommand
   , minComCommand   :: Text
   , minComParentId  :: Maybe PostId
   , minComRootId    :: Maybe PostId
+  , minComTeamId    :: TeamId
   } deriving (Read, Show, Eq)
 
 instance A.ToJSON MinCommand where
@@ -930,6 +931,7 @@ instance A.ToJSON MinCommand where
     , "command"   .= minComCommand
     , "parent_id" .= minComParentId
     , "root_id" .= minComRootId
+    , "team_id" .= minComTeamId
     ]
 
 --
@@ -1365,4 +1367,219 @@ instance A.ToJSON Status where
     , "status"  A..= statusStatus
     , "manual"  A..= statusManual
     , "last_activity_at" A..= timeToServer statusLastActivityAt
+    ]
+
+
+data UserSearch = UserSearch
+  { userSearchTerm :: Text
+  , userSearchAllowInactive :: Bool
+    -- ^ When `true`, include deactivated users in the results
+  , userSearchWithoutTeam :: Bool
+    -- ^ Set this to `true` if you would like to search for users that are not on a team. This option takes precendence over `team_id`, `in_channel_id`, and `not_in_channel_id`.
+  , userSearchInChannelId :: Text
+    -- ^ If provided, only search users in this channel
+  , userSearchNotInTeamId :: Text
+    -- ^ If provided, only search users not on this team
+  , userSearchNotInChannelId :: Text
+    -- ^ If provided, only search users not in this channel. Must specifiy `team_id` when using this option
+  , userSearchTeamId :: Text
+    -- ^ If provided, only search users on this team
+  } deriving (Read, Show, Eq)
+
+instance A.FromJSON UserSearch where
+  parseJSON = A.withObject "userSearch" $ \v -> do
+    userSearchTerm <- v A..: "term"
+    userSearchAllowInactive <- v A..: "allow_inactive"
+    userSearchWithoutTeam <- v A..: "without_team"
+    userSearchInChannelId <- v A..: "in_channel_id"
+    userSearchNotInTeamId <- v A..: "not_in_team_id"
+    userSearchNotInChannelId <- v A..: "not_in_channel_id"
+    userSearchTeamId <- v A..: "team_id"
+    return UserSearch { .. }
+
+instance A.ToJSON UserSearch where
+  toJSON UserSearch { .. } = A.object
+    [ "term" A..= userSearchTerm
+    , "allow_inactive" A..= userSearchAllowInactive
+    , "without_team" A..= userSearchWithoutTeam
+    , "in_channel_id" A..= userSearchInChannelId
+    , "not_in_team_id" A..= userSearchNotInTeamId
+    , "not_in_channel_id" A..= userSearchNotInChannelId
+    , "team_id" A..= userSearchTeamId
+    ]
+
+-- --
+
+data RawPost = RawPost
+  { rawPostChannelId :: ChannelId
+  , rawPostMessage :: Text
+    -- ^ The message contents, can be formatted with Markdown
+  , rawPostFileIds :: Seq FileId
+    -- ^ A list of file IDs to associate with the post
+  , rawPostRootId :: Maybe PostId
+    -- ^ The post ID to comment on
+  } deriving (Read, Show, Eq)
+
+instance A.FromJSON RawPost where
+  parseJSON = A.withObject "rawPost" $ \v -> do
+    rawPostChannelId <- v A..: "channel_id"
+    rawPostMessage <- v A..: "message"
+    rawPostFileIds <- v A..: "file_ids"
+    rawPostRootId <- v A..:? "root_id"
+    return RawPost { .. }
+
+instance A.ToJSON RawPost where
+  toJSON RawPost { .. } = A.object
+    ( "channel_id" A..= rawPostChannelId
+    : "message" A..= rawPostMessage
+    : "file_ids" A..= rawPostFileIds
+    : case rawPostRootId of
+        Nothing -> []
+        Just rId -> [("root_id" A..= rId)]
+    )
+
+rawPost :: Text -> ChannelId -> RawPost
+rawPost message channelId = RawPost
+  { rawPostChannelId = channelId
+  , rawPostMessage   = message
+  , rawPostFileIds   = mempty
+  , rawPostRootId    = Nothing
+  }
+
+
+data PostUpdate = PostUpdate
+  { postUpdateIsPinned :: Maybe Bool
+  , postUpdateMessage :: Text
+    -- ^ The message text of the post
+  , postUpdateHasReactions :: Maybe Bool
+    -- ^ Set to `true` if the post has reactions to it
+  , postUpdateFileIds :: Maybe (Seq FileId)
+    -- ^ The list of files attached to this post
+  , postUpdateProps :: Maybe Text
+    -- ^ A general JSON property bag to attach to the post
+  } deriving (Read, Show, Eq)
+
+instance A.FromJSON PostUpdate where
+  parseJSON = A.withObject "postUpdate" $ \v -> do
+    postUpdateIsPinned <- v A..:? "is_pinned" A..!= Nothing
+    postUpdateMessage <- v A..: "message"
+    postUpdateHasReactions <- v A..:? "has_reactions" A..!= Nothing
+    postUpdateFileIds <- v A..:? "file_ids" A..!= Nothing
+    postUpdateProps <- v A..:? "props" A..!= Nothing
+    return PostUpdate { .. }
+
+instance A.ToJSON PostUpdate where
+  toJSON PostUpdate { .. } = A.object $
+    [ "is_pinned" A..= p | Just p <- [postUpdateIsPinned] ] ++
+    [ "message" A..= postUpdateMessage ] ++
+    [ "has_reactions" A..= p | Just p <- [postUpdateHasReactions] ] ++
+    [ "file_ids" A..= p | Just p <- [postUpdateFileIds] ] ++
+    [ "props" A..= p | Just p <- [postUpdateProps] ]
+
+postUpdate :: Text -> PostUpdate
+postUpdate message = PostUpdate
+  { postUpdateIsPinned = Nothing
+  , postUpdateMessage = message
+  , postUpdateHasReactions = Nothing
+  , postUpdateFileIds = Nothing
+  , postUpdateProps = Nothing
+  }
+
+
+data ChannelPatch = ChannelPatch
+  { channelPatchHeader :: Maybe Text
+  , channelPatchDisplayName :: Maybe Text
+    -- ^ The non-unique UI name for the channel
+  , channelPatchName :: Maybe Text
+    -- ^ The unique handle for the channel, will be present in the channel URL
+  , channelPatchPurpose :: Maybe Text
+    -- ^ A short description of the purpose of the channel
+  } deriving (Read, Show, Eq)
+
+instance A.FromJSON ChannelPatch where
+  parseJSON = A.withObject "channelPatch" $ \v -> do
+    channelPatchHeader <- v A..:? "header"
+    channelPatchDisplayName <- v A..:? "display_name"
+    channelPatchName <- v A..:? "name"
+    channelPatchPurpose <- v A..:? "purpose"
+    return ChannelPatch { .. }
+
+instance A.ToJSON ChannelPatch where
+  toJSON ChannelPatch { .. } = A.object $
+    [ "header" A..= x | Just x <- [ channelPatchHeader] ] ++
+    [ "display_name" A..= x | Just x <- [channelPatchDisplayName] ] ++
+    [ "name" A..= x | Just x <- [channelPatchName] ] ++
+    [ "purpose" A..= x | Just x <- [channelPatchPurpose] ]
+
+defaultChannelPatch :: ChannelPatch
+defaultChannelPatch = ChannelPatch
+  { channelPatchHeader = Nothing
+  , channelPatchDisplayName = Nothing
+  , channelPatchName = Nothing
+  , channelPatchPurpose = Nothing
+  }
+
+
+data InitialTeamData = InitialTeamData
+  { initialTeamDataDisplayName :: Text
+  , initialTeamDataType :: Text
+    -- ^ `'O'` for open, `'I'` for invite only
+  , initialTeamDataName :: Text
+    -- ^ Unique handler for a team, will be present in the team URL
+  } deriving (Read, Show, Eq)
+
+instance A.FromJSON InitialTeamData where
+  parseJSON = A.withObject "initialTeamData" $ \v -> do
+    initialTeamDataDisplayName <- v A..: "display_name"
+    initialTeamDataType <- v A..: "type"
+    initialTeamDataName <- v A..: "name"
+    return InitialTeamData { .. }
+
+instance A.ToJSON InitialTeamData where
+  toJSON InitialTeamData { .. } = A.object
+    [ "display_name" A..= initialTeamDataDisplayName
+    , "type" A..= initialTeamDataType
+    , "name" A..= initialTeamDataName
+    ]
+
+data ChannelStats = ChannelStats
+  { channelStatsChannelId   :: Text
+  , channelStatsMemberCount :: Int
+  } deriving (Read, Show, Eq)
+
+instance A.FromJSON ChannelStats where
+  parseJSON = A.withObject "channelStats" $ \v -> do
+    channelStatsChannelId   <- v A..: "channel_id"
+    channelStatsMemberCount <- v A..: "member_count"
+    return ChannelStats { .. }
+
+instance A.ToJSON ChannelStats where
+  toJSON ChannelStats { .. } = A.object
+    [ "channel_id"   A..= channelStatsChannelId
+    , "member_count" A..= channelStatsMemberCount
+    ]
+
+-- --
+
+data ChannelUnread = ChannelUnread
+  { channelUnreadChannelId :: Text
+  , channelUnreadTeamId :: Text
+  , channelUnreadMsgCount :: Int
+  , channelUnreadMentionCount :: Int
+  } deriving (Read, Show, Eq)
+
+instance A.FromJSON ChannelUnread where
+  parseJSON = A.withObject "channelUnread" $ \v -> do
+    channelUnreadChannelId <- v A..: "channel_id"
+    channelUnreadTeamId <- v A..: "team_id"
+    channelUnreadMsgCount <- v A..: "msg_count"
+    channelUnreadMentionCount <- v A..: "mention_count"
+    return ChannelUnread { .. }
+
+instance A.ToJSON ChannelUnread where
+  toJSON ChannelUnread { .. } = A.object
+    [ "channel_id" A..= channelUnreadChannelId
+    , "team_id" A..= channelUnreadTeamId
+    , "msg_count" A..= channelUnreadMsgCount
+    , "mention_count" A..= channelUnreadMentionCount
     ]

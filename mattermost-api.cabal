@@ -32,6 +32,7 @@ library
                        Network.Mattermost.Version
                        Network.Mattermost.Types
                        Network.Mattermost.Types.Base
+                       Network.Mattermost.Types.Config
                        Network.Mattermost.Types.Internal
                        Network.Mattermost.Endpoints
   other-modules:       Network.Mattermost.TH
