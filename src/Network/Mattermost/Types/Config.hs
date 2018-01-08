@@ -11,25 +11,25 @@ data ServerConfig = ServerConfig
   {
   -- { configSqlsettings :: UnknownObject
   -- , configPrivacysettings :: PrivacySettings
-  -- , configLogsettings :: LogSettings
-  -- , configCompliancesettings :: ComplianceSettings
-    configEmailsettings :: EmailSettings
+    configLogsettings :: LogSettings
+  , configCompliancesettings :: ComplianceSettings
+  , configEmailsettings :: EmailSettings
   -- , configFilesettings :: FileSettings
   -- , configGitlabsettings :: GitLabSettings
-  -- , configNativeappsettings :: NativeAppSettings
+  , configNativeappsettings :: NativeAppSettings
   -- , configLdapsettings :: LdapSettings
   -- , configServicesettings :: ServiceSettings
   -- , configOffice365settings :: Office365Settings
   -- , configGooglesettings :: GoogleSettings
-  -- , configPasswordsettings :: PasswordSettings
+  , configPasswordsettings :: PasswordSettings
   , configTeamsettings :: TeamSettings
   -- , configSamlsettings :: SamlSettings
   -- , configClustersettings :: ClusterSettings
   -- , configRatelimitsettings :: RateLimitSettings
   -- , configLocalizationsettings :: LocalizationSettings
-  -- , configSupportsettings :: SupportSettings
+  , configSupportsettings :: SupportSettings
   -- , configAnalyticssettings :: Integer
-  -- , configMetricssettings :: MetricsSettings
+  , configMetricssettings :: MetricsSettings
   , configWebrtcsettings :: WebrtcSettings
   } deriving (Read, Show, Eq)
 
@@ -37,25 +37,25 @@ instance A.FromJSON ServerConfig where
   parseJSON = A.withObject "config" $ \v -> do
     -- configSqlsettings <- v A..: "SqlSettings"
     -- configPrivacysettings <- v A..: "PrivacySettings"
-    -- configLogsettings <- v A..: "LogSettings"
-    -- configCompliancesettings <- v A..: "ComplianceSettings"
+    configLogsettings <- v A..: "LogSettings"
+    configCompliancesettings <- v A..: "ComplianceSettings"
     configEmailsettings <- v A..: "EmailSettings"
     -- configFilesettings <- v A..: "FileSettings"
     -- configGitlabsettings <- v A..: "GitLabSettings"
-    -- configNativeappsettings <- v A..: "NativeAppSettings"
+    configNativeappsettings <- v A..: "NativeAppSettings"
     -- configLdapsettings <- v A..: "LdapSettings"
     -- configServicesettings <- v A..: "ServiceSettings"
     -- configOffice365settings <- v A..: "Office365Settings"
     -- configGooglesettings <- v A..: "GoogleSettings"
-    -- configPasswordsettings <- v A..: "PasswordSettings"
+    configPasswordsettings <- v A..: "PasswordSettings"
     configTeamsettings <- v A..: "TeamSettings"
     -- configSamlsettings <- v A..: "SamlSettings"
     -- configClustersettings <- v A..: "ClusterSettings"
     -- configRatelimitsettings <- v A..: "RateLimitSettings"
     -- configLocalizationsettings <- v A..: "LocalizationSettings"
-    -- configSupportsettings <- v A..: "SupportSettings"
+    configSupportsettings <- v A..: "SupportSettings"
     -- configAnalyticssettings <- v A..: "AnalyticsSettings"
-    -- configMetricssettings <- v A..: "MetricsSettings"
+    configMetricssettings <- v A..: "MetricsSettings"
     configWebrtcsettings <- v A..: "WebrtcSettings"
     return ServerConfig { .. }
 
@@ -63,30 +63,29 @@ instance A.ToJSON ServerConfig where
   toJSON ServerConfig { .. } = A.object
     [ "EmailSettings" A..= configEmailsettings
     , "WebrtcSettings" A..= configWebrtcsettings
-    ]
-    -- [ "SqlSettings" A..= configSqlsettings
+    , "PasswordSettings" A..= configPasswordsettings
+    , "LogSettings" A..= configLogsettings
+    , "NativeAppSettings" A..= configNativeappsettings
+    , "MetricsSettings" A..= configMetricssettings
+    , "ComplianceSettings" A..= configCompliancesettings
+    -- , "SqlSettings" A..= configSqlsettings
     -- , "PrivacySettings" A..= configPrivacysettings
-    -- , "LogSettings" A..= configLogsettings
-    -- , "ComplianceSettings" A..= configCompliancesettings
     -- , "EmailSettings" A..= configEmailsettings
     -- , "FileSettings" A..= configFilesettings
     -- , "GitLabSettings" A..= configGitlabsettings
-    -- , "NativeAppSettings" A..= configNativeappsettings
     -- , "LdapSettings" A..= configLdapsettings
     -- , "ServiceSettings" A..= configServicesettings
     -- , "Office365Settings" A..= configOffice365settings
     -- , "GoogleSettings" A..= configGooglesettings
-    -- , "PasswordSettings" A..= configPasswordsettings
     -- , "TeamSettings" A..= configTeamsettings
     -- , "SamlSettings" A..= configSamlsettings
     -- , "ClusterSettings" A..= configClustersettings
     -- , "RateLimitSettings" A..= configRatelimitsettings
     -- , "LocalizationSettings" A..= configLocalizationsettings
-    -- , "SupportSettings" A..= configSupportsettings
+    , "SupportSettings" A..= configSupportsettings
     -- , "AnalyticsSettings" A..= configAnalyticssettings
-    -- , "MetricsSettings" A..= configMetricssettings
-    -- , "WebrtcSettings" A..= configWebrtcsettings
-    -- ]
+    , "WebrtcSettings" A..= configWebrtcsettings
+    ]
 
 -- --
 
@@ -456,4 +455,212 @@ instance A.ToJSON WebrtcSettings where
     , "GatewayAdminUrl" A..= webrtcSettingsGatewayadminurl
     , "TurnUsername" A..= webrtcSettingsTurnusername
     , "GatewayWebsocketUrl" A..= webrtcSettingsGatewaywebsocketurl
+    ]
+
+
+data PasswordSettings = PasswordSettings
+  { passwordSettingsUppercase :: Bool
+  , passwordSettingsLowercase :: Bool
+  , passwordSettingsNumber :: Bool
+  , passwordSettingsSymbol :: Bool
+  , passwordSettingsMinimumlength :: Int
+  } deriving (Read, Show, Eq)
+
+instance A.FromJSON PasswordSettings where
+  parseJSON = A.withObject "passwordSettings" $ \v -> do
+    passwordSettingsUppercase <- v A..: "Uppercase"
+    passwordSettingsLowercase <- v A..: "Lowercase"
+    passwordSettingsNumber <- v A..: "Number"
+    passwordSettingsSymbol <- v A..: "Symbol"
+    passwordSettingsMinimumlength <- v A..: "MinimumLength"
+    return PasswordSettings { .. }
+
+instance A.ToJSON PasswordSettings where
+  toJSON PasswordSettings { .. } = A.object
+    [ "Uppercase" A..= passwordSettingsUppercase
+    , "Lowercase" A..= passwordSettingsLowercase
+    , "Number" A..= passwordSettingsNumber
+    , "Symbol" A..= passwordSettingsSymbol
+    , "MinimumLength" A..= passwordSettingsMinimumlength
+    ]
+
+--
+
+data PrivacySettings = PrivacySettings
+  { privacySettingsShowemailaddress :: Bool
+  , privacySettingsShowfullname :: Bool
+  } deriving (Read, Show, Eq)
+
+instance A.FromJSON PrivacySettings where
+  parseJSON = A.withObject "privacySettings" $ \v -> do
+    privacySettingsShowemailaddress <- v A..: "ShowEmailAddress"
+    privacySettingsShowfullname <- v A..: "ShowFullName"
+    return PrivacySettings { .. }
+
+instance A.ToJSON PrivacySettings where
+  toJSON PrivacySettings { .. } = A.object
+    [ "ShowEmailAddress" A..= privacySettingsShowemailaddress
+    , "ShowFullName" A..= privacySettingsShowfullname
+    ]
+
+--
+
+data RateLimitSettings = RateLimitSettings
+  { rateLimitSettingsEnable :: Bool
+  , rateLimitSettingsVarybyremoteaddr :: Bool
+  , rateLimitSettingsMemorystoresize :: Int
+  , rateLimitSettingsMaxburst :: Int
+  , rateLimitSettingsVarybyheader :: Text
+  , rateLimitSettingsPersec :: Int
+  } deriving (Read, Show, Eq)
+
+instance A.FromJSON RateLimitSettings where
+  parseJSON = A.withObject "rateLimitSettings" $ \v -> do
+    rateLimitSettingsEnable <- v A..: "Enable"
+    rateLimitSettingsVarybyremoteaddr <- v A..: "VaryByRemoteAddr"
+    rateLimitSettingsMemorystoresize <- v A..: "MemoryStoreSize"
+    rateLimitSettingsMaxburst <- v A..: "MaxBurst"
+    rateLimitSettingsVarybyheader <- v A..: "VaryByHeader"
+    rateLimitSettingsPersec <- v A..: "PerSec"
+    return RateLimitSettings { .. }
+
+instance A.ToJSON RateLimitSettings where
+  toJSON RateLimitSettings { .. } = A.object
+    [ "Enable" A..= rateLimitSettingsEnable
+    , "VaryByRemoteAddr" A..= rateLimitSettingsVarybyremoteaddr
+    , "MemoryStoreSize" A..= rateLimitSettingsMemorystoresize
+    , "MaxBurst" A..= rateLimitSettingsMaxburst
+    , "VaryByHeader" A..= rateLimitSettingsVarybyheader
+    , "PerSec" A..= rateLimitSettingsPersec
+    ]
+
+
+data LogSettings = LogSettings
+  { logSettingsEnablefile :: Bool
+  , logSettingsFilelocation :: Text
+  , logSettingsFilelevel :: Text
+  , logSettingsEnableconsole :: Bool
+  , logSettingsEnablewebhookdebugging :: Bool
+  , logSettingsConsolelevel :: Text
+  , logSettingsFileformat :: Text
+  , logSettingsEnablediagnostics :: Bool
+  } deriving (Read, Show, Eq)
+
+instance A.FromJSON LogSettings where
+  parseJSON = A.withObject "logSettings" $ \v -> do
+    logSettingsEnablefile <- v A..: "EnableFile"
+    logSettingsFilelocation <- v A..: "FileLocation"
+    logSettingsFilelevel <- v A..: "FileLevel"
+    logSettingsEnableconsole <- v A..: "EnableConsole"
+    logSettingsEnablewebhookdebugging <- v A..: "EnableWebhookDebugging"
+    logSettingsConsolelevel <- v A..: "ConsoleLevel"
+    logSettingsFileformat <- v A..: "FileFormat"
+    logSettingsEnablediagnostics <- v A..: "EnableDiagnostics"
+    return LogSettings { .. }
+
+instance A.ToJSON LogSettings where
+  toJSON LogSettings { .. } = A.object
+    [ "EnableFile" A..= logSettingsEnablefile
+    , "FileLocation" A..= logSettingsFilelocation
+    , "FileLevel" A..= logSettingsFilelevel
+    , "EnableConsole" A..= logSettingsEnableconsole
+    , "EnableWebhookDebugging" A..= logSettingsEnablewebhookdebugging
+    , "ConsoleLevel" A..= logSettingsConsolelevel
+    , "FileFormat" A..= logSettingsFileformat
+    , "EnableDiagnostics" A..= logSettingsEnablediagnostics
+    ]
+
+--
+
+data MetricsSettings = MetricsSettings
+  { metricsSettingsBlockprofilerate :: Integer
+  , metricsSettingsEnable :: Bool
+  , metricsSettingsListenaddress :: Text
+  } deriving (Read, Show, Eq)
+
+instance A.FromJSON MetricsSettings where
+  parseJSON = A.withObject "metricsSettings" $ \v -> do
+    metricsSettingsBlockprofilerate <- v A..: "BlockProfileRate"
+    metricsSettingsEnable <- v A..: "Enable"
+    metricsSettingsListenaddress <- v A..: "ListenAddress"
+    return MetricsSettings { .. }
+
+instance A.ToJSON MetricsSettings where
+  toJSON MetricsSettings { .. } = A.object
+    [ "BlockProfileRate" A..= metricsSettingsBlockprofilerate
+    , "Enable" A..= metricsSettingsEnable
+    , "ListenAddress" A..= metricsSettingsListenaddress
+    ]
+
+--
+
+data NativeAppSettings = NativeAppSettings
+  { nativeAppSettingsAndroidappdownloadlink :: Text
+  , nativeAppSettingsAppdownloadlink :: Text
+  , nativeAppSettingsIosappdownloadlink :: Text
+  } deriving (Read, Show, Eq)
+
+instance A.FromJSON NativeAppSettings where
+  parseJSON = A.withObject "nativeAppSettings" $ \v -> do
+    nativeAppSettingsAndroidappdownloadlink <- v A..: "AndroidAppDownloadLink"
+    nativeAppSettingsAppdownloadlink <- v A..: "AppDownloadLink"
+    nativeAppSettingsIosappdownloadlink <- v A..: "IosAppDownloadLink"
+    return NativeAppSettings { .. }
+
+instance A.ToJSON NativeAppSettings where
+  toJSON NativeAppSettings { .. } = A.object
+    [ "AndroidAppDownloadLink" A..= nativeAppSettingsAndroidappdownloadlink
+    , "AppDownloadLink" A..= nativeAppSettingsAppdownloadlink
+    , "IosAppDownloadLink" A..= nativeAppSettingsIosappdownloadlink
+    ]
+
+
+data ComplianceSettings = ComplianceSettings
+  { complianceSettingsDirectory :: Text
+  , complianceSettingsEnable :: Bool
+  , complianceSettingsEnabledaily :: Bool
+  } deriving (Read, Show, Eq)
+
+instance A.FromJSON ComplianceSettings where
+  parseJSON = A.withObject "complianceSettings" $ \v -> do
+    complianceSettingsDirectory <- v A..: "Directory"
+    complianceSettingsEnable <- v A..: "Enable"
+    complianceSettingsEnabledaily <- v A..: "EnableDaily"
+    return ComplianceSettings { .. }
+
+instance A.ToJSON ComplianceSettings where
+  toJSON ComplianceSettings { .. } = A.object
+    [ "Directory" A..= complianceSettingsDirectory
+    , "Enable" A..= complianceSettingsEnable
+    , "EnableDaily" A..= complianceSettingsEnabledaily
+    ]
+
+
+data SupportSettings = SupportSettings
+  { supportSettingsReportaproblemlink :: Text
+  , supportSettingsHelplink :: Text
+  , supportSettingsPrivacypolicylink :: Text
+  , supportSettingsTermsofservicelink :: Text
+  , supportSettingsAboutlink :: Text
+  , supportSettingsSupportemail :: Text
+  } deriving (Read, Show, Eq)
+
+instance A.FromJSON SupportSettings where
+  parseJSON = A.withObject "supportSettings" $ \v -> do
+    supportSettingsReportaproblemlink <- v A..: "ReportAProblemLink"
+    supportSettingsHelplink <- v A..: "HelpLink"
+    supportSettingsPrivacypolicylink <- v A..: "PrivacyPolicyLink"
+    supportSettingsTermsofservicelink <- v A..: "TermsOfServiceLink"
+    supportSettingsAboutlink <- v A..: "AboutLink"
+    supportSettingsSupportemail <- v A..: "SupportEmail"
+    return SupportSettings { .. }
+
+instance A.ToJSON SupportSettings where
+  toJSON SupportSettings { .. } = A.object
+    [ "ReportAProblemLink" A..= supportSettingsReportaproblemlink
+    , "HelpLink" A..= supportSettingsHelplink
+    , "PrivacyPolicyLink" A..= supportSettingsPrivacypolicylink
+    , "TermsOfServiceLink" A..= supportSettingsTermsofservicelink
+    , "AboutLink" A..= supportSettingsAboutlink
+    , "SupportEmail" A..= supportSettingsSupportemail
     ]
