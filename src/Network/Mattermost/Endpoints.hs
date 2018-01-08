@@ -266,16 +266,16 @@ mmInitialUser cd users = do
 -- * Brand
 
 -- -- | Uploads a brand image.
--- -- |
--- -- | /Permissions/: Must have @manage_system@ permission.
+-- --
+-- --   /Permissions/: Must have @manage_system@ permission.
 -- mmUploadBrandImage :: Session -> IO ()
 -- mmUploadBrandImage =
 --   inPost "/brand/image" noBody jsonResponse
 
 -- -- | Get the previously uploaded brand image. Returns 404 if no brand image
--- -- | has been uploaded.
--- -- |
--- -- | /Permissions/: No permission required.
+-- --   has been uploaded.
+-- --
+-- --   /Permissions/: No permission required.
 -- mmGetBrandImage :: Session -> IO Text
 -- mmGetBrandImage =
 --   inGet "/brand/image" noBody jsonResponse
@@ -285,35 +285,35 @@ mmInitialUser cd users = do
 -- * Channels
 
 -- | Get all channel members on a team for a user.
--- |
--- | /Permissions/: Logged in as the user and @view_team@ permission for
--- | the team. Having @manage_system@ permission voids the previous
--- | requirements.
+--
+--   /Permissions/: Logged in as the user and @view_team@ permission for
+--   the team. Having @manage_system@ permission voids the previous
+--   requirements.
 mmGetChannelMembersForUser :: UserParam -> TeamId -> Session -> IO (Seq ChannelMember)
 mmGetChannelMembersForUser userId teamId =
   inGet (printf "/users/%s/teams/%s/channels/members" userId teamId) noBody jsonResponse
 
 -- | Get all the channels on a team for a user.
--- |
--- | /Permissions/: Logged in as the user, or have @edit_other_users@
--- | permission, and @view_team@ permission for the team.
+--
+--   /Permissions/: Logged in as the user, or have @edit_other_users@
+--   permission, and @view_team@ permission for the team.
 mmGetChannelsForUser :: UserParam -> TeamId -> Session -> IO (Seq Channel)
 mmGetChannelsForUser userId teamId =
   inGet (printf "/users/%s/teams/%s/channels" userId teamId) noBody jsonResponse
 
 -- -- | Get a list of channel members based on the provided user ids.
--- -- |
--- -- | /Permissions/: Must have the @read_channel@ permission.
+-- --
+-- --   /Permissions/: Must have the @read_channel@ permission.
 -- mmGetChannelMembersByIds :: ChannelId -> (Seq Text) -> Session -> IO (Seq ChannelMember)
 -- mmGetChannelMembersByIds channelId body =
 --   inPost (printf "/channels/%s/members/ids" channelId) (jsonBody body) jsonResponse
 
 -- | Perform all the actions involved in viewing a channel. This includes
--- | marking channels as read, clearing push notifications, and updating
--- | the active channel.
--- |
--- | /Permissions/: Must be logged in as user or have @edit_other_users@
--- | permission.
+--   marking channels as read, clearing push notifications, and updating
+--   the active channel.
+--
+--   /Permissions/: Must be logged in as user or have @edit_other_users@
+--   permission.
 mmViewChannel :: UserParam -> ChannelId -> Maybe ChannelId -> Session -> IO ()
 mmViewChannel userId chanId prevChanIdMb =
   inPost (printf "/channels/members/%s/view" userId) (jsonBody body) noResponse
@@ -324,53 +324,53 @@ mmViewChannel userId chanId prevChanIdMb =
               Nothing         -> []
 
 -- | Create a new group message channel to group of users. If the logged in
--- | user's id is not included in the list, it will be appended to the end.
--- |
--- | /Permissions/: Must have @create_group_channel@ permission.
+--   user's id is not included in the list, it will be appended to the end.
+--
+--   /Permissions/: Must have @create_group_channel@ permission.
 mmCreateGroupMessageChannel :: Seq UserId -> Session -> IO Channel
 mmCreateGroupMessageChannel body =
   inPost "/channels/group" (jsonBody body) jsonResponse
 
 -- | Get the total unread messages and mentions for a channel for a user.
--- |
--- | /Permissions/: Must be logged in as user and have the @read_channel@
--- | permission, or have @edit_other_usrs@ permission.
+--
+--   /Permissions/: Must be logged in as user and have the @read_channel@
+--   permission, or have @edit_other_usrs@ permission.
 mmGetUnreadMessages :: UserParam -> ChannelId -> Session -> IO ChannelUnread
 mmGetUnreadMessages userId channelId =
   inGet (printf "/users/%s/channels/%s/unread" userId channelId) noBody jsonResponse
 
 -- -- | Gets a channel from the provided team name and channel name strings.
--- -- |
--- -- | /Permissions/: @read_channel@ permission for the channel.
+-- --
+-- --   /Permissions/: @read_channel@ permission for the channel.
 -- mmGetChannelByNameAndTeamName :: Text -> Text -> Session -> IO Channel
 -- mmGetChannelByNameAndTeamName teamName channelName =
 --   inGet (printf "/teams/name/%s/channels/name/%s" teamName channelName) noBody jsonResponse
 
 -- | Get a list of public channels on a team by id.
--- |
--- | /Permissions/: @view_team@ for the team the channels are on.
+--
+--   /Permissions/: @view_team@ for the team the channels are on.
 mmGetListOfChannelsByIds :: TeamId -> Seq ChannelId -> Session -> IO (Seq Channel)
 mmGetListOfChannelsByIds teamId body =
   inPost (printf "/teams/%s/channels/ids" teamId) (jsonBody body) jsonResponse
 
 -- | Partially update a channel by providing only the fields you want to
--- | update. Omitted fields will not be updated. The fields that can be
--- | updated are defined in the request body, all other provided fields
--- | will be ignored.
--- |
--- | /Permissions/: If updating a public channel,
--- | @manage_public_channel_members@ permission is required. If updating a
--- | private channel, @manage_private_channel_members@ permission is
--- | required.
+--   update. Omitted fields will not be updated. The fields that can be
+--   updated are defined in the request body, all other provided fields
+--   will be ignored.
+--
+--   /Permissions/: If updating a public channel,
+--   @manage_public_channel_members@ permission is required. If updating a
+--   private channel, @manage_private_channel_members@ permission is
+--   required.
 mmPatchChannel :: ChannelId -> ChannelPatch -> Session -> IO Channel
 mmPatchChannel channelId body =
   inPut (printf "/channels/%s/patch" channelId) (jsonBody body) jsonResponse
 
 -- | Create a new direct message channel between two users.
--- |
--- | /Permissions/: Must be one of the two users and have
--- | @create_direct_channel@ permission. Having the @manage_system@
--- | permission voids the previous requirements.
+--
+--   /Permissions/: Must be one of the two users and have
+--   @create_direct_channel@ permission. Having the @manage_system@
+--   permission voids the previous requirements.
 mmCreateDirectMessageChannel :: (UserId, UserId) -> Session -> IO Channel
 mmCreateDirectMessageChannel body =
   inPost "/channels/direct" (jsonBody body) jsonResponse
@@ -381,17 +381,17 @@ mmCreateDirectMessageChannel body =
 --   inGet (printf "/channels/%s/pinned" channelId) noBody jsonResponse
 
 -- | Get statistics for a channel.
--- |
--- | /Permissions/: Must have the @read_channel@ permission.
+--
+--   /Permissions/: Must have the @read_channel@ permission.
 mmGetChannelStatistics :: ChannelId -> Session -> IO ChannelStats
 mmGetChannelStatistics channelId =
   inGet (printf "/channels/%s/stats" channelId) noBody jsonResponse
 
 -- -- | Update a user's notification properties for a channel. Only the
--- -- | provided fields are updated.
--- -- |
--- -- | /Permissions/: Must be logged in as the user or have
--- -- | @edit_other_users@ permission.
+-- --   provided fields are updated.
+-- --
+-- --   /Permissions/: Must be logged in as the user or have
+-- --   @edit_other_users@ permission.
 -- mmUpdateChannelNotifications :: ChannelId -> UserId -> XX17 -> Session -> IO ()
 -- mmUpdateChannelNotifications channelId userId body =
 --   inPut (printf "/channels/%s/members/%s/notify_props" channelId userId) (jsonBody body) jsonResponse
@@ -402,90 +402,90 @@ mmAddUser channelId body =
   inPost (printf "/channels/%s/members" channelId) (jsonBody body) jsonResponse
 
 -- -- | Get a page of members for a channel.
--- -- |
--- -- | /Permissions/: @read_channel@ permission for the channel.
+-- --
+-- --   /Permissions/: @read_channel@ permission for the channel.
 -- mmGetChannelMembers :: ChannelId -> Maybe Integer -> Maybe Integer -> Session -> IO (Seq ChannelMember)
 -- mmGetChannelMembers channelId page perPage =
 --   inGet (printf "/channels/%s/members?%s" channelId (mkQueryString [ sequence ("page", fmap show page) , sequence ("per_page", fmap show perPage) ])) noBody jsonResponse
 
 -- | Create a new channel.
--- |
--- | /Permissions/: If creating a public channel, @create_public_channel@
--- | permission is required. If creating a private channel,
--- | @create_private_channel@ permission is required.
+--
+--   /Permissions/: If creating a public channel, @create_public_channel@
+--   permission is required. If creating a private channel,
+--   @create_private_channel@ permission is required.
 mmCreateChannel :: MinChannel -> Session -> IO Channel
 mmCreateChannel body =
   inPost "/channels" (jsonBody body) jsonResponse
 
 -- | Gets channel from the provided team id and channel name strings.
--- |
--- | /Permissions/: @read_channel@ permission for the channel.
+--
+--   /Permissions/: @read_channel@ permission for the channel.
 mmGetChannelByName :: TeamId -> Text -> Session -> IO Channel
 mmGetChannelByName teamId channelName =
   inGet (printf "/teams/%s/channels/name/%s" teamId channelName) noBody jsonResponse
 
 -- -- | Update a user's roles for a channel.
--- -- |
--- -- | /Permissions/: Must have @manage_channel_roles@ permission for the
--- -- | channel.
+-- --
+-- --   /Permissions/: Must have @manage_channel_roles@ permission for the
+-- --   channel.
 -- mmUpdateChannelRoles :: ChannelId -> UserId -> Text -> Session -> IO ()
 -- mmUpdateChannelRoles channelId userId roles =
 --   inPut (printf "/channels/%s/members/%s/roles" channelId userId) (jsonBody (A.object [ "roles" A..= roles ])) jsonResponse
 
 -- -- | Update a channel. The fields that can be updated are listed as
--- -- | paramters. Omitted fields will be treated as blanks.
--- -- |
--- -- | /Permissions/: If updating a public channel,
--- -- | @manage_public_channel_members@ permission is required. If updating a
--- -- | private channel, @manage_private_channel_members@ permission is
--- -- | required.
+-- --   paramters. Omitted fields will be treated as blanks.
+-- --
+-- --   /Permissions/: If updating a public channel,
+-- --   @manage_public_channel_members@ permission is required. If updating a
+-- --   private channel, @manage_private_channel_members@ permission is
+-- --   required.
 -- mmUpdateChannel :: ChannelId -> XX28 -> Session -> IO Channel
 -- mmUpdateChannel channelId body =
 --   inPut (printf "/channels/%s" channelId) (jsonBody body) jsonResponse
 
 -- | Get channel from the provided channel id string.
--- |
--- | /Permissions/: @read_channel@ permission for the channel.
+--
+--   /Permissions/: @read_channel@ permission for the channel.
 mmGetChannel :: ChannelId -> Session -> IO Channel
 mmGetChannel channelId =
   inGet (printf "/channels/%s" channelId) noBody jsonResponse
 
 -- | Delete a channel based from provided channel id string.
--- |
--- | /Permissions/: @delete_public_channel@ permission if the channel is
--- | public,
--- |
--- | @delete_private_channel@ permission if the channel is private,
--- |
--- | or have @manage_system@ permission.
+--
+--   /Permissions/: @delete_public_channel@ permission if the channel is
+--   public,
+--
+--   @delete_private_channel@ permission if the channel is private,
+--
+--   or have @manage_system@ permission.
 mmDeleteChannel :: ChannelId -> Session -> IO ()
 mmDeleteChannel channelId =
   inDelete (printf "/channels/%s" channelId) noBody noResponse
 
 -- -- | Restore channel from the provided channel id string.
--- -- |
--- -- |
--- -- | /Minimum server version/: 3.10
--- -- |
--- -- |
--- -- | /Permissions/: @manage_team@ permission for the team of channel.
+-- --
+-- --
+-- --   /Minimum server version/: 3.10
+-- --
+-- --
+-- --   /Permissions/: @manage_team@ permission for the team of channel.
 -- mmRestoreChannel :: ChannelId -> Session -> IO Channel
 -- mmRestoreChannel channelId =
 --   inPost (printf "/channels/%s/restore" channelId) noBody jsonResponse
 
 -- | Get a channel member.
--- |
--- | /Permissions/: @read_channel@ permission for the channel.
+--
+--   /Permissions/: @read_channel@ permission for the channel.
 mmGetChannelMember :: ChannelId -> UserParam -> Session -> IO ChannelMember
 mmGetChannelMember channelId userId =
   inGet (printf "/channels/%s/members/%s" channelId userId) noBody jsonResponse
 
 -- | Delete a channel member, effectively removing them from a channel.
--- |
--- | /Permissions/: @manage_public_channel_members@ permission if the
--- | channel is public.
--- |
--- | @manage_private_channel_members@ permission if the channel is private.
+--
+--   /Permissions/: @manage_public_channel_members@ permission if the
+--   channel is public.
+--
+--   @manage_private_channel_members@ permission if the channel is private.
 mmRemoveUserFromChannel :: ChannelId -> UserParam -> Session -> IO ()
 mmRemoveUserFromChannel channelId userId =
   inDelete (printf "/channels/%s/members/%s" channelId userId) noBody noResponse
@@ -495,9 +495,9 @@ mmRemoveUserFromChannel channelId userId =
 -- * Cluster
 
 -- -- | Get a set of information for each node in the cluster, useful for
--- -- | checking the status and health of each node.
--- -- |
--- -- | /Permissions/: Must have @manage_system@ permission.
+-- --   checking the status and health of each node.
+-- --
+-- --   /Permissions/: Must have @manage_system@ permission.
 -- mmGetClusterStatus :: Session -> IO (Seq ClusterInfo)
 -- mmGetClusterStatus =
 --   inGet "/cluster/status" noBody jsonResponse
@@ -507,54 +507,54 @@ mmRemoveUserFromChannel channelId userId =
 -- * Commands
 
 -- -- | Generate a new token for the command based on command id string.
--- -- |
--- -- | /Permissions/: Must have @manage_slash_commands@ permission for the
--- -- | team the command is in.
+-- --
+-- --   /Permissions/: Must have @manage_slash_commands@ permission for the
+-- --   team the command is in.
 -- mmGenerateNewToken :: CommandId -> Session -> IO Text
 -- mmGenerateNewToken commandId =
 --   inPut (printf "/commands/%s/regen_token" commandId) noBody jsonResponse
 
 -- | Execute a command on a team.
--- |
--- | /Permissions/: Must have @use_slash_commands@ permission for the team
--- | the command is in.
+--
+--   /Permissions/: Must have @use_slash_commands@ permission for the team
+--   the command is in.
 mmExecuteCommand :: MinCommand -> Session -> IO CommandResponse
 mmExecuteCommand body =
   inPost "/commands/execute" (jsonBody body) jsonResponse
 
 -- -- | Update a single command based on command id string and Command struct.
--- -- |
--- -- | /Permissions/: Must have @manage_slash_commands@ permission for the
--- -- | team the command is in.
+-- --
+-- --   /Permissions/: Must have @manage_slash_commands@ permission for the
+-- --   team the command is in.
 -- mmUpdateCommand :: CommandId -> Command -> Session -> IO Command
 -- mmUpdateCommand commandId body =
 --   inPut (printf "/commands/%s" commandId) (jsonBody body) jsonResponse
 
 -- -- | Delete a command based on command id string.
--- -- |
--- -- | /Permissions/: Must have @manage_slash_commands@ permission for the
--- -- | team the command is in.
+-- --
+-- --   /Permissions/: Must have @manage_slash_commands@ permission for the
+-- --   team the command is in.
 -- mmDeleteCommand :: CommandId -> Session -> IO ()
 -- mmDeleteCommand commandId =
 --   inDelete (printf "/commands/%s" commandId) noBody jsonResponse
 
 -- -- | List autocomplete commands in the team.
--- -- |
--- -- | /Permissions/: @view_team@ for the team.
+-- --
+-- --   /Permissions/: @view_team@ for the team.
 -- mmListAutocompleteCommands :: TeamId -> Session -> IO (Seq Command)
 -- mmListAutocompleteCommands teamId =
 --   inGet (printf "/teams/%s/commands/autocomplete" teamId) noBody jsonResponse
 
 -- -- | Create a command for a team.
--- -- |
--- -- | /Permissions/: @manage_slash_commands@ for the team the command is in.
+-- --
+-- --   /Permissions/: @manage_slash_commands@ for the team the command is in.
 -- mmCreateCommand :: XX32 -> Session -> IO Command
 -- mmCreateCommand body =
 --   inPost "/commands" (jsonBody body) jsonResponse
 
 -- -- | List commands for a team.
--- -- |
--- -- | /Permissions/: @manage_slash_commands@ if need list custom commands.
+-- --
+-- --   /Permissions/: @manage_slash_commands@ if need list custom commands.
 -- mmListCommandsForTeam :: TeamId -> Maybe Text -> Session -> IO (Seq Command)
 -- mmListCommandsForTeam teamId customOnly =
 --   inGet (printf "/commands?%s" (mkQueryString [ Just ("team_id", T.unpack (idString teamId)) , sequence ("custom_only", fmap T.unpack customOnly) ])) noBody jsonResponse
@@ -564,30 +564,30 @@ mmExecuteCommand body =
 -- * Compliance
 
 -- -- | Get a compliance reports previously created.
--- -- |
--- -- | /Permissions/: Must have @manage_system@ permission.
+-- --
+-- --   /Permissions/: Must have @manage_system@ permission.
 -- mmGetReport :: ReportId -> Session -> IO Compliance
 -- mmGetReport reportId =
 --   inGet (printf "/compliance/reports/%s" reportId) noBody jsonResponse
 
 -- -- | Create and save a compliance report.
--- -- |
--- -- | /Permissions/: Must have @manage_system@ permission.
+-- --
+-- --   /Permissions/: Must have @manage_system@ permission.
 -- mmCreateReport :: Session -> IO Compliance
 -- mmCreateReport =
 --   inPost "/compliance/reports" noBody jsonResponse
 
 -- -- | Get a list of compliance reports previously created by page, selected
--- -- | with @page@ and @per_page@ query parameters.
--- -- |
--- -- | /Permissions/: Must have @manage_system@ permission.
+-- --   with @page@ and @per_page@ query parameters.
+-- --
+-- --   /Permissions/: Must have @manage_system@ permission.
 -- mmGetReports :: Maybe Integer -> Maybe Integer -> Session -> IO (Seq Compliance)
 -- mmGetReports page perPage =
 --   inGet (printf "/compliance/reports?%s" (mkQueryString [ sequence ("page", fmap show page) , sequence ("per_page", fmap show perPage) ])) noBody jsonResponse
 
 -- -- | Download the full contents of a report as a file.
--- -- |
--- -- | /Permissions/: Must have @manage_system@ permission.
+-- --
+-- --   /Permissions/: Must have @manage_system@ permission.
 -- mmDownloadReport :: ReportId -> Session -> IO ()
 -- mmDownloadReport reportId =
 --   inGet (printf "/compliance/reports/%s/download" reportId) noBody jsonResponse
@@ -597,30 +597,30 @@ mmExecuteCommand body =
 -- * Elasticsearch
 
 -- -- | Deletes all Elasticsearch indexes and their contents. After calling
--- -- | this endpoint, it is
--- -- |
--- -- | necessary to schedule a new Elasticsearch indexing job to repopulate
--- -- | the indexes.
--- -- |
--- -- | /Minimum server version/: 4.1
--- -- |
--- -- | /Permissions/: Must have @manage_system@ permission.
+-- --   this endpoint, it is
+-- --
+-- --   necessary to schedule a new Elasticsearch indexing job to repopulate
+-- --   the indexes.
+-- --
+-- --   /Minimum server version/: 4.1
+-- --
+-- --   /Permissions/: Must have @manage_system@ permission.
 -- mmPurgeAllElasticsearchIndexes :: Session -> IO ()
 -- mmPurgeAllElasticsearchIndexes =
 --   inPost "/elasticsearch/purge_indexes" noBody jsonResponse
 
 -- -- | Test the current Elasticsearch configuration to see if the
--- -- | Elasticsearch server can be contacted successfully.
--- -- |
--- -- | Optionally provide a configuration in the request body to test. If no
--- -- | valid configuration is present in the
--- -- |
--- -- | request body the current server configuration will be tested.
--- -- |
--- -- |
--- -- | /Minimum server version/: 4.1
--- -- |
--- -- | /Permissions/: Must have @manage_system@ permission.
+-- --   Elasticsearch server can be contacted successfully.
+-- --
+-- --   Optionally provide a configuration in the request body to test. If no
+-- --   valid configuration is present in the
+-- --
+-- --   request body the current server configuration will be tested.
+-- --
+-- --
+-- --   /Minimum server version/: 4.1
+-- --
+-- --   /Permissions/: Must have @manage_system@ permission.
 -- mmTestElasticsearchConfiguration :: Session -> IO ()
 -- mmTestElasticsearchConfiguration =
 --   inPost "/elasticsearch/test" noBody jsonResponse
@@ -630,37 +630,37 @@ mmExecuteCommand body =
 -- * Emoji
 
 -- -- | Create a custom emoji for the team.
--- -- |
--- -- | /Permissions/: Must be authenticated.
+-- --
+-- --   /Permissions/: Must be authenticated.
 -- mmCreateCustomEmoji :: Session -> IO Emoji
 -- mmCreateCustomEmoji =
 --   inPost "/emoji" noBody jsonResponse
 
 -- -- | Get a page of metadata for custom emoji on the system.
--- -- |
--- -- | /Permissions/: Must be authenticated.
+-- --
+-- --   /Permissions/: Must be authenticated.
 -- mmGetListOfCustomEmoji :: Maybe Integer -> Maybe Integer -> Session -> IO Emoji
 -- mmGetListOfCustomEmoji page perPage =
 --   inGet (printf "/emoji?%s" (mkQueryString [ sequence ("page", fmap show page) , sequence ("per_page", fmap show perPage) ])) noBody jsonResponse
 
 -- -- | Get some metadata for a custom emoji.
--- -- |
--- -- | /Permissions/: Must be authenticated.
+-- --
+-- --   /Permissions/: Must be authenticated.
 -- mmGetCustomEmoji :: EmojiId -> Session -> IO Emoji
 -- mmGetCustomEmoji emojiId =
 --   inGet (printf "/emoji/%s" emojiId) noBody jsonResponse
 
 -- -- | Delete a custom emoji.
--- -- |
--- -- | /Permissions/: Must have the @manage_team@ or @manage_system@
--- -- | permissions or be the user who created the emoji.
+-- --
+-- --   /Permissions/: Must have the @manage_team@ or @manage_system@
+-- --   permissions or be the user who created the emoji.
 -- mmDeleteCustomEmoji :: EmojiId -> Session -> IO Emoji
 -- mmDeleteCustomEmoji emojiId =
 --   inDelete (printf "/emoji/%s" emojiId) noBody jsonResponse
 
 -- -- | Get the image for a custom emoji.
--- -- |
--- -- | /Permissions/: Must be authenticated.
+-- --
+-- --   /Permissions/: Must be authenticated.
 -- mmGetCustomEmojiImage :: EmojiId -> Session -> IO ()
 -- mmGetCustomEmojiImage emojiId =
 --   inGet (printf "/emoji/%s/image" emojiId) noBody jsonResponse
@@ -675,40 +675,40 @@ mmExecuteCommand body =
 --   inGet (printf "/files/%s/link" fileId) noBody jsonResponse
 
 -- | Gets a file that has been uploaded previously.
--- |
--- | /Permissions/: Must have @read_channel@ permission or be uploader of
--- | the file.
+--
+--   /Permissions/: Must have @read_channel@ permission or be uploader of
+--   the file.
 mmGetFile :: FileId -> Session -> IO B.ByteString
 mmGetFile fileId =
   inGet (printf "/files/%s" fileId) noBody bytestringResponse
 
 -- -- | Uploads a file that can later be attached to a post.
--- -- |
--- -- | /Permissions/: Must have @upload_file@ permission.
+-- --
+-- --   /Permissions/: Must have @upload_file@ permission.
 -- mmUploadFile :: Session -> IO XX15
 -- mmUploadFile =
 --   inPost "/files" noBody jsonResponse
 
 -- | Gets a file's info.
--- |
--- | /Permissions/: Must have @read_channel@ permission or be uploader of
--- | the file.
+--
+--   /Permissions/: Must have @read_channel@ permission or be uploader of
+--   the file.
 mmGetMetadataForFile :: FileId -> Session -> IO FileInfo
 mmGetMetadataForFile fileId =
   inGet (printf "/files/%s/info" fileId) noBody jsonResponse
 
 -- -- | Gets a file's thumbnail.
--- -- |
--- -- | /Permissions/: Must have @read_channel@ permission or be uploader of
--- -- | the file.
+-- --
+-- --   /Permissions/: Must have @read_channel@ permission or be uploader of
+-- --   the file.
 -- mmGetFilesThumbnail :: FileId -> Session -> IO ()
 -- mmGetFilesThumbnail fileId =
 --   inGet (printf "/files/%s/thumbnail" fileId) noBody jsonResponse
 
 -- -- | Gets a file's preview.
--- -- |
--- -- | /Permissions/: Must have @read_channel@ permission or be uploader of
--- -- | the file.
+-- --
+-- --   /Permissions/: Must have @read_channel@ permission or be uploader of
+-- --   the file.
 -- mmGetFilesPreview :: FileId -> Session -> IO ()
 -- mmGetFilesPreview fileId =
 --   inGet (printf "/files/%s/preview" fileId) noBody jsonResponse
@@ -718,48 +718,48 @@ mmGetMetadataForFile fileId =
 -- * Jobs
 
 -- -- | Create a new job.
--- -- |
--- -- | /Minimum server version: 4.1/
--- -- |
--- -- | /Permissions/: Must have @manage_jobs@ permission.
+-- --
+-- --   /Minimum server version: 4.1/
+-- --
+-- --   /Permissions/: Must have @manage_jobs@ permission.
 -- mmCreateNewJob :: XX20 -> Session -> IO Job
 -- mmCreateNewJob body =
 --   inPost "/jobs" (jsonBody body) jsonResponse
 
 -- -- | Get a page of jobs. Use the query parameters to modify the behaviour
--- -- | of this endpoint.
--- -- |
--- -- | /Minimum server version: 4.1/
--- -- |
--- -- | /Permissions/: Must have @manage_jobs@ permission.
+-- --   of this endpoint.
+-- --
+-- --   /Minimum server version: 4.1/
+-- --
+-- --   /Permissions/: Must have @manage_jobs@ permission.
 -- mmGetJobs :: Maybe Integer -> Maybe Integer -> Session -> IO (Seq Job)
 -- mmGetJobs page perPage =
 --   inGet (printf "/jobs?%s" (mkQueryString [ sequence ("page", fmap show page) , sequence ("per_page", fmap show perPage) ])) noBody jsonResponse
 
 -- -- | Cancel a job.
--- -- |
--- -- | /Minimum server version: 4.1/
--- -- |
--- -- | /Permissions/: Must have @manage_jobs@ permission.
+-- --
+-- --   /Minimum server version: 4.1/
+-- --
+-- --   /Permissions/: Must have @manage_jobs@ permission.
 -- mmCancelJob :: JobId -> Session -> IO ()
 -- mmCancelJob jobId =
 --   inPost (printf "/jobs/%s/cancel" jobId) noBody jsonResponse
 
 -- -- | Gets a single job.
--- -- |
--- -- | /Minimum server version: 4.1/
--- -- |
--- -- | /Permissions/: Must have @manage_jobs@ permission.
+-- --
+-- --   /Minimum server version: 4.1/
+-- --
+-- --   /Permissions/: Must have @manage_jobs@ permission.
 -- mmGetJob :: JobId -> Session -> IO Job
 -- mmGetJob jobId =
 --   inGet (printf "/jobs/%s" jobId) noBody jsonResponse
 
 -- -- | Get a page of jobs of the given type. Use the query parameters to
--- -- | modify the behaviour of this endpoint.
--- -- |
--- -- | /Minimum server version: 4.1/
--- -- |
--- -- | /Permissions/: Must have @manage_jobs@ permission.
+-- --   modify the behaviour of this endpoint.
+-- --
+-- --   /Minimum server version: 4.1/
+-- --
+-- --   /Permissions/: Must have @manage_jobs@ permission.
 -- mmGetJobsOfGivenType :: Text -> Maybe Integer -> Maybe Integer -> Session -> IO (Seq Job)
 -- mmGetJobsOfGivenType type_ page perPage =
 --   inGet (printf "/jobs/type/%s?%s" type_ (mkQueryString [ sequence ("page", fmap show page) , sequence ("per_page", fmap show perPage) ])) noBody jsonResponse
@@ -769,17 +769,17 @@ mmGetMetadataForFile fileId =
 -- * LDAP
 
 -- -- | Test the current AD\/LDAP configuration to see if the AD\/LDAP server
--- -- | can be contacted successfully.
--- -- |
--- -- | /Permissions/: Must have @manage_system@ permission.
+-- --   can be contacted successfully.
+-- --
+-- --   /Permissions/: Must have @manage_system@ permission.
 -- mmTestLdapConfiguration :: Session -> IO ()
 -- mmTestLdapConfiguration =
 --   inPost "/ldap/test" noBody jsonResponse
 
 -- -- | Synchronize any user attribute changes in the configured AD\/LDAP
--- -- | server with Mattermost.
--- -- |
--- -- | /Permissions/: Must have @manage_system@ permission.
+-- --   server with Mattermost.
+-- --
+-- --   /Permissions/: Must have @manage_system@ permission.
 -- mmSyncWithLdap :: Session -> IO ()
 -- mmSyncWithLdap =
 --   inPost "/ldap/sync" noBody jsonResponse
@@ -789,62 +789,62 @@ mmGetMetadataForFile fileId =
 -- * OAuth
 
 -- -- | Register an OAuth 2.0 client application with Mattermost as the
--- -- | service provider.
--- -- |
--- -- | /Permissions/: Must have @manage_oauth@ permission.
+-- --   service provider.
+-- --
+-- --   /Permissions/: Must have @manage_oauth@ permission.
 -- mmRegisterOauthApp :: XX13 -> Session -> IO OAuthApp
 -- mmRegisterOauthApp body =
 --   inPost "/oauth/apps" (jsonBody body) jsonResponse
 
 -- -- | Get a page of OAuth 2.0 client applications registered with
--- -- | Mattermost.
--- -- |
--- -- | /Permissions/: With @manage_oauth@ permission, the apps registered by
--- -- | the logged in user are returned. With @manage_system_wide_oauth@
--- -- | permission, all apps regardless of creator are returned.
+-- --   Mattermost.
+-- --
+-- --   /Permissions/: With @manage_oauth@ permission, the apps registered by
+-- --   the logged in user are returned. With @manage_system_wide_oauth@
+-- --   permission, all apps regardless of creator are returned.
 -- mmGetOauthApps :: Maybe Integer -> Maybe Integer -> Session -> IO (Seq OAuthApp)
 -- mmGetOauthApps page perPage =
 --   inGet (printf "/oauth/apps?%s" (mkQueryString [ sequence ("page", fmap show page) , sequence ("per_page", fmap show perPage) ])) noBody jsonResponse
 
 -- -- | Get an OAuth 2.0 client application registered with Mattermost.
--- -- |
--- -- | /Permissions/: If app creator, must have @mange_oauth@ permission
--- -- | otherwise @manage_system_wide_oauth@ permission is required.
+-- --
+-- --   /Permissions/: If app creator, must have @mange_oauth@ permission
+-- --   otherwise @manage_system_wide_oauth@ permission is required.
 -- mmGetAnOauthApp :: AppId -> Session -> IO OAuthApp
 -- mmGetAnOauthApp appId =
 --   inGet (printf "/oauth/apps/%s" appId) noBody jsonResponse
 
 -- -- | Delete and unregister an OAuth 2.0 client application
--- -- |
--- -- | /Permissions/: If app creator, must have @mange_oauth@ permission
--- -- | otherwise @manage_system_wide_oauth@ permission is required.
+-- --
+-- --   /Permissions/: If app creator, must have @mange_oauth@ permission
+-- --   otherwise @manage_system_wide_oauth@ permission is required.
 -- mmDeleteAnOauthApp :: AppId -> Session -> IO ()
 -- mmDeleteAnOauthApp appId =
 --   inDelete (printf "/oauth/apps/%s" appId) noBody jsonResponse
 
 -- -- | Get public information about an OAuth 2.0 client application
--- -- | registered with Mattermost. The application's client secret will be
--- -- | blanked out.
--- -- |
--- -- | /Permissions/: Must be authenticated.
+-- --   registered with Mattermost. The application's client secret will be
+-- --   blanked out.
+-- --
+-- --   /Permissions/: Must be authenticated.
 -- mmGetInfoOnAnOauthApp :: AppId -> Session -> IO OAuthApp
 -- mmGetInfoOnAnOauthApp appId =
 --   inGet (printf "/oauth/apps/%s/info" appId) noBody jsonResponse
 
 -- -- | Get a page of OAuth 2.0 client applications authorized to access a
--- -- | user's account.
--- -- |
--- -- | /Permissions/: Must be authenticated as the user or have
--- -- | @edit_other_users@ permission.
+-- --   user's account.
+-- --
+-- --   /Permissions/: Must be authenticated as the user or have
+-- --   @edit_other_users@ permission.
 -- mmGetAuthorizedOauthApps :: UserId -> Maybe Integer -> Maybe Integer -> Session -> IO (Seq OAuthApp)
 -- mmGetAuthorizedOauthApps userId page perPage =
 --   inGet (printf "/users/%s/oauth/apps/authorized?%s" userId (mkQueryString [ sequence ("page", fmap show page) , sequence ("per_page", fmap show perPage) ])) noBody jsonResponse
 
 -- -- | Regenerate the client secret for an OAuth 2.0 client application
--- -- | registered with Mattermost.
--- -- |
--- -- | /Permissions/: If app creator, must have @mange_oauth@ permission
--- -- | otherwise @manage_system_wide_oauth@ permission is required.
+-- --   registered with Mattermost.
+-- --
+-- --   /Permissions/: If app creator, must have @mange_oauth@ permission
+-- --   otherwise @manage_system_wide_oauth@ permission is required.
 -- mmRegenerateOauthAppSecret :: AppId -> Session -> IO OAuthApp
 -- mmRegenerateOauthAppSecret appId =
 --   inPost (printf "/oauth/apps/%s/regen_secret" appId) noBody jsonResponse
@@ -854,63 +854,63 @@ mmGetMetadataForFile fileId =
 -- * Posts
 
 -- | Create a new post in a channel. To create the post as a comment on
--- | another post, provide @root_id@.
--- |
--- | /Permissions/: Must have @create_post@ permission for the channel the
--- | post is being created in.
+--   another post, provide @root_id@.
+--
+--   /Permissions/: Must have @create_post@ permission for the channel the
+--   post is being created in.
 mmCreatePost :: RawPost -> Session -> IO Post
 mmCreatePost body =
   inPost "/posts" (jsonBody body) jsonResponse
 
 -- | Search posts in the team and from the provided terms string.
--- |
--- | /Permissions/: Must be authenticated and have the @view_team@
--- | permission.
+--
+--   /Permissions/: Must be authenticated and have the @view_team@
+--   permission.
 mmSearchForTeamPosts :: TeamId -> SearchPosts -> Session -> IO Posts
 mmSearchForTeamPosts teamId body =
   inPost (printf "/teams/%s/posts/search" teamId) (jsonBody body) jsonResponse
 
 -- -- | Pin a post to a channel it is in based from the provided post id
--- -- | string.
--- -- |
--- -- | /Permissions/: Must be authenticated and have the @read_channel@
--- -- | permission to the channel the post is in.
+-- --   string.
+-- --
+-- --   /Permissions/: Must be authenticated and have the @read_channel@
+-- --   permission to the channel the post is in.
 -- mmPinPostToChannel :: PostId -> Session -> IO ()
 -- mmPinPostToChannel postId =
 --   inPost (printf "/posts/%s/pin" postId) noBody jsonResponse
 
 -- | Get a post and the rest of the posts in the same thread.
--- |
--- | /Permissions/: Must have @read_channel@ permission for the channel the
--- | post is in or if the channel is public, have the
--- | @read_public_channels@ permission for the team.
+--
+--   /Permissions/: Must have @read_channel@ permission for the channel the
+--   post is in or if the channel is public, have the
+--   @read_public_channels@ permission for the team.
 mmGetThread :: PostId -> Session -> IO Posts
 mmGetThread postId =
   inGet (printf "/posts/%s/thread" postId) noBody jsonResponse
 
 -- | Update a post. Only the fields listed below are updatable, omitted
--- | fields will be treated as blank.
--- |
--- | /Permissions/: Must have @edit_post@ permission for the channel the
--- | post is in.
+--   fields will be treated as blank.
+--
+--   /Permissions/: Must have @edit_post@ permission for the channel the
+--   post is in.
 mmUpdatePost :: PostId -> PostUpdate -> Session -> IO Post
 mmUpdatePost postId body =
   inPut (printf "/posts/%s" postId) (jsonBody body) jsonResponse
 
 -- | Get a single post.
--- |
--- | /Permissions/: Must have @read_channel@ permission for the channel the
--- | post is in or if the channel is public, have the
--- | @read_public_channels@ permission for the team.
+--
+--   /Permissions/: Must have @read_channel@ permission for the channel the
+--   post is in or if the channel is public, have the
+--   @read_public_channels@ permission for the team.
 mmGetPost :: PostId -> Session -> IO Post
 mmGetPost postId =
   inGet (printf "/posts/%s" postId) noBody jsonResponse
 
 -- | Soft deletes a post, by marking the post as deleted in the database.
--- | Soft deleted posts will not be returned in post queries.
--- |
--- | /Permissions/: Must be logged in as the user or have
--- | @delete_others_posts@ permission.
+--   Soft deleted posts will not be returned in post queries.
+--
+--   /Permissions/: Must be logged in as the user or have
+--   @delete_others_posts@ permission.
 mmDeletePost :: PostId -> Session -> IO ()
 mmDeletePost postId =
   inDelete (printf "/posts/%s" postId) noBody noResponse
@@ -932,9 +932,9 @@ defaultFlaggedPostsQuery = FlaggedPostsQuery
 
 
 -- | Get a page of flagged posts of a user provided user id string. Selects
--- | from a channel, team or all flagged posts by a user.
--- |
--- | /Permissions/: Must be user or have @manage_system@ permission.
+--   from a channel, team or all flagged posts by a user.
+--
+--   /Permissions/: Must be user or have @manage_system@ permission.
 mmGetListOfFlaggedPosts :: UserParam -> FlaggedPostsQuery -> Session -> IO Posts
 mmGetListOfFlaggedPosts userId FlaggedPostsQuery { .. } =
   inGet (printf "/users/%s/posts/flagged?%s" userId query) noBody jsonResponse
@@ -946,20 +946,20 @@ mmGetListOfFlaggedPosts userId FlaggedPostsQuery { .. } =
             ]
 
 -- -- | Unpin a post to a channel it is in based from the provided post id
--- -- | string.
--- -- |
--- -- | /Permissions/: Must be authenticated and have the @read_channel@
--- -- | permission to the channel the post is in.
+-- --   string.
+-- --
+-- --   /Permissions/: Must be authenticated and have the @read_channel@
+-- --   permission to the channel the post is in.
 -- mmUnpinPostToChannel :: PostId -> Session -> IO ()
 -- mmUnpinPostToChannel postId =
 --   inPost (printf "/posts/%s/unpin" postId) noBody jsonResponse
 
 -- -- | Partially update a post by providing only the fields you want to
--- -- | update. Omitted fields will not be updated. The fields that can be
--- -- | updated are defined in the request body, all other provided fields
--- -- | will be ignored.
--- -- |
--- -- | /Permissions/: Must have the @edit_post@ permission.
+-- --   update. Omitted fields will not be updated. The fields that can be
+-- --   updated are defined in the request body, all other provided fields
+-- --   will be ignored.
+-- --
+-- --   /Permissions/: Must have the @edit_post@ permission.
 -- mmPatchPost :: PostId -> XX27 -> Session -> IO Post
 -- mmPatchPost postId body =
 --   inPut (printf "/posts/%s/patch" postId) (jsonBody body) jsonResponse
@@ -992,19 +992,19 @@ postQueryToQueryString PostQuery { .. } =
     ]
 
 -- | Get a page of posts in a channel. Use the query parameters to modify
--- | the behaviour of this endpoint. The parameters @since@, @before@ and
--- | @after@ must not be used together.
--- |
--- | /Permissions/: Must have @read_channel@ permission for the channel.
+--   the behaviour of this endpoint. The parameters @since@, @before@ and
+--   @after@ must not be used together.
+--
+--   /Permissions/: Must have @read_channel@ permission for the channel.
 mmGetPostsForChannel :: ChannelId -> PostQuery -> Session -> IO Posts
 mmGetPostsForChannel channelId postQuery =
   inGet (printf "/channels/%s/posts?%s" channelId (postQueryToQueryString postQuery)) noBody jsonResponse
 
 -- -- | Gets a list of file information objects for the files attached to a
--- -- | post.
--- -- |
--- -- | /Permissions/: Must have @read_channel@ permission for the channel the
--- -- | post is in.
+-- --   post.
+-- --
+-- --   /Permissions/: Must have @read_channel@ permission for the channel the
+-- --   post is in.
 -- mmGetFileInfoForPost :: PostId -> Session -> IO (Seq FileInfo)
 -- mmGetFileInfoForPost postId =
 --   inGet (printf "/posts/%s/files/info" postId) noBody jsonResponse
@@ -1014,42 +1014,42 @@ mmGetPostsForChannel channelId postQuery =
 -- * Preferences
 
 -- | Gets a single preference for the current user with the given category
--- | and name.
--- |
--- | /Permissions/: Must be logged in as the user being updated or have the
--- | @edit_other_users@ permission.
+--   and name.
+--
+--   /Permissions/: Must be logged in as the user being updated or have the
+--   @edit_other_users@ permission.
 mmGetSpecificUserPreference :: UserParam -> Text -> Text -> Session -> IO Preference
 mmGetSpecificUserPreference userId category preferenceName =
   inGet (printf "/users/%s/preferences/%s/name/%s" userId category preferenceName) noBody jsonResponse
 
 -- | Save a list of the user's preferences.
--- |
--- | /Permissions/: Must be logged in as the user being updated or have the
--- | @edit_other_users@ permission.
+--
+--   /Permissions/: Must be logged in as the user being updated or have the
+--   @edit_other_users@ permission.
 mmSaveUsersPreferences :: UserParam -> (Seq Preference) -> Session -> IO ()
 mmSaveUsersPreferences userId body =
   inPut (printf "/users/%s/preferences" userId) (jsonBody body) noResponse
 
 -- | Get a list of the user's preferences.
--- |
--- | /Permissions/: Must be logged in as the user being updated or have the
--- | @edit_other_users@ permission.
+--
+--   /Permissions/: Must be logged in as the user being updated or have the
+--   @edit_other_users@ permission.
 mmGetUsersPreferences :: UserParam -> Session -> IO (Seq Preference)
 mmGetUsersPreferences userId =
   inGet (printf "/users/%s/preferences" userId) noBody jsonResponse
 
 -- | Delete a list of the user's preferences.
--- |
--- | /Permissions/: Must be logged in as the user being updated or have the
--- | @edit_other_users@ permission.
+--
+--   /Permissions/: Must be logged in as the user being updated or have the
+--   @edit_other_users@ permission.
 mmDeleteUsersPreferences :: UserParam -> (Seq Preference) -> Session -> IO ()
 mmDeleteUsersPreferences userId body =
   inPost (printf "/users/%s/preferences/delete" userId) (jsonBody body) noResponse
 
 -- | Lists the current user's stored preferences in the given category.
--- |
--- | /Permissions/: Must be logged in as the user being updated or have the
--- | @edit_other_users@ permission.
+--
+--   /Permissions/: Must be logged in as the user being updated or have the
+--   @edit_other_users@ permission.
 mmListUsersPreferencesByCategory :: UserParam -> Text -> Session -> IO (Seq Preference)
 mmListUsersPreferencesByCategory userId category =
   inGet (printf "/users/%s/preferences/%s" userId category) noBody jsonResponse
@@ -1070,70 +1070,70 @@ mmGetReactionsForPost postId =
 -- * SAML
 
 -- -- | Upload the private key to be used for encryption with your SAML
--- -- | configuration. This will also set the filename for the PrivateKeyFile
--- -- | setting in your @config.json@.
--- -- |
--- -- | /Permissions/: Must have @manage_system@ permission.
+-- --   configuration. This will also set the filename for the PrivateKeyFile
+-- --   setting in your @config.json@.
+-- --
+-- --   /Permissions/: Must have @manage_system@ permission.
 -- mmUploadPrivateKey :: Session -> IO ()
 -- mmUploadPrivateKey =
 --   inPost "/saml/certificate/private" noBody noResponse
 
 -- -- | Delete the current private key being used with your SAML
--- -- | configuration. This will also disable encryption for SAML on your
--- -- | system as this key is required for that.
--- -- |
--- -- | /Permissions/: Must have @manage_system@ permission.
+-- --   configuration. This will also disable encryption for SAML on your
+-- --   system as this key is required for that.
+-- --
+-- --   /Permissions/: Must have @manage_system@ permission.
 -- mmRemovePrivateKey :: Session -> IO ()
 -- mmRemovePrivateKey =
 --   inDelete "/saml/certificate/private" noBody jsonResponse
 
 -- -- | Upload the public certificate to be used for encryption with your SAML
--- -- | configuration. This will also set the filename for the
--- -- | PublicCertificateFile setting in your @config.json@.
--- -- |
--- -- | /Permissions/: Must have @manage_system@ permission.
+-- --   configuration. This will also set the filename for the
+-- --   PublicCertificateFile setting in your @config.json@.
+-- --
+-- --   /Permissions/: Must have @manage_system@ permission.
 -- mmUploadPublicCertificate :: Session -> IO ()
 -- mmUploadPublicCertificate =
 --   inPost "/saml/certificate/public" noBody jsonResponse
 
 -- -- | Delete the current public certificate being used with your SAML
--- -- | configuration. This will also disable encryption for SAML on your
--- -- | system as this certificate is required for that.
--- -- |
--- -- | /Permissions/: Must have @manage_system@ permission.
+-- --   configuration. This will also disable encryption for SAML on your
+-- --   system as this certificate is required for that.
+-- --
+-- --   /Permissions/: Must have @manage_system@ permission.
 -- mmRemovePublicCertificate :: Session -> IO ()
 -- mmRemovePublicCertificate =
 --   inDelete "/saml/certificate/public" noBody jsonResponse
 
 -- -- | Upload the IDP certificate to be used with your SAML configuration.
--- -- | This will also set the filename for the IdpCertificateFile setting in
--- -- | your @config.json@.
--- -- |
--- -- | /Permissions/: Must have @manage_system@ permission.
+-- --   This will also set the filename for the IdpCertificateFile setting in
+-- --   your @config.json@.
+-- --
+-- --   /Permissions/: Must have @manage_system@ permission.
 -- mmUploadIdpCertificate :: Session -> IO ()
 -- mmUploadIdpCertificate =
 --   inPost "/saml/certificate/idp" noBody jsonResponse
 
 -- -- | Delete the current IDP certificate being used with your SAML
--- -- | configuration. This will also disable SAML on your system as this
--- -- | certificate is required for SAML.
--- -- |
--- -- | /Permissions/: Must have @manage_system@ permission.
+-- --   configuration. This will also disable SAML on your system as this
+-- --   certificate is required for SAML.
+-- --
+-- --   /Permissions/: Must have @manage_system@ permission.
 -- mmRemoveIdpCertificate :: Session -> IO ()
 -- mmRemoveIdpCertificate =
 --   inDelete "/saml/certificate/idp" noBody jsonResponse
 
 -- -- | Get the status of the uploaded certificates and keys in use by your
--- -- | SAML configuration.
--- -- |
--- -- | /Permissions/: Must have @manage_system@ permission.
+-- --   SAML configuration.
+-- --
+-- --   /Permissions/: Must have @manage_system@ permission.
 -- mmGetCertificateStatus :: Session -> IO SamlCertificateStatus
 -- mmGetCertificateStatus =
 --   inGet "/saml/certificate/status" noBody jsonResponse
 
 -- -- | Get SAML metadata from the server. SAML must be configured properly.
--- -- |
--- -- | /Permissions/: No permission required.
+-- --
+-- --   /Permissions/: No permission required.
 -- mmGetMetadata :: Session -> IO Text
 -- mmGetMetadata =
 --   inGet "/saml/metadata" noBody jsonResponse
@@ -1149,151 +1149,151 @@ mmGetUserStatusByIds body =
 -- * System
 
 -- -- | Get a page of audits for all users on the system, selected with @page@
--- -- | and @per_page@ query parameters.
--- -- |
--- -- | /Permissions/: Must have @manage_system@ permission.
+-- --   and @per_page@ query parameters.
+-- --
+-- --   /Permissions/: Must have @manage_system@ permission.
 -- mmGetAudits :: Maybe Integer -> Maybe Integer -> Session -> IO (Seq Audit)
 -- mmGetAudits page perPage =
 --   inGet (printf "/audits?%s" (mkQueryString [ sequence ("page", fmap show page) , sequence ("per_page", fmap show perPage) ])) noBody jsonResponse
 
 -- -- | Get a subset of the server license needed by the client.
--- -- |
--- -- | /Permissions/: No permission required but having the @manage_system@
--- -- | permission returns more information.
+-- --
+-- --   /Permissions/: No permission required but having the @manage_system@
+-- --   permission returns more information.
 -- mmGetClientLicense :: Text -> Session -> IO ()
 -- mmGetClientLicense format =
 --   inGet (printf "/license/client?%s" (mkQueryString [ Just ("format", T.unpack format) ])) noBody jsonResponse
 
 -- -- | Upload a license to enable enterprise features.
--- -- |
--- -- | /Minimum server version/: 4.0
--- -- |
--- -- | /Permissions/: Must have @manage_system@ permission.
+-- --
+-- --   /Minimum server version/: 4.0
+-- --
+-- --   /Permissions/: Must have @manage_system@ permission.
 -- mmUploadLicenseFile :: Session -> IO ()
 -- mmUploadLicenseFile =
 --   inPost "/license" noBody jsonResponse
 
 -- -- | Remove the license file from the server. This will disable all
--- -- | enterprise features.
--- -- |
--- -- | /Minimum server version/: 4.0
--- -- |
--- -- | /Permissions/: Must have @manage_system@ permission.
+-- --   enterprise features.
+-- --
+-- --   /Minimum server version/: 4.0
+-- --
+-- --   /Permissions/: Must have @manage_system@ permission.
 -- mmRemoveLicenseFile :: Session -> IO ()
 -- mmRemoveLicenseFile =
 --   inDelete "/license" noBody jsonResponse
 
 -- -- | Get a valid WebRTC token, STUN and TURN server URLs along with TURN
--- -- | credentials to use with the Mattermost WebRTC service. See
--- -- | https:\/\/docs.mattermost.com\/administration\/config-settings.html
--- -- | #webrtc-beta for WebRTC configutation settings. The token returned is
--- -- | for the current user's session.
--- -- |
--- -- | /Permissions/: Must be authenticated.
+-- --   credentials to use with the Mattermost WebRTC service. See
+-- --   https:\/\/docs.mattermost.com\/administration\/config-settings.html
+-- --   #webrtc-beta for WebRTC configutation settings. The token returned is
+-- --   for the current user's session.
+-- --
+-- --   /Permissions/: Must be authenticated.
 -- mmGetWebrtcToken :: Session -> IO XX8
 -- mmGetWebrtcToken =
 --   inGet "/webrtc/token" noBody jsonResponse
 
 -- | Get a subset of the server configuration needed by the client.
--- |
--- | /Permissions/: No permission required.
+--
+--   /Permissions/: No permission required.
 mmGetClientConfiguration :: Maybe Text -> Session -> IO ClientConfig
 mmGetClientConfiguration format =
   inGet (printf "/config/client?%s" (mkQueryString [ sequence ("format", fmap T.unpack format) ])) noBody jsonResponse
 
 -- -- | Reload the configuration file to pick up on any changes made to it.
--- -- |
--- -- | /Permissions/: Must have @manage_system@ permission.
+-- --
+-- --   /Permissions/: Must have @manage_system@ permission.
 -- mmReloadConfiguration :: Session -> IO ()
 -- mmReloadConfiguration =
 --   inPost "/config/reload" noBody jsonResponse
 
 -- -- | Purge all the in-memory caches for the Mattermost server. This can
--- -- | have a temporary negative effect on performance while the caches are
--- -- | re-populated.
--- -- |
--- -- | /Permissions/: Must have @manage_system@ permission.
+-- --   have a temporary negative effect on performance while the caches are
+-- --   re-populated.
+-- --
+-- --   /Permissions/: Must have @manage_system@ permission.
 -- mmInvalidateAllCaches :: Session -> IO ()
 -- mmInvalidateAllCaches =
 --   inPost "/caches/invalidate" noBody jsonResponse
 
 -- -- | Recycle database connections by closing and reconnecting all
--- -- | connections to master and read replica databases.
--- -- |
--- -- | /Permissions/: Must have @manage_system@ permission.
+-- --   connections to master and read replica databases.
+-- --
+-- --   /Permissions/: Must have @manage_system@ permission.
 -- mmRecycleDatabaseConnections :: Session -> IO ()
 -- mmRecycleDatabaseConnections =
 --   inPost "/database/recycle" noBody jsonResponse
 
 -- -- | Add log messages to the server logs.
--- -- |
--- -- | /Permissions/: Must have @manage_system@ permission or if
--- -- | @ServiceSettings.EnableDeveloper@ in the
--- -- |
--- -- | config file is set to @true@ then any user can use this endpoint.
+-- --
+-- --   /Permissions/: Must have @manage_system@ permission or if
+-- --   @ServiceSettings.EnableDeveloper@ in the
+-- --
+-- --   config file is set to @true@ then any user can use this endpoint.
 -- mmAddLogMessage :: XX26 -> Session -> IO UnknownType
 -- mmAddLogMessage body =
 --   inPost "/logs" (jsonBody body) jsonResponse
 
 -- -- | Get a page of server logs, selected with @page@ and @per_page@ query
--- -- | parameters.
--- -- |
--- -- | /Permissions/: Must have @manage_system@ permission.
+-- --   parameters.
+-- --
+-- --   /Permissions/: Must have @manage_system@ permission.
 -- mmGetLogs :: Maybe Integer -> Maybe Integer -> Session -> IO (Seq Text)
 -- mmGetLogs page perPage =
 --   inGet (printf "/logs?%s" (mkQueryString [ sequence ("page", fmap show page) , sequence ("per_page", fmap show perPage) ])) noBody jsonResponse
 
 -- -- | Send a test email to make sure you have your email settings configured
--- -- | correctly. Optionally provide a configuration in the request body to
--- -- | test. If no valid configuration is present in the request body the
--- -- | current server configuration will be tested.
--- -- |
--- -- | /Permissions/: Must have @manage_system@ permission.
+-- --   correctly. Optionally provide a configuration in the request body to
+-- --   test. If no valid configuration is present in the request body the
+-- --   current server configuration will be tested.
+-- --
+-- --   /Permissions/: Must have @manage_system@ permission.
 -- mmSendTestEmail :: Session -> IO ()
 -- mmSendTestEmail =
 --   inPost "/email/test" noBody jsonResponse
 
 -- -- | Check if the server is up and healthy based on the configuration
--- -- | setting @GoRoutineHealthThreshold@. If @GoRoutineHealthThreshold@ and
--- -- | the number of goroutines on the server exceeds that threshold the
--- -- | server is considered unhealthy. If @GoRoutineHealthThreshold@ is not
--- -- | set or the number of goroutines is below the threshold the server is
--- -- | considered healthy.
--- -- |
--- -- | /Minimum server version/: 3.10
--- -- |
--- -- | /Permissions/: Must be logged in.
+-- --   setting @GoRoutineHealthThreshold@. If @GoRoutineHealthThreshold@ and
+-- --   the number of goroutines on the server exceeds that threshold the
+-- --   server is considered unhealthy. If @GoRoutineHealthThreshold@ is not
+-- --   set or the number of goroutines is below the threshold the server is
+-- --   considered healthy.
+-- --
+-- --   /Minimum server version/: 3.10
+-- --
+-- --   /Permissions/: Must be logged in.
 -- mmCheckSystemHealth :: Session -> IO UnknownType
 -- mmCheckSystemHealth =
 --   inGet "/system/ping" noBody jsonResponse
 
 -- -- | Get some analytics data about the system. This endpoint uses the old
--- -- | format, the @\/analytics@ route is reserved for the new format when it
--- -- | gets implemented.
--- -- |
--- -- |
--- -- | The returned JSON changes based on the @name@ query parameter but is
--- -- | always key\/value pairs.
--- -- |
--- -- |
--- -- | /Minimum server version/: 4.0
--- -- |
--- -- |
--- -- | /Permissions/: Must have @manage_system@ permission.
+-- --   format, the @\/analytics@ route is reserved for the new format when it
+-- --   gets implemented.
+-- --
+-- --
+-- --   The returned JSON changes based on the @name@ query parameter but is
+-- --   always key\/value pairs.
+-- --
+-- --
+-- --   /Minimum server version/: 4.0
+-- --
+-- --
+-- --   /Permissions/: Must have @manage_system@ permission.
 -- mmGetAnalytics :: Maybe Text -> TeamId -> Session -> IO ()
 -- mmGetAnalytics name teamId =
 --   inGet (printf "/analytics/old?%s" (mkQueryString [ sequence ("name", fmap T.unpack name) , Just ("team_id", T.unpack (idString teamId)) ])) noBody jsonResponse
 
 -- | Submit a new configuration for the server to use.
--- |
--- | /Permissions/: Must have @manage_system@ permission.
+--
+--   /Permissions/: Must have @manage_system@ permission.
 mmUpdateConfiguration :: ServerConfig -> Session -> IO ServerConfig
 mmUpdateConfiguration body =
   inPut "/config" (jsonBody body) jsonResponse
 
 -- | Retrieve the current server configuration
--- |
--- | /Permissions/: Must have @manage_system@ permission.
+--
+--   /Permissions/: Must have @manage_system@ permission.
 mmGetConfiguration :: Session -> IO ServerConfig
 mmGetConfiguration =
   inGet "/config" noBody jsonResponse
@@ -1303,50 +1303,50 @@ mmGetConfiguration =
 -- * Teams
 
 -- | Get a team member on the system.
--- |
--- | /Permissions/: Must be authenticated and have the @view_team@
--- | permission.
+--
+--   /Permissions/: Must be authenticated and have the @view_team@
+--   permission.
 mmGetTeamMember :: TeamId -> UserParam -> Session -> IO TeamMember
 mmGetTeamMember teamId userId =
   inGet (printf "/teams/%s/members/%s" teamId userId) noBody jsonResponse
 
 -- | Delete the team member object for a user, effectively removing them
--- | from a team.
--- |
--- | /Permissions/: Must be logged in as the user or have the
--- | @remove_user_from_team@ permission.
+--   from a team.
+--
+--   /Permissions/: Must be logged in as the user or have the
+--   @remove_user_from_team@ permission.
 mmRemoveUserFromTeam :: TeamId -> UserParam -> Session -> IO ()
 mmRemoveUserFromTeam teamId userId =
   inDelete (printf "/teams/%s/members/%s" teamId userId) noBody jsonResponse
 
 -- -- | Get a page of deleted channels on a team based on query string
--- -- | parameters - team_id, page and per_page.
--- -- |
--- -- |
--- -- | /Minimum server version/: 3.10
--- -- |
--- -- |
--- -- | /Permissions/: Must be authenticated and have the @manage_team@
--- -- | permission.
+-- --   parameters - team_id, page and per_page.
+-- --
+-- --
+-- --   /Minimum server version/: 3.10
+-- --
+-- --
+-- --   /Permissions/: Must be authenticated and have the @manage_team@
+-- --   permission.
 -- mmGetDeletedChannels :: TeamId -> Maybe Integer -> Maybe Integer -> Session -> IO (Seq Channel)
 -- mmGetDeletedChannels teamId page perPage =
 --   inGet (printf "/teams/%s/channels/deleted?%s" teamId (mkQueryString [ sequence ("page", fmap show page) , sequence ("per_page", fmap show perPage) ])) noBody jsonResponse
 
 -- -- | Update a team member roles. Valid team roles are "team_user",
--- -- | "team_admin" or both of them. Overwrites any previously assigned team
--- -- | roles.
--- -- |
--- -- | /Permissions/: Must be authenticated and have the @manage_team_roles@
--- -- | permission.
+-- --   "team_admin" or both of them. Overwrites any previously assigned team
+-- --   roles.
+-- --
+-- --   /Permissions/: Must be authenticated and have the @manage_team_roles@
+-- --   permission.
 -- mmUpdateTeamMemberRoles :: TeamId -> UserId -> Text -> Session -> IO ()
 -- mmUpdateTeamMemberRoles teamId userId roles =
 --   inPut (printf "/teams/%s/members/%s/roles" teamId userId) (jsonBody (A.object [ "roles" A..= roles ])) jsonResponse
 
 -- | Get a page of public channels on a team based on query string
--- | parameters - page and per_page.
--- |
--- | /Permissions/: Must be authenticated and have the @list_team_channels@
--- | permission.
+--   parameters - page and per_page.
+--
+--   /Permissions/: Must be authenticated and have the @list_team_channels@
+--   permission.
 mmGetPublicChannels :: TeamId -> Maybe Int -> Maybe Int -> Session -> IO (Seq Channel)
 mmGetPublicChannels teamId page perPage =
   inGet (printf "/teams/%s/channels?%s" teamId (mkQueryString [ sequence ("page", fmap show page)
@@ -1359,19 +1359,19 @@ mmGetPublicChannels teamId page perPage =
 --   inGet (printf "/teams/name/%s/exists" name) noBody jsonResponse
 
 -- | Create a new team on the system.
--- |
--- | /Permissions/: Must be authenticated and have the @create_team@
--- | permission.
+--
+--   /Permissions/: Must be authenticated and have the @create_team@
+--   permission.
 mmCreateTeam :: TeamsCreate -> Session -> IO Team
 mmCreateTeam body =
   inPost "/teams" (jsonBody body) jsonResponse
 
 -- | For regular users only returns open teams. Users with the
--- | "manage_system" permission will return teams regardless of type. The
--- | result is based on query string parameters - page and per_page.
--- |
--- | /Permissions/: Must be authenticated. "manage_system" permission is
--- | required to show all teams.
+--   "manage_system" permission will return teams regardless of type. The
+--   result is based on query string parameters - page and per_page.
+--
+--   /Permissions/: Must be authenticated. "manage_system" permission is
+--   required to show all teams.
 mmGetTeams :: Maybe Integer -> Maybe Integer -> Session -> IO (Seq Team)
 mmGetTeams page perPage =
   inGet (printf "/teams?%s"
@@ -1380,170 +1380,170 @@ mmGetTeams page perPage =
                          ])) noBody jsonResponse
 
 -- | Search teams based on search term provided in the request body.
--- |
--- | /Permissions/: Logged in user only shows open teams
--- |
--- | Logged in user with "manage_system" permission shows all teams
+--
+--   /Permissions/: Logged in user only shows open teams
+--
+--   Logged in user with "manage_system" permission shows all teams
 mmSearchTeams :: Text -> Session -> IO (Seq Team)
 mmSearchTeams term =
   inPost "/teams/search" (jsonBody (A.object [ "term" A..= term ])) jsonResponse
 
 -- -- | Invite users to the existing team usign the user's email.
--- -- |
--- -- | /Permissions/: Must have @invite_to_team@ permission for the team.
+-- --
+-- --   /Permissions/: Must have @invite_to_team@ permission for the team.
 -- mmInviteUsersToTeamByEmail :: TeamId -> (Seq Text) -> Session -> IO ()
 -- mmInviteUsersToTeamByEmail teamId body =
 --   inPost (printf "/teams/%s/invite/email" teamId) (jsonBody body) jsonResponse
 
 -- | Search public channels on a team based on the search term provided in
--- | the request body.
--- |
--- | /Permissions/: Must have the @list_team_channels@ permission.
+--   the request body.
+--
+--   /Permissions/: Must have the @list_team_channels@ permission.
 mmSearchChannels :: TeamId -> Text -> Session -> IO (Seq Channel)
 mmSearchChannels teamId term =
   inPost (printf "/teams/%s/channels/search" teamId) (jsonBody (A.object [ "term" A..= term ])) jsonResponse
 
 -- -- | Get the count for unread messages and mentions in the teams the user
--- -- | is a member of.
--- -- |
--- -- | /Permissions/: Must be logged in.
+-- --   is a member of.
+-- --
+-- --   /Permissions/: Must be logged in.
 -- mmGetTeamUnreadsForUser :: UserId -> Text -> Session -> IO (Seq TeamUnread)
 -- mmGetTeamUnreadsForUser userId excludeTeam =
 --   inGet (printf "/users/%s/teams/unread?%s" userId (mkQueryString [ Just ("exclude_team", T.unpack excludeTeam) ])) noBody jsonResponse
 
 -- | Get a list of teams that a user is on.
--- |
--- | /Permissions/: Must be authenticated as the user or have the
--- | @manage_system@ permission.
+--
+--   /Permissions/: Must be authenticated as the user or have the
+--   @manage_system@ permission.
 mmGetUsersTeams :: UserParam -> Session -> IO (Seq Team)
 mmGetUsersTeams userId =
   inGet (printf "/users/%s/teams" userId) noBody jsonResponse
 
 -- -- | Using either an invite id or hash\/data pair from an email invite
--- -- | link, add a user to a team.
--- -- |
--- -- | /Permissions/: Must be authenticated.
+-- --   link, add a user to a team.
+-- --
+-- --   /Permissions/: Must be authenticated.
 -- mmAddUserToTeamFromInvite :: Text -> Text -> InviteId -> Session -> IO TeamMember
 -- mmAddUserToTeamFromInvite hash data_ inviteId =
 --   inPost (printf "/teams/members/invite?%s" (mkQueryString [ Just ("hash", T.unpack hash) , Just ("data", T.unpack data_) , Just ("invite_id", T.unpack (idString inviteId)) ])) noBody jsonResponse
 
 -- -- | Get a team stats on the system.
--- -- |
--- -- | /Permissions/: Must be authenticated and have the @view_team@
--- -- | permission.
+-- --
+-- --   /Permissions/: Must be authenticated and have the @view_team@
+-- --   permission.
 -- mmGetTeamStats :: TeamId -> Session -> IO TeamStats
 -- mmGetTeamStats teamId =
 --   inGet (printf "/teams/%s/stats" teamId) noBody jsonResponse
 
 -- | Get a list of team members based on a provided array of user ids.
--- |
--- | /Permissions/: Must have @view_team@ permission for the team.
+--
+--   /Permissions/: Must have @view_team@ permission for the team.
 mmGetTeamMembersByIds :: TeamId -> Seq UserId -> Session -> IO (Seq TeamMember)
 mmGetTeamMembersByIds teamId body =
   inPost (printf "/teams/%s/members/ids" teamId) (jsonBody body) jsonResponse
 
 -- -- | Partially update a team by providing only the fields you want to
--- -- | update. Omitted fields will not be updated. The fields that can be
--- -- | updated are defined in the request body, all other provided fields
--- -- | will be ignored.
--- -- |
--- -- | /Permissions/: Must have the @manage_team@ permission.
+-- --   update. Omitted fields will not be updated. The fields that can be
+-- --   updated are defined in the request body, all other provided fields
+-- --   will be ignored.
+-- --
+-- --   /Permissions/: Must have the @manage_team@ permission.
 -- mmPatchTeam :: TeamId -> XX23 -> Session -> IO Team
 -- mmPatchTeam teamId body =
 --   inPut (printf "/teams/%s/patch" teamId) (jsonBody body) jsonResponse
 
 -- | Get a list of team members for a user. Useful for getting the ids of
--- | teams the user is on and the roles they have in those teams.
--- |
--- | /Permissions/: Must be logged in as the user or have the
--- | @edit_other_users@ permission.
+--   teams the user is on and the roles they have in those teams.
+--
+--   /Permissions/: Must be logged in as the user or have the
+--   @edit_other_users@ permission.
 mmGetTeamMembersForUser :: UserParam -> Session -> IO (Seq TeamMember)
 mmGetTeamMembersForUser userId =
   inGet (printf "/users/%s/teams/members" userId) noBody jsonResponse
 
 -- | Add user to the team by user_id.
--- |
--- | /Permissions/: Must be authenticated and team be open to add self. For
--- | adding another user, authenticated user must have the
--- | @add_user_to_team@ permission.
+--
+--   /Permissions/: Must be authenticated and team be open to add self. For
+--   adding another user, authenticated user must have the
+--   @add_user_to_team@ permission.
 mmAddUserToTeam :: TeamId -> TeamMember -> Session -> IO TeamMember
 mmAddUserToTeam teamId body =
   inPost (printf "/teams/%s/members" teamId) (jsonBody body) jsonResponse
 
 -- -- | Get a page team members list based on query string parameters - team
--- -- | id, page and per page.
--- -- |
--- -- | /Permissions/: Must be authenticated and have the @view_team@
--- -- | permission.
+-- --   id, page and per page.
+-- --
+-- --   /Permissions/: Must be authenticated and have the @view_team@
+-- --   permission.
 -- mmGetTeamMembers :: TeamId -> Maybe Integer -> Maybe Integer -> Session -> IO (Seq TeamMember)
 -- mmGetTeamMembers teamId page perPage =
 --   inGet (printf "/teams/%s/members?%s" teamId (mkQueryString [ sequence ("page", fmap show page) , sequence ("per_page", fmap show perPage) ])) noBody jsonResponse
 
 -- -- | Import a team into a existing team. Import users, channels, posts,
--- -- | hooks.
--- -- |
--- -- | /Permissions/: Must have @permission_import_team@ permission.
+-- --   hooks.
+-- --
+-- --   /Permissions/: Must have @permission_import_team@ permission.
 -- mmImportTeamFromOtherApplication :: TeamId -> Session -> IO Text
 -- mmImportTeamFromOtherApplication teamId =
 --   inPost (printf "/teams/%s/import" teamId) noBody jsonResponse
 
 -- -- | Add a number of users to the team by user_id.
--- -- |
--- -- | /Permissions/: Must be authenticated. Authenticated user must have the
--- -- | @add_user_to_team@ permission.
+-- --
+-- --   /Permissions/: Must be authenticated. Authenticated user must have the
+-- --   @add_user_to_team@ permission.
 -- mmAddMultipleUsersToTeam :: TeamId -> (Seq TeamMember) -> Session -> IO (Seq TeamMember)
 -- mmAddMultipleUsersToTeam teamId body =
 --   inPost (printf "/teams/%s/members/batch" teamId) (jsonBody body) jsonResponse
 
 -- -- | Get the unread mention and message counts for a team for the specified
--- -- | user.
--- -- |
--- -- | /Permissions/: Must be the user or have @edit_other_users@ permission
--- -- | and have @view_team@ permission for the team.
+-- --   user.
+-- --
+-- --   /Permissions/: Must be the user or have @edit_other_users@ permission
+-- --   and have @view_team@ permission for the team.
 -- mmGetUnreadsForTeam :: UserId -> TeamId -> Session -> IO TeamUnread
 -- mmGetUnreadsForTeam userId teamId =
 --   inGet (printf "/users/%s/teams/%s/unread" userId teamId) noBody jsonResponse
 
 -- -- | Get the @name@, @display_name@, @description@ and @id@ for a team from
--- -- | the invite id.
--- -- |
--- -- |
--- -- | /Minimum server version/: 4.0
--- -- |
--- -- |
--- -- | /Permissions/: No authentication required.
+-- --   the invite id.
+-- --
+-- --
+-- --   /Minimum server version/: 4.0
+-- --
+-- --
+-- --   /Permissions/: No authentication required.
 -- mmGetInviteInfoForTeam :: InviteId -> Session -> IO XX34
 -- mmGetInviteInfoForTeam inviteId =
 --   inGet (printf "/teams/invite/%s" inviteId) noBody jsonResponse
 
 -- | Get a team based on provided name string
--- |
--- | /Permissions/: Must be authenticated, team type is open and have the
--- | @view_team@ permission.
+--
+--   /Permissions/: Must be authenticated, team type is open and have the
+--   @view_team@ permission.
 mmGetTeamByName :: Text -> Session -> IO Team
 mmGetTeamByName name =
   inGet (printf "/teams/name/%s" name) noBody jsonResponse
 
 -- -- | Update a team by providing the team object. The fields that can be
--- -- | updated are defined in the request body, all other provided fields
--- -- | will be ignored.
--- -- |
--- -- | /Permissions/: Must have the @manage_team@ permission.
+-- --   updated are defined in the request body, all other provided fields
+-- --   will be ignored.
+-- --
+-- --   /Permissions/: Must have the @manage_team@ permission.
 -- mmUpdateTeam :: TeamId -> XX36 -> Session -> IO Team
 -- mmUpdateTeam teamId body =
 --   inPut (printf "/teams/%s" teamId) (jsonBody body) jsonResponse
 
 -- | Get a team on the system.
--- |
--- | /Permissions/: Must be authenticated and have the @view_team@
--- | permission.
+--
+--   /Permissions/: Must be authenticated and have the @view_team@
+--   permission.
 mmGetTeam :: TeamId -> Session -> IO Team
 mmGetTeam teamId =
   inGet (printf "/teams/%s" teamId) noBody jsonResponse
 
 -- -- | Delete a team softly and put in archived only.
--- -- |
--- -- | /Permissions/: Must have the @manage_team@ permission.
+-- --
+-- --   /Permissions/: Must have the @manage_team@ permission.
 -- mmDeleteTeam :: TeamId -> Bool -> Session -> IO ()
 -- mmDeleteTeam teamId permanent =
 --   inDelete (printf "/teams/%s?%s" teamId (mkQueryString [ Just ("permanent", if permanent then "true" else "false") ])) noBody jsonResponse
@@ -1553,291 +1553,291 @@ mmGetTeam teamId =
 -- * Users
 
 -- | Get a list of users based on search criteria provided in the request
--- | body. Searches are typically done against username, full name,
--- | nickname and email unless otherwise configured by the server.
--- |
--- | /Permissions/: Requires an active session and @read_channel@ and\/or
--- | @view_team@ permissions for any channels or teams specified in the
--- | request body.
+--   body. Searches are typically done against username, full name,
+--   nickname and email unless otherwise configured by the server.
+--
+--   /Permissions/: Requires an active session and @read_channel@ and\/or
+--   @view_team@ permissions for any channels or teams specified in the
+--   request body.
 mmSearchUsers :: UserSearch -> Session -> IO (Seq User)
 mmSearchUsers body =
   inPost "/users/search" (jsonBody body) jsonResponse
 
 -- | Get a list of users based on a provided list of usernames.
--- |
--- | /Permissions/: Requires an active session but no other permissions.
+--
+--   /Permissions/: Requires an active session but no other permissions.
 mmGetUsersByUsernames :: (Seq Text) -> Session -> IO (Seq User)
 mmGetUsersByUsernames body =
   inPost "/users/usernames" (jsonBody body) jsonResponse
 
 -- -- | Revokes a user session from the provided user id and session id
--- -- | strings.
--- -- |
--- -- | /Permissions/: Must be logged in as the user being updated or have the
--- -- | @edit_other_users@ permission.
+-- --   strings.
+-- --
+-- --   /Permissions/: Must be logged in as the user being updated or have the
+-- --   @edit_other_users@ permission.
 -- mmRevokeUserSession :: UserId -> Text -> Session -> IO ()
 -- mmRevokeUserSession userId sessionId =
 --   inPost (printf "/users/%s/sessions/revoke" userId) (jsonBody (A.object [ "session_id" A..= sessionId ])) jsonResponse
 
 -- | Update a user's system-level roles. Valid user roles are
--- | "system_user", "system_admin" or both of them. Overwrites any
--- | previously assigned system-level roles.
--- |
--- | /Permissions/: Must have the @manage_roles@ permission.
+--   "system_user", "system_admin" or both of them. Overwrites any
+--   previously assigned system-level roles.
+--
+--   /Permissions/: Must have the @manage_roles@ permission.
 mmUpdateUsersRoles :: UserId -> Text -> Session -> IO ()
 mmUpdateUsersRoles userId roles =
   inPut (printf "/users/%s/roles" userId) (jsonBody (A.object [ "roles" A..= roles ])) noResponse
 
 -- -- | Send an email with a verification link to a user that has an email
--- -- | matching the one in the request body. This endpoint will return
--- -- | success even if the email does not match any users on the system.
--- -- |
--- -- | /Permissions/: No permissions required.
+-- --   matching the one in the request body. This endpoint will return
+-- --   success even if the email does not match any users on the system.
+-- --
+-- --   /Permissions/: No permissions required.
 -- mmSendVerificationEmail :: Text -> Session -> IO ()
 -- mmSendVerificationEmail email =
 --   inPost "/users/email/verify/send" (jsonBody (A.object [ "email" A..= email ])) jsonResponse
 
 -- -- | Get a list of sessions by providing the user GUID. Sensitive
--- -- | information will be sanitized out.
--- -- |
--- -- | /Permissions/: Must be logged in as the user being updated or have the
--- -- | @edit_other_users@ permission.
+-- --   information will be sanitized out.
+-- --
+-- --   /Permissions/: Must be logged in as the user being updated or have the
+-- --   @edit_other_users@ permission.
 -- -- mmGetUsersSessions :: UserId -> Session -> IO (Seq Session)
 -- -- mmGetUsersSessions userId =
 -- --   inGet (printf "/users/%s/sessions" userId) noBody jsonResponse
 
 -- -- | Check if a user has multi-factor authentication active on their
--- -- | account by providing a login id. Used to check whether an MFA code
--- -- | needs to be provided when logging in.
--- -- |
--- -- | /Permissions/: No permission required.
+-- --   account by providing a login id. Used to check whether an MFA code
+-- --   needs to be provided when logging in.
+-- --
+-- --   /Permissions/: No permission required.
 -- mmCheckMfa :: Text -> Session -> IO Bool
 -- mmCheckMfa loginId =
 --   inPost "/users/mfa" (jsonBody (A.object [ "login_id" A..= loginId ])) jsonResponse
 
 -- -- | Generate a user access token that can be used to authenticate with the
--- -- | Mattermost REST API.
--- -- |
--- -- |
--- -- | /Minimum server version/: 4.1
--- -- |
--- -- |
--- -- | /Permissions/: Must have @create_user_access_token@ permission. For
--- -- | non-self requests, must also have the @edit_other_users@ permission.
+-- --   Mattermost REST API.
+-- --
+-- --
+-- --   /Minimum server version/: 4.1
+-- --
+-- --
+-- --   /Permissions/: Must have @create_user_access_token@ permission. For
+-- --   non-self requests, must also have the @edit_other_users@ permission.
 -- mmCreateUserAccessToken :: UserId -> Text -> Session -> IO UserAccessToken
 -- mmCreateUserAccessToken userId description =
 --   inPost (printf "/users/%s/tokens" userId) (jsonBody (A.object [ "description" A..= description ])) jsonResponse
 
 -- -- | Get a list of user access tokens for a user. Does not include the
--- -- | actual authentication tokens. Use query paremeters for paging.
--- -- |
--- -- |
--- -- | /Minimum server version/: 4.1
--- -- |
--- -- |
--- -- | /Permissions/: Must have @read_user_access_token@ permission. For non-
--- -- | self requests, must also have the @edit_other_users@ permission.
+-- --   actual authentication tokens. Use query paremeters for paging.
+-- --
+-- --
+-- --   /Minimum server version/: 4.1
+-- --
+-- --
+-- --   /Permissions/: Must have @read_user_access_token@ permission. For non-
+-- --   self requests, must also have the @edit_other_users@ permission.
 -- mmGetUserAccessTokens :: UserId -> Maybe Integer -> Maybe Integer -> Session -> IO (Seq UserAccessTokenSanitized)
 -- mmGetUserAccessTokens userId page perPage =
 --   inGet (printf "/users/%s/tokens?%s" userId (mkQueryString [ sequence ("page", fmap show page) , sequence ("per_page", fmap show perPage) ])) noBody jsonResponse
 
 -- -- | Revoke a user access token and delete any sessions using the token.
--- -- |
--- -- |
--- -- | /Minimum server version/: 4.1
--- -- |
--- -- |
--- -- | /Permissions/: Must have @revoke_user_access_token@ permission. For
--- -- | non-self requests, must also have the @edit_other_users@ permission.
+-- --
+-- --
+-- --   /Minimum server version/: 4.1
+-- --
+-- --
+-- --   /Permissions/: Must have @revoke_user_access_token@ permission. For
+-- --   non-self requests, must also have the @edit_other_users@ permission.
 -- mmRevokeUserAccessToken :: Text -> Session -> IO ()
 -- mmRevokeUserAccessToken token =
 --   inPost "/users/tokens/revoke" (jsonBody (A.object [ "token" A..= token ])) jsonResponse
 
 -- -- | Get a user access token. Does not include the actual authentication
--- -- | token.
--- -- |
--- -- |
--- -- | /Minimum server version/: 4.1
--- -- |
--- -- |
--- -- | /Permissions/: Must have @read_user_access_token@ permission. For non-
--- -- | self requests, must also have the @edit_other_users@ permission.
+-- --   token.
+-- --
+-- --
+-- --   /Minimum server version/: 4.1
+-- --
+-- --
+-- --   /Permissions/: Must have @read_user_access_token@ permission. For non-
+-- --   self requests, must also have the @edit_other_users@ permission.
 -- mmGetUserAccessToken :: TokenId -> Session -> IO UserAccessTokenSanitized
 -- mmGetUserAccessToken tokenId =
 --   inGet (printf "/users/tokens/%s" tokenId) noBody jsonResponse
 
 -- -- | Update user active or inactive status
--- -- |
--- -- | /Permissions/: User can deactivate itself.
--- -- |
--- -- | User with @manage_system@ permission can activate or deactivate a
--- -- | user.
+-- --
+-- --   /Permissions/: User can deactivate itself.
+-- --
+-- --   User with @manage_system@ permission can activate or deactivate a
+-- --   user.
 -- mmUpdateUserActiveStatus :: UserId -> Bool -> Session -> IO ()
 -- mmUpdateUserActiveStatus userId active =
 --   inPut (printf "/users/%s/active" userId) (jsonBody (A.object [ "active" A..= active ])) jsonResponse
 
 -- -- | Get a user object by providing a username. Sensitive information will
--- -- | be sanitized out.
--- -- |
--- -- | /Permissions/: Requires an active session but no other permissions.
+-- --   be sanitized out.
+-- --
+-- --   /Permissions/: Requires an active session but no other permissions.
 -- mmGetUserByUsername :: Text -> Session -> IO User
 -- mmGetUserByUsername username =
 --   inGet (printf "/users/username/%s" username) noBody jsonResponse
 
 -- -- | Get a list of users based on a provided list of user ids.
--- -- |
--- -- | /Permissions/: Requires an active session but no other permissions.
+-- --
+-- --   /Permissions/: Requires an active session but no other permissions.
 -- mmGetUsersByIds :: (Seq Text) -> Session -> IO (Seq User)
 -- mmGetUsersByIds body =
 --   inPost "/users/ids" (jsonBody body) jsonResponse
 
 -- -- | Attach a mobile device id to the currently logged in session. This
--- -- | will enable push notiofications for a user, if configured by the
--- -- | server.
--- -- |
--- -- | /Permissions/: Must be authenticated.
+-- --   will enable push notiofications for a user, if configured by the
+-- --   server.
+-- --
+-- --   /Permissions/: Must be authenticated.
 -- mmAttachMobileDevice :: Text -> Session -> IO ()
 -- mmAttachMobileDevice deviceId =
 --   inPut "/users/sessions/device" (jsonBody (A.object [ "device_id" A..= deviceId ])) jsonResponse
 
 -- -- | Send an email containing a link for resetting the user's password. The
--- -- | link will contain a one-use, timed recovery code tied to the user's
--- -- | account. Only works for non-SSO users.
--- -- |
--- -- | /Permissions/: No permissions required.
+-- --   link will contain a one-use, timed recovery code tied to the user's
+-- --   account. Only works for non-SSO users.
+-- --
+-- --   /Permissions/: No permissions required.
 -- mmSendPasswordResetEmail :: Text -> Session -> IO ()
 -- mmSendPasswordResetEmail email =
 --   inPost "/users/password/reset/send" (jsonBody (A.object [ "email" A..= email ])) jsonResponse
 
 -- -- | Get a user object by providing a user email. Sensitive information
--- -- | will be sanitized out.
--- -- |
--- -- | /Permissions/: Requires an active session but no other permissions.
+-- --   will be sanitized out.
+-- --
+-- --   /Permissions/: Requires an active session but no other permissions.
 -- mmGetUserByEmail :: Text -> Session -> IO User
 -- mmGetUserByEmail email =
 --   inGet (printf "/users/email/%s" email) noBody jsonResponse
 
 -- -- | Switch a user's login method from using email to OAuth2\/SAML\/LDAP or
--- -- | back to email. When switching to OAuth2\/SAML, account switching is
--- -- | not complete until the user follows the returned link and completes
--- -- | any steps on the OAuth2\/SAML service provider.
--- -- |
--- -- |
--- -- | To switch from email to OAuth2\/SAML, specify @current_service@,
--- -- | @new_service@, @email@ and @password@.
--- -- |
--- -- |
--- -- | To switch from OAuth2\/SAML to email, specify @current_service@,
--- -- | @new_service@, @email@ and @new_password@.
--- -- |
--- -- |
--- -- | To switch from email to LDAP\/AD, specify @current_service@,
--- -- | @new_service@, @email@, @password@, @ldap_ip@ and @new_password@ (this
--- -- | is the user's LDAP password).
--- -- |
--- -- |
--- -- | To switch from LDAP\/AD to email, specify @current_service@,
--- -- | @new_service@, @ldap_ip@, @password@ (this is the user's LDAP
--- -- | password), @email@  and @new_password@.
--- -- |
--- -- |
--- -- | Additionally, specify @mfa_code@ when trying to switch an account on
--- -- | LDAP\/AD or email that has MFA activated.
--- -- |
--- -- |
--- -- | /Permissions/: No current authentication required except when
--- -- | switching from OAuth2\/SAML to email.
+-- --   back to email. When switching to OAuth2\/SAML, account switching is
+-- --   not complete until the user follows the returned link and completes
+-- --   any steps on the OAuth2\/SAML service provider.
+-- --
+-- --
+-- --   To switch from email to OAuth2\/SAML, specify @current_service@,
+-- --   @new_service@, @email@ and @password@.
+-- --
+-- --
+-- --   To switch from OAuth2\/SAML to email, specify @current_service@,
+-- --   @new_service@, @email@ and @new_password@.
+-- --
+-- --
+-- --   To switch from email to LDAP\/AD, specify @current_service@,
+-- --   @new_service@, @email@, @password@, @ldap_ip@ and @new_password@ (this
+-- --   is the user's LDAP password).
+-- --
+-- --
+-- --   To switch from LDAP\/AD to email, specify @current_service@,
+-- --   @new_service@, @ldap_ip@, @password@ (this is the user's LDAP
+-- --   password), @email@  and @new_password@.
+-- --
+-- --
+-- --   Additionally, specify @mfa_code@ when trying to switch an account on
+-- --   LDAP\/AD or email that has MFA activated.
+-- --
+-- --
+-- --   /Permissions/: No current authentication required except when
+-- --   switching from OAuth2\/SAML to email.
 -- mmSwitchLoginMethod :: XX19 -> Session -> IO Text
 -- mmSwitchLoginMethod body =
 --   inPost "/users/login/switch" (jsonBody body) jsonResponse
 
 -- -- | Set a user's profile image based on user_id string parameter.
--- -- |
--- -- | /Permissions/: Must be logged in as the user being updated or have the
--- -- | @edit_other_users@ permission.
+-- --
+-- --   /Permissions/: Must be logged in as the user being updated or have the
+-- --   @edit_other_users@ permission.
 -- mmSetUsersProfileImage :: UserId -> Session -> IO ()
 -- mmSetUsersProfileImage userId =
 --   inPost (printf "/users/%s/image" userId) noBody jsonResponse
 
 -- -- | Get a user's profile image based on user_id string parameter.
--- -- |
--- -- | /Permissions/: Must be logged in.
+-- --
+-- --   /Permissions/: Must be logged in.
 -- mmGetUsersProfileImage :: UserId -> Session -> IO ()
 -- mmGetUsersProfileImage userId =
 --   inGet (printf "/users/%s/image" userId) noBody jsonResponse
 
 -- -- | Activates multi-factor authentication for the user if @activate@ is
--- -- | true and a valid @code@ is provided. If activate is false, then @code@
--- -- | is not required and multi-factor authentication is disabled for the
--- -- | user.
--- -- |
--- -- | /Permissions/: Must be logged in as the user being updated or have the
--- -- | @edit_other_users@ permission.
+-- --   true and a valid @code@ is provided. If activate is false, then @code@
+-- --   is not required and multi-factor authentication is disabled for the
+-- --   user.
+-- --
+-- --   /Permissions/: Must be logged in as the user being updated or have the
+-- --   @edit_other_users@ permission.
 -- mmUpdateUsersMfa :: UserId -> XX22 -> Session -> IO ()
 -- mmUpdateUsersMfa userId body =
 --   inPut (printf "/users/%s/mfa" userId) (jsonBody body) jsonResponse
 
 -- -- | Verify the email used by a user to sign-up their account with.
--- -- |
--- -- | /Permissions/: No permissions required.
+-- --
+-- --   /Permissions/: No permissions required.
 -- mmVerifyUserEmail :: Text -> Session -> IO ()
 -- mmVerifyUserEmail token =
 --   inPost "/users/email/verify" (jsonBody (A.object [ "token" A..= token ])) jsonResponse
 
 -- -- | Update the password for a user using a one-use, timed recovery code
--- -- | tied to the user's account. Only works for non-SSO users.
--- -- |
--- -- | /Permissions/: No permissions required.
+-- --   tied to the user's account. Only works for non-SSO users.
+-- --
+-- --   /Permissions/: No permissions required.
 -- mmResetPassword :: XX24 -> Session -> IO ()
 -- mmResetPassword body =
 --   inPost "/users/password/reset" (jsonBody body) jsonResponse
 
 -- -- | Get a list of audit by providing the user GUID.
--- -- |
--- -- | /Permissions/: Must be logged in as the user or have the
--- -- | @edit_other_users@ permission.
+-- --
+-- --   /Permissions/: Must be logged in as the user or have the
+-- --   @edit_other_users@ permission.
 -- mmGetUsersAudits :: UserId -> Session -> IO (Seq Audit)
 -- mmGetUsersAudits userId =
 --   inGet (printf "/users/%s/audits" userId) noBody jsonResponse
 
 -- -- | Update a user's password. New password must meet password policy set
--- -- | by server configuration.
--- -- |
--- -- | /Permissions/: Must be logged in as the user the password is being
--- -- | changed for or have @manage_system@ permission.
+-- --   by server configuration.
+-- --
+-- --   /Permissions/: Must be logged in as the user the password is being
+-- --   changed for or have @manage_system@ permission.
 -- mmUpdateUsersPassword :: UserId -> XX29 -> Session -> IO ()
 -- mmUpdateUsersPassword userId body =
 --   inPut (printf "/users/%s/password" userId) (jsonBody body) jsonResponse
 
 -- -- | Update a user by providing the user object. The fields that can be
--- -- | updated are defined in the request body, all other provided fields
--- -- | will be ignored.
--- -- |
--- -- | /Permissions/: Must be logged in as the user being updated or have the
--- -- | @edit_other_users@ permission.
+-- --   updated are defined in the request body, all other provided fields
+-- --   will be ignored.
+-- --
+-- --   /Permissions/: Must be logged in as the user being updated or have the
+-- --   @edit_other_users@ permission.
 -- mmUpdateUser :: UserId -> XX30 -> Session -> IO User
 -- mmUpdateUser userId body =
 --   inPut (printf "/users/%s" userId) (jsonBody body) jsonResponse
 
 -- | Get a user a object. Sensitive information will be sanitized out.
--- |
--- | /Permissions/: Requires an active session but no other permissions.
+--
+--   /Permissions/: Requires an active session but no other permissions.
 mmGetUser :: UserParam -> Session -> IO User
 mmGetUser userId =
   inGet (printf "/users/%s" userId) noBody jsonResponse
 
 -- | Deactivates the user by archiving its user object.
--- |
--- | /Permissions/: Must be logged in as the user being deactivated or have
--- | the @edit_other_users@ permission.
+--
+--   /Permissions/: Must be logged in as the user being deactivated or have
+--   the @edit_other_users@ permission.
 mmDeactivateUserAccount :: UserParam -> Session -> IO ()
 mmDeactivateUserAccount userId =
   inDelete (printf "/users/%s" userId) noBody jsonResponse
 
 -- | Create a new user on the system.
--- |
--- | /Permissions/: No permission required but user creation can be
--- | controlled by server configuration.
+--
+--   /Permissions/: No permission required but user creation can be
+--   controlled by server configuration.
 mmCreateUser :: UsersCreate -> Session -> IO User
 mmCreateUser body =
   inPost "/users" (jsonBody body) jsonResponse
@@ -1893,16 +1893,16 @@ userQueryToQueryString UserQuery { .. } =
                 ]
 
 -- | Get a page of a list of users. Based on query string parameters,
--- | select users from a team, channel, or select users not in a specific
--- | channel.
--- |
--- |
--- | Since server version 4.0, some basic sorting is available using the
--- | @sort@ query parameter. Sorting is currently only supported when
--- | selecting users on a team.
--- |
--- | /Permissions/: Requires an active session and (if specified)
--- | membership to the channel or team being selected from.
+--   select users from a team, channel, or select users not in a specific
+--   channel.
+--
+--
+--   Since server version 4.0, some basic sorting is available using the
+--   @sort@ query parameter. Sorting is currently only supported when
+--   selecting users on a team.
+--
+--   /Permissions/: Requires an active session and (if specified)
+--   membership to the channel or team being selected from.
 mmGetUsers
   :: UserQuery
   -> Session
@@ -1911,32 +1911,32 @@ mmGetUsers userQuery =
   inGet (printf "/users?%s" (userQueryToQueryString userQuery)) noBody jsonResponse
 
 -- -- | Generates an multi-factor authentication secret for a user and returns
--- -- | it as a string and as base64 encoded QR code image.
--- -- |
--- -- | /Permissions/: Must be logged in as the user or have the
--- -- | @edit_other_users@ permission.
+-- --   it as a string and as base64 encoded QR code image.
+-- --
+-- --   /Permissions/: Must be logged in as the user or have the
+-- --   @edit_other_users@ permission.
 -- mmGenerateMfaSecret :: UserId -> Session -> IO XX37
 -- mmGenerateMfaSecret userId =
 --   inPost (printf "/users/%s/mfa/generate" userId) noBody jsonResponse
 
 -- -- | Partially update a user by providing only the fields you want to
--- -- | update. Omitted fields will not be updated. The fields that can be
--- -- | updated are defined in the request body, all other provided fields
--- -- | will be ignored.
--- -- |
--- -- | /Permissions/: Must be logged in as the user being updated or have the
--- -- | @edit_other_users@ permission.
+-- --   update. Omitted fields will not be updated. The fields that can be
+-- --   updated are defined in the request body, all other provided fields
+-- --   will be ignored.
+-- --
+-- --   /Permissions/: Must be logged in as the user being updated or have the
+-- --   @edit_other_users@ permission.
 -- mmPatchUser :: UserId -> XX38 -> Session -> IO User
 -- mmPatchUser userId body =
 --   inPut (printf "/users/%s/patch" userId) (jsonBody body) jsonResponse
 
 -- -- | Get a list of users for the purpose of autocompleting based on the
--- -- | provided search term. Specify a combination of @team_id@ and
--- -- | @channel_id@ to filter results further.
--- -- |
--- -- | /Permissions/: Requires an active session and @view_team@ and
--- -- | @read_channel@ on any teams or channels used to filter the results
--- -- | further.
+-- --   provided search term. Specify a combination of @team_id@ and
+-- --   @channel_id@ to filter results further.
+-- --
+-- --   /Permissions/: Requires an active session and @view_team@ and
+-- --   @read_channel@ on any teams or channels used to filter the results
+-- --   further.
 -- mmAutocompleteUsers :: TeamId -> ChannelId -> Text -> Session -> IO UserAutocomplete
 -- mmAutocompleteUsers teamId channelId name =
 --   inGet (printf "/users/autocomplete?%s" (mkQueryString [ Just ("team_id", T.unpack (idString teamId)) , Just ("channel_id", T.unpack (idString channelId)) , Just ("name", T.unpack name) ])) noBody jsonResponse
@@ -1946,81 +1946,81 @@ mmGetUsers userQuery =
 -- * Webhooks
 
 -- -- | Update an outgoing webhook given the hook id.
--- -- |
--- -- | /Permissions/: @manage_webhooks@ for system or @manage_webhooks@ for
--- -- | the specific team or @manage_webhooks@ for the channel.
+-- --
+-- --   /Permissions/: @manage_webhooks@ for system or @manage_webhooks@ for
+-- --   the specific team or @manage_webhooks@ for the channel.
 -- mmUpdateAnOutgoingWebhook :: HookId -> XX12 -> Session -> IO OutgoingWebhook
 -- mmUpdateAnOutgoingWebhook hookId body =
 --   inPut (printf "/hooks/outgoing/%s" hookId) (jsonBody body) jsonResponse
 
 -- -- | Get an outgoing webhook given the hook id.
--- -- |
--- -- | /Permissions/: @manage_webhooks@ for system or @manage_webhooks@ for
--- -- | the specific team or @manage_webhooks@ for the channel.
+-- --
+-- --   /Permissions/: @manage_webhooks@ for system or @manage_webhooks@ for
+-- --   the specific team or @manage_webhooks@ for the channel.
 -- mmGetAnOutgoingWebhook :: HookId -> Session -> IO OutgoingWebhook
 -- mmGetAnOutgoingWebhook hookId =
 --   inGet (printf "/hooks/outgoing/%s" hookId) noBody jsonResponse
 
 -- -- | Delete an outgoing webhook given the hook id.
--- -- |
--- -- | /Permissions/: @manage_webhooks@ for system or @manage_webhooks@ for
--- -- | the specific team or @manage_webhooks@ for the channel.
+-- --
+-- --   /Permissions/: @manage_webhooks@ for system or @manage_webhooks@ for
+-- --   the specific team or @manage_webhooks@ for the channel.
 -- mmDeleteAnOutgoingWebhook :: HookId -> Session -> IO ()
 -- mmDeleteAnOutgoingWebhook hookId =
 --   inDelete (printf "/hooks/outgoing/%s" hookId) noBody jsonResponse
 
 -- -- | Regenerate the token for the outgoing webhook.
--- -- |
--- -- | /Permissions/: @manage_webhooks@ for system or @manage_webhooks@ for
--- -- | the specific team or @manage_webhooks@ for the channel.
+-- --
+-- --   /Permissions/: @manage_webhooks@ for system or @manage_webhooks@ for
+-- --   the specific team or @manage_webhooks@ for the channel.
 -- mmRegenerateTokenForOutgoingWebhook :: HookId -> Session -> IO ()
 -- mmRegenerateTokenForOutgoingWebhook hookId =
 --   inPost (printf "/hooks/outgoing/%s/regen_token" hookId) noBody jsonResponse
 
 -- -- | Create an incoming webhook for a channel.
--- -- |
--- -- | /Permissions/: @manage_webhooks@ for the channel the webhook is in.
+-- --
+-- --   /Permissions/: @manage_webhooks@ for the channel the webhook is in.
 -- mmCreateAnIncomingWebhook :: XX25 -> Session -> IO IncomingWebhook
 -- mmCreateAnIncomingWebhook body =
 --   inPost "/hooks/incoming" (jsonBody body) jsonResponse
 
 -- -- | Get a page of a list of incoming webhooks. Optionally filter for a
--- -- | specific team using query parameters.
--- -- |
--- -- | /Permissions/: @manage_webhooks@ for the system or @manage_webhooks@
--- -- | for the specific team.
+-- --   specific team using query parameters.
+-- --
+-- --   /Permissions/: @manage_webhooks@ for the system or @manage_webhooks@
+-- --   for the specific team.
 -- mmListIncomingWebhooks :: Maybe Integer -> Maybe Integer -> TeamId -> Session -> IO (Seq IncomingWebhook)
 -- mmListIncomingWebhooks page perPage teamId =
 --   inGet (printf "/hooks/incoming?%s" (mkQueryString [ sequence ("page", fmap show page) , sequence ("per_page", fmap show perPage) , Just ("team_id", T.unpack (idString teamId)) ])) noBody jsonResponse
 
 -- -- | Create an outgoing webhook for a team.
--- -- |
--- -- | /Permissions/: @manage_webhooks@ for the team the webhook is in.
+-- --
+-- --   /Permissions/: @manage_webhooks@ for the team the webhook is in.
 -- mmCreateAnOutgoingWebhook :: XX33 -> Session -> IO OutgoingWebhook
 -- mmCreateAnOutgoingWebhook body =
 --   inPost "/hooks/outgoing" (jsonBody body) jsonResponse
 
 -- -- | Get a page of a list of outgoing webhooks. Optionally filter for a
--- -- | specific team or channel using query parameters.
--- -- |
--- -- | /Permissions/: @manage_webhooks@ for the system or @manage_webhooks@
--- -- | for the specific team\/channel.
+-- --   specific team or channel using query parameters.
+-- --
+-- --   /Permissions/: @manage_webhooks@ for the system or @manage_webhooks@
+-- --   for the specific team\/channel.
 -- mmListOutgoingWebhooks :: Maybe Integer -> Maybe Integer -> TeamId -> ChannelId -> Session -> IO (Seq OutgoingWebhook)
 -- mmListOutgoingWebhooks page perPage teamId channelId =
 --   inGet (printf "/hooks/outgoing?%s" (mkQueryString [ sequence ("page", fmap show page) , sequence ("per_page", fmap show perPage) , Just ("team_id", T.unpack (idString teamId)) , Just ("channel_id", T.unpack (idString channelId)) ])) noBody jsonResponse
 
 -- -- | Update an incoming webhook given the hook id.
--- -- |
--- -- | /Permissions/: @manage_webhooks@ for system or @manage_webhooks@ for
--- -- | the specific team or @manage_webhooks@ for the channel.
+-- --
+-- --   /Permissions/: @manage_webhooks@ for system or @manage_webhooks@ for
+-- --   the specific team or @manage_webhooks@ for the channel.
 -- mmUpdateAnIncomingWebhook :: HookId -> XX35 -> Session -> IO IncomingWebhook
 -- mmUpdateAnIncomingWebhook hookId body =
 --   inPut (printf "/hooks/incoming/%s" hookId) (jsonBody body) jsonResponse
 
 -- -- | Get an incoming webhook given the hook id.
--- -- |
--- -- | /Permissions/: @manage_webhooks@ for system or @manage_webhooks@ for
--- -- | the specific team or @manage_webhooks@ for the channel.
+-- --
+-- --   /Permissions/: @manage_webhooks@ for system or @manage_webhooks@ for
+-- --   the specific team or @manage_webhooks@ for the channel.
 -- mmGetAnIncomingWebhook :: HookId -> Session -> IO IncomingWebhook
 -- mmGetAnIncomingWebhook hookId =
 --   inGet (printf "/hooks/incoming/%s" hookId) noBody jsonResponse
