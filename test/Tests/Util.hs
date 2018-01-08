@@ -49,7 +49,6 @@ module Tests.Util
   )
 where
 
-import qualified Data.Aeson as A
 import qualified Control.Exception as E
 import qualified Control.Concurrent.STM as STM
 import Control.Concurrent (forkIO)
@@ -62,11 +61,11 @@ import Test.Tasty (TestTree)
 import Test.Tasty.HUnit (testCaseSteps)
 import Control.Monad.State.Lazy
 import System.Timeout (timeout)
-import qualified Data.HashMap.Lazy as HM
 
 import Network.Mattermost (ConnectionData)
 import Network.Mattermost.Endpoints
 import Network.Mattermost.Types
+import Network.Mattermost.Types.Config
 import Network.Mattermost.WebSocket
 import Network.Mattermost.Exceptions
 import Network.Mattermost.Util
@@ -83,7 +82,7 @@ mmTestCase testName cfg act =
                                 , tsConfig = cfg
                                 , tsConnectionData = cd
                                 , tsSession = Nothing
-                                , tsDebug = True
+                                , tsDebug = False
                                 , tsWebsocketChan = wsChan
                                 , tsDone = mv
                                 }
@@ -373,37 +372,32 @@ getUserByName uname = do
             Just <$> (liftIO $ mmGetUser (UserById uId) session)
         _ -> return Nothing
 
-createChannel :: Team -> MinChannel -> TestM Channel
-createChannel team mc = do
+createChannel :: MinChannel -> TestM Channel
+createChannel mc = do
   session <- getSession
   liftIO $ mmCreateChannel mc session
 
-deleteChannel :: Team -> Channel -> TestM ()
-deleteChannel team ch = do
+deleteChannel :: Channel -> TestM ()
+deleteChannel ch = do
   session <- getSession
   liftIO $ mmDeleteChannel (channelId ch) session
 
-joinChannel :: User -> Team -> Channel -> TestM ()
-joinChannel user team chan = do
+joinChannel :: User -> Channel -> TestM ()
+joinChannel user chan = do
   session <- getSession
   let member = MinChannelMember
         { minChannelMemberUserId = userId user
         , minChannelMemberChannelId = channelId chan
         }
-  liftIO $ void $ mmAddUser (channelId chan) member session -- mmJoinChannel session (teamId team) (channelId chan)
+  liftIO $ void $ mmAddUser (channelId chan) member session
 
--- getMoreChannels :: Team -> TestM Channels
--- getMoreChannels team = do
---   session <- getSession
---   liftIO $ mmGetMoreChannels session (teamId team) 0 100
-
-leaveChannel :: Team -> Channel -> TestM ()
-leaveChannel team chan = do
+leaveChannel :: Channel -> TestM ()
+leaveChannel chan = do
   session <- getSession
   liftIO $ mmRemoveUserFromChannel (channelId chan) UserMe session
 
-getChannelMembers :: Team -> Channel -> TestM [User]
-getChannelMembers team chan = do
+getChannelMembers :: Channel -> TestM [User]
+getChannelMembers chan = do
   session <- getSession
   let query = defaultUserQuery
         { userQueryPage = Just 0
@@ -417,7 +411,7 @@ getChannels team = do
   session <- getSession
   liftIO $ mmGetPublicChannels (teamId team) Nothing Nothing session
 
-getConfig :: TestM Config
+getConfig :: TestM ServerConfig
 getConfig = do
   session <- getSession
   liftIO $ mmGetConfiguration session
@@ -427,7 +421,7 @@ getClientConfig = do
   session <- getSession
   liftIO $ mmGetClientConfiguration (Just (T.pack "old")) session
 
-saveConfig :: Config -> TestM ()
+saveConfig :: ServerConfig -> TestM ()
 saveConfig newConfig = do
   session <- getSession
   liftIO $ void $ mmUpdateConfiguration newConfig session

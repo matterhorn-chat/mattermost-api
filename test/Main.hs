@@ -4,24 +4,22 @@ module Main (
 ) where
 
 import           Control.Exception
-import           Control.Monad (when, unless)
+import           Control.Monad (when)
 
 import           System.Exit
 
 import           Text.Show.Pretty ( ppShow )
 
-import           Data.Aeson
 import           Data.Monoid ((<>))
-import qualified Data.HashMap.Strict as HM
 import qualified Data.Sequence as Seq
-import qualified Data.Text as T (Text, unpack)
+import qualified Data.Text as T (Text)
 
 import           Test.Tasty
 
 import           Network.Mattermost.Types
+import           Network.Mattermost.Types.Config
 import           Network.Mattermost.WebSocket.Types
 import           Network.Mattermost.Exceptions
-import           Network.Mattermost.Endpoints
 
 import           Tests.Util
 import           Tests.Types
@@ -185,7 +183,7 @@ createChannelTest =
         teams <- getTeams
         let team Seq.:< _ = Seq.viewl teams
 
-        chan <- createChannel team (testMinChannel (teamId team))
+        chan <- createChannel (testMinChannel (teamId team))
         print_ (ppShow chan)
 
         expectWSEvent "hello" (hasWSEventType WMHello)
@@ -220,7 +218,7 @@ leaveChannelTest =
         print_ (ppShow chans)
 
         let chan = findChannel chans $ testMinChannelName
-        leaveChannel team chan
+        leaveChannel chan
 
         expectWSEvent "hello" (hasWSEventType WMHello)
         expectWSEvent "leave channel" (isUserLeave testUser chan)
@@ -238,9 +236,9 @@ joinChannelTest =
         print_ (ppShow chans)
 
         let chan = findChannel chans $ testMinChannelName
-        joinChannel testUser team chan
+        joinChannel testUser chan
 
-        members <- getChannelMembers team chan
+        members <- getChannelMembers chan
         let expected :: [User]
             expected = [testUser]
         when (fmap userId members /= fmap userId expected) $
@@ -265,7 +263,7 @@ deleteChannelTest =
 
         let toDelete = findChannel chans (testMinChannelName)
 
-        deleteChannel team toDelete
+        deleteChannel toDelete
 
         expectWSEvent "hello" (hasWSEventType WMHello)
 
