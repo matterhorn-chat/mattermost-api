@@ -36,6 +36,7 @@ library
                        Network.Mattermost.Types.Internal
                        Network.Mattermost.Endpoints
   other-modules:       Network.Mattermost.TH
+                       Network.Mattermost.Connection
                        Paths_mattermost_api
   -- other-extensions:
   build-depends:       base >=4.4 && <5
