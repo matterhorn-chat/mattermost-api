@@ -1,3 +1,30 @@
+40600.0.0
+=========
+
+API changes:
+ * This release provides implementations of many of Mattermost's version
+   4 API endpoints in the new Network.Mattermost.Endpoints module. The
+   old version 3 API is still provided by Network.Mattermost but will
+   be deprecated in a future release, and removed after that. Note
+   that this release chiefly exposes version 4 endpoints used by the
+   Matterhorn application; endpoints not used there have not been tested
+   and so are left commented out in this release and may be enabled in
+   future releases as needed.
+ * This release also provides first-class Haskell types corresponding to
+   the server-side configuration; see Network.Mattermost.Types.Config.
+ * The Post data type got a new postEditAt field corresponding to the
+   (at the time) undocumented `edit_at` field of posts.
+ * Websockets got action support; see
+   Network.Mattermost.WebSocket.mmSendWSAction and the new
+   WebsocketAction type (thanks to Abhinav Sarkar for this change)
+ * All UTCTimes received from the Mattermost server are wrapped in a
+   `ServerTime` newtype to ensure that users cannot accidentally compare
+   such timestamps to local UTCTimes, since the server time is not
+   necessarily comparable.
+ * Added Network.Mattermost.Endpoints.mmGetClientConfig to get the
+   client configuration from the server (Thanks to Kelly McLaughlin for
+   this change)
+
 40400.0.0
 =========
 
