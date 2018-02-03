@@ -93,11 +93,6 @@ data Session = Session
   , sessTok  :: Token
   }
 
-mkSession :: ConnectionData -> Token -> Session
-mkSession = Session
-
---
-
 data Login
   = Login
   { username :: Text
