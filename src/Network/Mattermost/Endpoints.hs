@@ -1463,12 +1463,12 @@ mmUpdateUsersRoles userId roles =
 -- mmGetUserByUsername username =
 --   inGet (printf "/users/username/%s" username) noBody jsonResponse
 
--- -- | Get a list of users based on a provided list of user ids.
--- --
--- --   /Permissions/: Requires an active session but no other permissions.
--- mmGetUsersByIds :: (Seq Text) -> Session -> IO (Seq User)
--- mmGetUsersByIds body =
---   inPost "/users/ids" (jsonBody body) jsonResponse
+-- | Get a list of users based on a provided list of user ids.
+--
+--   /Permissions/: Requires an active session but no other permissions.
+mmGetUsersByIds :: Seq UserId -> Session -> IO (Seq User)
+mmGetUsersByIds body =
+  inPost "/users/ids" (jsonBody body) jsonResponse
 
 -- -- | Attach a mobile device id to the currently logged in session. This
 -- --   will enable push notiofications for a user, if configured by the
