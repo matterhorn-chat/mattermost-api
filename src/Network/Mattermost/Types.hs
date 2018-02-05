@@ -1371,13 +1371,13 @@ data UserSearch = UserSearch
     -- ^ When `true`, include deactivated users in the results
   , userSearchWithoutTeam :: Bool
     -- ^ Set this to `true` if you would like to search for users that are not on a team. This option takes precendence over `team_id`, `in_channel_id`, and `not_in_channel_id`.
-  , userSearchInChannelId :: Text
+  , userSearchInChannelId :: Maybe ChannelId
     -- ^ If provided, only search users in this channel
-  , userSearchNotInTeamId :: Text
+  , userSearchNotInTeamId :: Maybe TeamId
     -- ^ If provided, only search users not on this team
-  , userSearchNotInChannelId :: Text
+  , userSearchNotInChannelId :: Maybe ChannelId
     -- ^ If provided, only search users not in this channel. Must specifiy `team_id` when using this option
-  , userSearchTeamId :: Text
+  , userSearchTeamId :: Maybe TeamId
     -- ^ If provided, only search users on this team
   } deriving (Read, Show, Eq)
 
