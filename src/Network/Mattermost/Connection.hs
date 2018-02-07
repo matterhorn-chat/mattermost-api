@@ -90,6 +90,7 @@ doRequest method uri payload (Session cd token) = do
             ] ++ autoCloseToHeader (cdAutoClose cd)
           , HTTP.rqBody    = B.unpack payload
           }
+    runLogger cd "doRequest" (HttpRequest method uri Nothing)
     HTTP.simpleHTTP_ con request
   rsp <- hoistE (left ConnectionException rawResponse)
   case HTTP.rspCode rsp of
