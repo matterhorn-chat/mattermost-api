@@ -1,3 +1,18 @@
+
+40600.1.0
+=========
+
+API changes:
+ * The `UserSearch` type now wraps optional fields with `Maybe`. The
+   field types changed from `Text` to the appropriate ID type.
+ * Removed defunct `Network.Mattermost.Types.mkSession` function.
+ * Added an API endpoint function `mmGetUsersByIds` for getting users by
+   ID.
+
+Other changes:
+ * The `doRequest` function used by APIv4 endpoint functions now invokes
+   the connection's logger to log request method and URI.
+
 40600.0.0
 =========
 
