@@ -5,7 +5,7 @@ set -e
 HERE=$(cd `dirname $0`; pwd)
 TEST_PROGRAM=test-mm-api
 ROOT=$HERE/..
-VERSION=3.8
+VERSION=4.2
 CONTAINER=mattermost-preview
 
 LOGFILE=$(mktemp)

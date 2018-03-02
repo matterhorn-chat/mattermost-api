@@ -1,4 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Network.Mattermost.Exceptions
 ( -- Exception Types
   LoginFailureException(..)
@@ -7,10 +9,12 @@ module Network.Mattermost.Exceptions
 , JSONDecodeException(..)
 , HeaderNotFoundException(..)
 , HTTPResponseException(..)
+, MattermostError(..)
 , ConnectionException(..)
 , MattermostServerError(..)
 ) where
 
+import qualified Data.Aeson as A
 import qualified Data.Text as T
 import           Data.Typeable ( Typeable )
 import           Control.Exception ( Exception(..) )
@@ -56,6 +60,25 @@ data HeaderNotFoundException = HeaderNotFoundException String
 instance Exception HeaderNotFoundException
 
 --
+
+data MattermostError = MattermostError
+  { mattermostErrorId         :: T.Text
+  , mattermostErrorMessage    :: T.Text
+  , mattermostErrorRequestId  :: T.Text
+  , mattermostErrorStatusCode :: Int
+  , mattermostErrorIsOAuth    :: Bool
+  } deriving (Show, Typeable)
+
+instance Exception MattermostError
+
+instance A.FromJSON MattermostError where
+  parseJSON = A.withObject "MattermostError" $ \o -> do
+    mattermostErrorId         <- o A..: "id"
+    mattermostErrorMessage    <- o A..: "message"
+    mattermostErrorRequestId  <- o A..: "request_id"
+    mattermostErrorStatusCode <- o A..: "status_code"
+    mattermostErrorIsOAuth    <- o A..:? "is_oauth" A..!= False
+    return MattermostError { .. }
 
 data MattermostServerError = MattermostServerError T.Text
   deriving (Show, Typeable)

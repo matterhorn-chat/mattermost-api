@@ -24,7 +24,11 @@ import           Network.Connection ( Connection
                                     , ConnectionParams(..)
                                     , TLSSettings(..)
                                     , connectionGet
+                                    , connectionGetLine
+                                    , connectionPut
+                                    , connectionClose
                                     , connectTo )
+import qualified Network.HTTP.Stream as HTTP
 
 import           Network.Mattermost.Types.Base
 import           Network.Mattermost.Types.Internal
@@ -60,8 +64,23 @@ dropTrailingChar _ = ""
 
 -- | Creates a new connection to 'Hostname' from an already initialized 'ConnectionContext'.
 -- Internally it uses 'bracket' to cleanup the connection.
-withConnection :: ConnectionData -> (Connection -> IO a) -> IO a
+withConnection :: ConnectionData -> (MMConn -> IO a) -> IO a
 withConnection cd action = withResource (cdConnectionPool cd) action
+
+maxLineLength :: Int
+maxLineLength = 2^(16::Int)
+
+newtype MMConn = MMConn { fromMMConn :: Connection }
+
+-- | This instance allows us to use 'simpleHTTP' from 'Network.HTTP.Stream' with
+-- connections from the 'connection' package.
+instance HTTP.Stream MMConn where
+  readLine   con       = Right . B.unpack . dropTrailingChar <$> connectionGetLine maxLineLength (fromMMConn con)
+  readBlock  con n     = Right . B.unpack <$> connectionGetExact (fromMMConn con) n
+  writeBlock con block = Right <$> connectionPut (fromMMConn con) (B.pack block)
+  close      con       = connectionClose (fromMMConn con)
+  closeOnEnd _   _     = return ()
+
 
 -- | Creates a connection from a 'ConnectionData' value, returning it. It
 --   is the user's responsibility to close this appropriately.

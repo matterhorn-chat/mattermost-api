@@ -1,7 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE TupleSections        #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Network.Mattermost
 ( -- * Types
   -- ** Mattermost-Related Types (deprecated: use Network.Mattermost.Types instead)
@@ -129,10 +128,6 @@ import           Data.Monoid ((<>))
 import           Text.Printf ( printf )
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as BL
-import           Network.Connection ( Connection
-                                    , connectionGetLine
-                                    , connectionPut
-                                    , connectionClose )
 import           Network.HTTP.Headers ( HeaderName(..)
                                       , mkHeader
                                       , lookupHeader )
@@ -141,7 +136,6 @@ import           Network.HTTP.Base ( Request(..)
                                    , defaultUserAgent
                                    , Response_String
                                    , Response(..) )
-import           Network.Stream as NS ( Stream(..) )
 import           Network.URI ( URI, parseRelativeReference )
 import           Network.HTTP.Stream ( simpleHTTP_ )
 import           Data.HashMap.Strict ( HashMap )
@@ -160,23 +154,12 @@ import qualified Data.Sequence as Seq
 import qualified Data.Text as T
 import           Control.Arrow ( left )
 
+import           Network.Mattermost.Connection()
 import           Network.Mattermost.Exceptions
 import           Network.Mattermost.Util
 import           Network.Mattermost.Types.Base
 import           Network.Mattermost.Types.Internal
 import           Network.Mattermost.Types
-
-maxLineLength :: Int
-maxLineLength = 2^(16::Int)
-
--- | This instance allows us to use 'simpleHTTP' from 'Network.HTTP.Stream' with
--- connections from the 'connection' package.
-instance Stream Connection where
-  readLine   con       = Right . B.unpack . dropTrailingChar <$> connectionGetLine maxLineLength con
-  readBlock  con n     = Right . B.unpack <$> connectionGetExact con n
-  writeBlock con block = Right <$> connectionPut con (B.pack block)
-  close      con       = connectionClose con
-  closeOnEnd _   _     = return ()
 
 
 -- MM utility functions

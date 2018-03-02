@@ -18,7 +18,8 @@ import           Control.Monad ( when, join )
 import           System.Console.GetOpt
 import           System.Environment ( getArgs, getProgName )
 
-import           Network.Mattermost
+import           Network.Mattermost.Endpoints
+import           Network.Mattermost.Types
 import           Network.Mattermost.Util
 
 import           Config
@@ -85,22 +86,31 @@ main = do
     putStrLn "Authenticated as:"
     pPrint mmUser
 
-  i <- mmGetInitialLoad session
+  teams <- mmGetUsersTeams UserMe session
   when (optVerbose opts) $ do
-    pPrint i
-  forM_ (initialLoadTeams i) $ \t -> do
+    pPrint teams
+  forM_ teams $ \t -> do
     when (teamName t == configTeam config) $ do
-      userMap <- mmGetProfiles session (getId t) 0 10000
+      users <- mmGetUsers (defaultUserQuery { userQueryInTeam = Just (getId t)
+                                            , userQueryPerPage = Just 1000
+                                            }) session
+      let userMap = HM.fromList [ (getId u, u) | u <- toList users ]
       when (optVerbose opts) $ do
         pPrint userMap
-      chans <- mmGetChannels session (getId t)
+      chans <- mmGetChannelsForUser UserMe (getId t) session
       forM_ chans $ \chan -> do
         when (optVerbose opts) $ do
           pPrint chan
         when (channelName chan == optChannel opts) $ do
           when (not (T.null (optMessage opts))) $ do
-            pendingPost <- mkPendingPost (optMessage opts)
-                                         (getId mmUser)
-                                         (getId chan)
-            post <- mmPost session (getId t) pendingPost
+            let pendingPost = RawPost
+                  { rawPostChannelId = getId chan
+                  , rawPostMessage   = optMessage opts
+                  , rawPostFileIds   = mempty
+                  , rawPostRootId    = Nothing
+                  }
+            -- pendingPost <- mkPendingPost (optMessage opts)
+            --                              (getId mmUser)
+            --                              (getId chan)
+            post <- mmCreatePost pendingPost session
             when (optVerbose opts) (pPrint post)
