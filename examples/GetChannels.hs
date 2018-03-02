@@ -21,9 +21,8 @@ import           LocalConfig -- You will need to define a function:
 main :: IO ()
 main = do
   config <- getConfig -- see LocalConfig import
-  ctx    <- initConnectionContext
-  let cd = mkConnectionData (configHostname config)
-                            (fromIntegral (configPort config)) ctx
+  cd <- initConnectionData (configHostname config)
+                           (fromIntegral (configPort config)) defaultConnectionPoolConfig
 
   let login = Login { username = configUsername config
                     , password = configPassword config

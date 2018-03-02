@@ -82,13 +82,12 @@ main = do
 
   config <- getConfig -- see LocalConfig import
   let repl = do
-        ctx    <- initConnectionContext
-        let cd      = mkConnectionData (T.unpack (configHostname config))
-                                       (fromIntegral (configPort config))
-                                       ctx
-            login   = Login { username = configUsername config
-                            , password = configPassword config
-                            }
+        cd <- initConnectionData (configHostname config) (fromIntegral (configPort config))
+                                 defaultConnectionPoolConfig
+
+        let login = Login { username = configUsername config
+                          , password = configPassword config
+                          }
 
         (token, mmUser) <- join (hoistE <$> mmLogin cd login)
         when (optVerbose opts) $ do

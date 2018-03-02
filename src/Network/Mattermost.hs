@@ -6,7 +6,8 @@ module Network.Mattermost
   -- ** Mattermost-Related Types (deprecated: use Network.Mattermost.Types instead)
   -- n.b. the deprecation notice is in that haddock header because we're
   -- still waiting for https://ghc.haskell.org/trac/ghc/ticket/4879 ...
-  Login(..)
+  ConnectionPoolConfig(..)
+, Login(..)
 , Hostname
 , Port
 , ConnectionData
@@ -55,9 +56,11 @@ module Network.Mattermost
 -- * Typeclasses
 , HasId(..)
 -- * HTTP API Functions
+, defaultConnectionPoolConfig
 , mkConnectionData
 , initConnectionData
 , initConnectionDataInsecure
+, mmCloseSession
 , mmLogin
 , mmCreateDirect
 , mmCreateChannel
@@ -1079,3 +1082,6 @@ assert200Response path rsp =
                         in throwIO $ MattermostServerError newMsg
                     _ -> throwIO $ httpExc
             _ -> throwIO $ httpExc
+
+mmCloseSession :: Session -> IO ()
+mmCloseSession (Session cd _) = destroyConnectionData cd

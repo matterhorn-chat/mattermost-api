@@ -17,9 +17,10 @@ import qualified Data.ByteString.Char8 as B
 import qualified Data.Text as T
 
 import           Control.Exception ( Exception
-                                   , throwIO
-                                   , bracket )
+                                   , throwIO )
+import           Data.Pool (withResource)
 import           Network.Connection ( Connection
+                                    , ConnectionContext
                                     , ConnectionParams(..)
                                     , TLSSettings(..)
                                     , connectionGet
@@ -29,6 +30,7 @@ import           Network.Connection ( Connection
                                     , connectTo )
 import qualified Network.HTTP.Stream as HTTP
 
+import           Network.Mattermost.Types.Base
 import           Network.Mattermost.Types.Internal
 
 -- | This unwraps a 'Maybe' value, throwing a provided exception
@@ -63,10 +65,7 @@ dropTrailingChar _ = ""
 -- | Creates a new connection to 'Hostname' from an already initialized 'ConnectionContext'.
 -- Internally it uses 'bracket' to cleanup the connection.
 withConnection :: ConnectionData -> (MMConn -> IO a) -> IO a
-withConnection cd action =
-  bracket (MMConn <$> mkConnection cd)
-          (connectionClose . fromMMConn)
-          action
+withConnection cd action = withResource (cdConnectionPool cd) action
 
 maxLineLength :: Int
 maxLineLength = 2^(16::Int)
@@ -85,12 +84,12 @@ instance HTTP.Stream MMConn where
 
 -- | Creates a connection from a 'ConnectionData' value, returning it. It
 --   is the user's responsibility to close this appropriately.
-mkConnection :: ConnectionData -> IO Connection
-mkConnection cd = do
-  connectTo (cdConnectionCtx cd) $ ConnectionParams
-    { connectionHostname  = T.unpack $ cdHostname cd
-    , connectionPort      = fromIntegral (cdPort cd)
-    , connectionUseSecure = if cdUseTLS cd
+mkConnection :: ConnectionContext -> Hostname -> Port -> Bool -> IO Connection
+mkConnection connectionCtx hostname port useTLS = do
+  connectTo connectionCtx $ ConnectionParams
+    { connectionHostname  = T.unpack hostname
+    , connectionPort      = fromIntegral port
+    , connectionUseSecure = if useTLS
                                then Just (TLSSettingsSimple False False False)
                                else Nothing
     , connectionUseSocks  = Nothing

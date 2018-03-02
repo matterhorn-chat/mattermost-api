@@ -110,7 +110,7 @@ mmWithWebSocket :: Session
                 -> (MMWebSocket -> IO ())
                 -> IO ()
 mmWithWebSocket (Session cd (Token tk)) recv body = do
-  con <- mkConnection cd
+  con <- mkConnection (cdConnectionCtx cd) (cdHostname cd) (cdPort cd) (cdUseTLS cd)
   stream <- connectionToStream con
   health <- newIORef 0
   myId <- myThreadId
