@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
 -- | The types defined in this module are exported to facilitate
 -- efforts such as QuickCheck and other instrospection efforts, but
@@ -8,8 +9,11 @@
 
 module Network.Mattermost.Types.Internal where
 
+import Control.Monad (when)
 import Data.Pool (Pool)
 import qualified Network.Connection as C
+import Control.Exception (finally)
+import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import Network.HTTP.Headers (Header, HeaderName(..), mkHeader)
 import qualified Network.HTTP.Stream as HTTP
 import qualified Data.ByteString.Char8 as B
@@ -30,7 +34,24 @@ autoCloseToHeader :: AutoClose -> [Header]
 autoCloseToHeader No  = []
 autoCloseToHeader Yes = [mkHeader HdrConnection "Close"]
 
-newtype MMConn = MMConn { fromMMConn :: C.Connection }
+data MMConn = MMConn { fromMMConn :: C.Connection
+                     , connConnected :: IORef Bool
+                     }
+
+closeMMConn :: MMConn -> IO ()
+closeMMConn c = do
+    conn <- readIORef $ connConnected c
+    when conn $
+        C.connectionClose (fromMMConn c)
+            `finally` (writeIORef (connConnected c) False)
+
+newMMConn :: C.Connection -> IO MMConn
+newMMConn c = do
+    v <- newIORef True
+    return $ MMConn c v
+
+isConnected :: MMConn -> IO Bool
+isConnected = readIORef . connConnected
 
 maxLineLength :: Int
 maxLineLength = 2^(16::Int)

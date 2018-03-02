@@ -3,9 +3,11 @@ module Network.Mattermost.Connection where
 
 import           Control.Arrow (left)
 import           Control.Exception (throwIO)
+import           Control.Monad (when)
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as BL
+import           Data.Char (toLower)
 import qualified Data.List as List
 import qualified Data.Text as T
 import qualified Network.HTTP.Base as HTTP
@@ -91,7 +93,13 @@ doRequest method uri payload (Session cd token) = do
           , HTTP.rqBody    = B.unpack payload
           }
     runLogger cd "doRequest" (HttpRequest method uri Nothing)
-    HTTP.simpleHTTP_ con request
+    result <- HTTP.simpleHTTP_ con request
+    case result of
+        Left e -> return $ Left e
+        Right response -> do
+            when (shouldClose response) $ closeMMConn con
+            return $ Right response
+
   rsp <- hoistE (left ConnectionException rawResponse)
   case HTTP.rspCode rsp of
     (2, _, _) -> return rsp
@@ -102,6 +110,11 @@ doRequest method uri payload (Session cd token) = do
         Left _ ->
           throwIO (HTTPResponseException ("Server returned unexpected " ++ show code ++ " response"))
 
+shouldClose :: HTTP.Response_String -> Bool
+shouldClose r =
+    let isConnClose (HTTP.Header HTTP.HdrConnection v) = (toLower <$> v) == "close"
+        isConnClose _ = False
+    in any isConnClose $ HTTP.rspHeaders r
 
 mkQueryString :: [Maybe (String, String)] -> String
 mkQueryString ls =
@@ -168,7 +181,13 @@ doUnauthRequest method uri payload cd = do
             ] ++ autoCloseToHeader (cdAutoClose cd)
           , HTTP.rqBody    = B.unpack payload
           }
-    HTTP.simpleHTTP_ con request
+    result <- HTTP.simpleHTTP_ con request
+    case result of
+        Left e -> return $ Left e
+        Right response -> do
+            when (shouldClose response) $ closeMMConn con
+            return $ Right response
+
   rsp <- hoistE (left ConnectionException rawResponse)
   case HTTP.rspCode rsp of
     (2, _, _) -> return rsp

@@ -35,8 +35,9 @@ import qualified Data.Text as T
 import           Data.Time.Clock ( getCurrentTime )
 import           Data.Time.Clock.POSIX ( posixSecondsToUTCTime
                                        , utcTimeToPOSIXSeconds )
-import           Network.Connection (ConnectionContext, Connection
-                                    , initConnectionContext, connectionClose)
+import           Network.Connection ( ConnectionContext
+                                    , initConnectionContext
+                                    )
 import           Network.Mattermost.Types.Base
 import           Network.Mattermost.Types.Internal
 import           Network.Mattermost.Util (mkConnection)
@@ -80,7 +81,7 @@ mkConnectionDataInsecure host port pool ctx = ConnectionData
 
 createPool :: Hostname -> Port -> ConnectionContext -> ConnectionPoolConfig -> IO (Pool.Pool MMConn)
 createPool host port ctx cpc =
-  Pool.createPool (mkConnection ctx host port True) (connectionClose . fromMMConn)
+  Pool.createPool (mkConnection ctx host port True) closeMMConn
                   (cpStripesCount cpc) (cpIdleConnTimeout cpc) (cpMaxConnCount cpc)
 
 initConnectionData :: Hostname -> Port -> ConnectionPoolConfig -> IO ConnectionData

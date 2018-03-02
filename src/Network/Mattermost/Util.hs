@@ -11,13 +11,14 @@ module Network.Mattermost.Util
 , connectionGetExact
 ) where
 
+import           Control.Exception (finally)
 import           Data.Char ( toUpper )
 import qualified Data.ByteString.Char8 as B
 import qualified Data.Text as T
 
 import           Control.Exception ( Exception
                                    , throwIO )
-import           Data.Pool (withResource)
+import           Data.Pool (takeResource, putResource, destroyResource)
 import           Network.Connection ( Connection
                                     , ConnectionContext
                                     , ConnectionParams(..)
@@ -53,13 +54,19 @@ a ~= b = map toUpper a == map toUpper b
 -- | Creates a new connection to 'Hostname' from an already initialized
 -- 'ConnectionContext'.
 withConnection :: ConnectionData -> (MMConn -> IO a) -> IO a
-withConnection cd action = withResource (cdConnectionPool cd) action
+withConnection cd action = do
+    (conn, lp) <- takeResource (cdConnectionPool cd)
+    action conn `finally` do
+        c <- isConnected conn
+        if c then
+             putResource lp conn else
+             destroyResource (cdConnectionPool cd) lp conn
 
 -- | Creates a connection from a 'ConnectionData' value, returning it. It
 --   is the user's responsibility to close this appropriately.
 mkConnection :: ConnectionContext -> Hostname -> Port -> Bool -> IO MMConn
 mkConnection connectionCtx hostname port useTLS = do
-  MMConn <$> (connectTo connectionCtx $ ConnectionParams
+  newMMConn =<< (connectTo connectionCtx $ ConnectionParams
     { connectionHostname  = T.unpack hostname
     , connectionPort      = fromIntegral port
     , connectionUseSecure = if useTLS
