@@ -53,7 +53,7 @@ maybeFail :: Parser a -> Parser (Maybe a)
 maybeFail p = (Just <$> p) <|> (return Nothing)
 
 -- | Creates a structure representing a TLS connection to the server.
-mkConnectionData :: Hostname -> Port -> Pool.Pool Connection -> ConnectionContext -> ConnectionData
+mkConnectionData :: Hostname -> Port -> Pool.Pool MMConn -> ConnectionContext -> ConnectionData
 mkConnectionData host port pool ctx = ConnectionData
   { cdHostname       = host
   , cdPort           = port
@@ -66,7 +66,7 @@ mkConnectionData host port pool ctx = ConnectionData
   }
 
 -- | Plaintext HTTP instead of a TLS connection.
-mkConnectionDataInsecure :: Hostname -> Port -> Pool.Pool Connection -> ConnectionContext -> ConnectionData
+mkConnectionDataInsecure :: Hostname -> Port -> Pool.Pool MMConn -> ConnectionContext -> ConnectionData
 mkConnectionDataInsecure host port pool ctx = ConnectionData
   { cdHostname       = host
   , cdPort           = port
@@ -78,9 +78,9 @@ mkConnectionDataInsecure host port pool ctx = ConnectionData
   , cdUseTLS         = False
   }
 
-createPool :: Hostname -> Port -> ConnectionContext -> ConnectionPoolConfig -> IO (Pool.Pool Connection)
+createPool :: Hostname -> Port -> ConnectionContext -> ConnectionPoolConfig -> IO (Pool.Pool MMConn)
 createPool host port ctx cpc =
-  Pool.createPool (mkConnection ctx host port True) connectionClose
+  Pool.createPool (mkConnection ctx host port True) (connectionClose . fromMMConn)
                   (cpStripesCount cpc) (cpIdleConnTimeout cpc) (cpMaxConnCount cpc)
 
 initConnectionData :: Hostname -> Port -> ConnectionPoolConfig -> IO ConnectionData

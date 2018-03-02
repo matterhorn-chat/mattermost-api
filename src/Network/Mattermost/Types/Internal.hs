@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 -- | The types defined in this module are exported to facilitate
 -- efforts such as QuickCheck and other instrospection efforts, but
 -- users are advised to avoid using these types wherever possible:
@@ -8,8 +9,10 @@
 module Network.Mattermost.Types.Internal where
 
 import Data.Pool (Pool)
-import Network.Connection (ConnectionContext, Connection)
+import qualified Network.Connection as C
 import Network.HTTP.Headers (Header, HeaderName(..), mkHeader)
+import qualified Network.HTTP.Stream as HTTP
+import qualified Data.ByteString.Char8 as B
 import Network.Mattermost.Types.Base
 
 data Token = Token String
@@ -27,14 +30,34 @@ autoCloseToHeader :: AutoClose -> [Header]
 autoCloseToHeader No  = []
 autoCloseToHeader Yes = [mkHeader HdrConnection "Close"]
 
+newtype MMConn = MMConn { fromMMConn :: C.Connection }
+
+maxLineLength :: Int
+maxLineLength = 2^(16::Int)
+
+-- | HTTP ends newlines with \r\n sequence, but the 'connection' package doesn't
+-- know this so we need to drop the \r after reading lines. This should only be
+-- needed in your compatibility with the HTTP library.
+dropTrailingChar :: B.ByteString -> B.ByteString
+dropTrailingChar bs | not (B.null bs) = B.init bs
+dropTrailingChar _ = ""
+
+-- | This instance allows us to use 'simpleHTTP' from 'Network.HTTP.Stream' with
+-- connections from the 'connection' package.
+instance HTTP.Stream MMConn where
+  readLine   con       = Right . B.unpack . dropTrailingChar <$> C.connectionGetLine maxLineLength (fromMMConn con)
+  readBlock  con n     = Right . B.unpack <$> C.connectionGetExact (fromMMConn con) n
+  writeBlock con block = Right <$> C.connectionPut (fromMMConn con) (B.pack block)
+  close      con       = C.connectionClose (fromMMConn con)
+  closeOnEnd _   _     = return ()
 
 data ConnectionData
   = ConnectionData
   { cdHostname       :: Hostname
   , cdPort           :: Port
   , cdAutoClose      :: AutoClose
-  , cdConnectionPool :: Pool Connection
-  , cdConnectionCtx  :: ConnectionContext
+  , cdConnectionPool :: Pool MMConn
+  , cdConnectionCtx  :: C.ConnectionContext
   , cdToken          :: Maybe Token
   , cdLogger         :: Maybe Logger
   , cdUseTLS         :: Bool

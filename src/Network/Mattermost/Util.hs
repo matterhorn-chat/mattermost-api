@@ -6,7 +6,6 @@ module Network.Mattermost.Util
 , noteE
 , hoistE
 , (~=)
-, dropTrailingChar
 , withConnection
 , mkConnection
 , connectionGetExact
@@ -24,11 +23,7 @@ import           Network.Connection ( Connection
                                     , ConnectionParams(..)
                                     , TLSSettings(..)
                                     , connectionGet
-                                    , connectionGetLine
-                                    , connectionPut
-                                    , connectionClose
                                     , connectTo )
-import qualified Network.HTTP.Stream as HTTP
 
 import           Network.Mattermost.Types.Base
 import           Network.Mattermost.Types.Internal
@@ -55,46 +50,23 @@ assertE False e = throwIO e
 (~=) :: String -> String -> Bool
 a ~= b = map toUpper a == map toUpper b
 
--- | HTTP ends newlines with \r\n sequence, but the 'connection' package doesn't
--- know this so we need to drop the \r after reading lines. This should only be
--- needed in your compatibility with the HTTP library.
-dropTrailingChar :: B.ByteString -> B.ByteString
-dropTrailingChar bs | not (B.null bs) = B.init bs
-dropTrailingChar _ = ""
-
 -- | Creates a new connection to 'Hostname' from an already initialized 'ConnectionContext'.
 -- Internally it uses 'bracket' to cleanup the connection.
 withConnection :: ConnectionData -> (MMConn -> IO a) -> IO a
 withConnection cd action = withResource (cdConnectionPool cd) action
 
-maxLineLength :: Int
-maxLineLength = 2^(16::Int)
-
-newtype MMConn = MMConn { fromMMConn :: Connection }
-
--- | This instance allows us to use 'simpleHTTP' from 'Network.HTTP.Stream' with
--- connections from the 'connection' package.
-instance HTTP.Stream MMConn where
-  readLine   con       = Right . B.unpack . dropTrailingChar <$> connectionGetLine maxLineLength (fromMMConn con)
-  readBlock  con n     = Right . B.unpack <$> connectionGetExact (fromMMConn con) n
-  writeBlock con block = Right <$> connectionPut (fromMMConn con) (B.pack block)
-  close      con       = connectionClose (fromMMConn con)
-  closeOnEnd _   _     = return ()
-
-
 -- | Creates a connection from a 'ConnectionData' value, returning it. It
 --   is the user's responsibility to close this appropriately.
-mkConnection :: ConnectionContext -> Hostname -> Port -> Bool -> IO Connection
+mkConnection :: ConnectionContext -> Hostname -> Port -> Bool -> IO MMConn
 mkConnection connectionCtx hostname port useTLS = do
-  connectTo connectionCtx $ ConnectionParams
+  MMConn <$> (connectTo connectionCtx $ ConnectionParams
     { connectionHostname  = T.unpack hostname
     , connectionPort      = fromIntegral port
     , connectionUseSecure = if useTLS
                                then Just (TLSSettingsSimple False False False)
                                else Nothing
     , connectionUseSocks  = Nothing
-    }
-
+    })
 
 -- | Get exact count of bytes from a connection.
 --
