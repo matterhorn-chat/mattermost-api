@@ -1,5 +1,5 @@
 name:                mattermost-api
-version:             40600.1.0
+version:             40700.0.0
 synopsis:            Client API for Mattermost chat system
 description:         Client API for Mattermost chat system
 license:             BSD3

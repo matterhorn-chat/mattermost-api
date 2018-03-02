@@ -1,4 +1,11 @@
 
+40700.0.0
+=========
+
+API changes:
+ * Added a websocket event constructor for the `delete_team` event added
+   in 4.7.
+
 40600.1.0
 =========
 
