@@ -11,7 +11,7 @@ module Network.Mattermost.Util
 , connectionGetExact
 ) where
 
-import           Control.Exception (finally)
+import           Control.Exception (finally, onException)
 import           Data.Char ( toUpper )
 import qualified Data.ByteString.Char8 as B
 import qualified Data.Text as T
@@ -56,7 +56,7 @@ a ~= b = map toUpper a == map toUpper b
 withConnection :: ConnectionData -> (MMConn -> IO a) -> IO a
 withConnection cd action = do
     (conn, lp) <- takeResource (cdConnectionPool cd)
-    action conn `finally` do
+    (action conn `onException` closeMMConn conn) `finally` do
         c <- isConnected conn
         if c then
              putResource lp conn else
