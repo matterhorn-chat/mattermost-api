@@ -50,8 +50,8 @@ assertE False e = throwIO e
 (~=) :: String -> String -> Bool
 a ~= b = map toUpper a == map toUpper b
 
--- | Creates a new connection to 'Hostname' from an already initialized 'ConnectionContext'.
--- Internally it uses 'bracket' to cleanup the connection.
+-- | Creates a new connection to 'Hostname' from an already initialized
+-- 'ConnectionContext'.
 withConnection :: ConnectionData -> (MMConn -> IO a) -> IO a
 withConnection cd action = withResource (cdConnectionPool cd) action
 
