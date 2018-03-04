@@ -23,7 +23,7 @@ import Network.Mattermost.Types.Internal
 
 mmLogin :: ConnectionData -> Login -> IO (Either LoginFailureException (Session, User))
 mmLogin cd login = do
-  rsp <- doUnauthRequest HTTP.POST "/users/login" (jsonBody login) cd
+  rsp <- doUnauthRequest cd HTTP.POST "/users/login" (jsonBody login)
   case HTTP.rspCode rsp of
     (2, _, _) -> do
       token <- mmGetHeader rsp (HTTP.HdrCustom "Token")
@@ -35,7 +35,7 @@ mmLogin cd login = do
 
 mmInitialUser :: ConnectionData -> UsersCreate -> IO User
 mmInitialUser cd users = do
-  rsp <- doUnauthRequest HTTP.POST "/users" (jsonBody users) cd
+  rsp <- doUnauthRequest cd HTTP.POST "/users" (jsonBody users)
   case HTTP.rspCode rsp of
     (2, _, _) -> mmGetJSONBody "User" rsp
     _ -> error ("Server returned unexpected " ++ show (HTTP.rspCode rsp) ++ " response")

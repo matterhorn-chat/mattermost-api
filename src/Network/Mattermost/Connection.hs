@@ -4,6 +4,7 @@ module Network.Mattermost.Connection where
 import           Control.Arrow (left)
 import           Control.Exception (throwIO)
 import           Control.Monad (when)
+import           Data.Monoid ((<>))
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as BL
@@ -75,24 +76,48 @@ mmGetJSONBody label rsp = do
     y <- value
     return (y)
 
-doRequest :: HTTP.RequestMethod -> String -> B.ByteString -> Session -> IO HTTP.Response_String
-doRequest method uri payload (Session cd token) = do
+doRequest :: Session
+          -> HTTP.RequestMethod
+          -> String
+          -> B.ByteString
+          -> IO HTTP.Response_String
+doRequest (Session cd token) = submitRequest cd (Just token)
+
+doUnauthRequest :: ConnectionData
+                -> HTTP.RequestMethod
+                -> String
+                -> B.ByteString
+                -> IO HTTP.Response_String
+doUnauthRequest cd = submitRequest cd Nothing
+
+submitRequest :: ConnectionData
+              -> Maybe Token
+              -> HTTP.RequestMethod
+              -> String
+              -> B.ByteString
+              -> IO HTTP.Response_String
+submitRequest cd mToken method uri payload = do
   path <- mmPath ("/api/v4" ++ uri)
   rawResponse <- withConnection cd $ \con -> do
     let contentLength = B.length payload
+        authHeader =
+            case mToken of
+                Nothing -> []
+                Just token -> [HTTP.mkHeader HTTP.HdrAuthorization ("Bearer " ++ getTokenString token)]
+
         request = HTTP.Request
           { HTTP.rqURI = path
           , HTTP.rqMethod = method
           , HTTP.rqHeaders =
-            [ HTTP.mkHeader HTTP.HdrAuthorization ("Bearer " ++ getTokenString token)
-            , HTTP.mkHeader HTTP.HdrHost          (T.unpack $ cdHostname cd)
+            authHeader <>
+            [ HTTP.mkHeader HTTP.HdrHost          (T.unpack $ cdHostname cd)
             , HTTP.mkHeader HTTP.HdrUserAgent     HTTP.defaultUserAgent
             , HTTP.mkHeader HTTP.HdrContentType   "application/json"
             , HTTP.mkHeader HTTP.HdrContentLength (show contentLength)
             ] ++ autoCloseToHeader (cdAutoClose cd)
           , HTTP.rqBody    = B.unpack payload
           }
-    runLogger cd "doRequest" (HttpRequest method uri Nothing)
+    runLogger cd "submitRequest" (HttpRequest method uri Nothing)
     result <- HTTP.simpleHTTP_ con request
     case result of
         Left e -> return $ Left e
@@ -134,7 +159,7 @@ inPost
   -> Session
   -> IO o
 inPost uri payload k session =
-  doRequest HTTP.POST uri payload session >>= k
+  doRequest session HTTP.POST uri payload >>= k
 
 inPut
   :: String
@@ -143,7 +168,7 @@ inPut
   -> Session
   -> IO o
 inPut uri payload k session =
-  doRequest HTTP.PUT uri payload session >>= k
+  doRequest session HTTP.PUT uri payload >>= k
 
 inGet
   :: String
@@ -152,7 +177,7 @@ inGet
   -> Session
   -> IO o
 inGet uri payload k session =
-  doRequest HTTP.GET uri payload session >>= k
+  doRequest session HTTP.GET uri payload >>= k
 
 inDelete
   :: String
@@ -161,34 +186,4 @@ inDelete
   -> Session
   -> IO o
 inDelete uri payload k session =
-  doRequest HTTP.DELETE uri payload session >>= k
-
-
-
-doUnauthRequest :: HTTP.RequestMethod -> String -> B.ByteString -> ConnectionData -> IO HTTP.Response_String
-doUnauthRequest method uri payload cd = do
-  path <- mmPath ("/api/v4" ++ uri)
-  rawResponse <- withConnection cd $ \con -> do
-    let contentLength = B.length payload
-        request = HTTP.Request
-          { HTTP.rqURI = path
-          , HTTP.rqMethod = method
-          , HTTP.rqHeaders =
-            [ HTTP.mkHeader HTTP.HdrHost          (T.unpack $ cdHostname cd)
-            , HTTP.mkHeader HTTP.HdrUserAgent     HTTP.defaultUserAgent
-            , HTTP.mkHeader HTTP.HdrContentType   "application/json"
-            , HTTP.mkHeader HTTP.HdrContentLength (show contentLength)
-            ] ++ autoCloseToHeader (cdAutoClose cd)
-          , HTTP.rqBody    = B.unpack payload
-          }
-    result <- HTTP.simpleHTTP_ con request
-    case result of
-        Left e -> return $ Left e
-        Right response -> do
-            when (shouldClose response) $ closeMMConn con
-            return $ Right response
-
-  rsp <- hoistE (left ConnectionException rawResponse)
-  case HTTP.rspCode rsp of
-    (2, _, _) -> return rsp
-    code -> throwIO (HTTPResponseException ("Server returned unexpected " ++ show code ++ " response"))
+  doRequest session HTTP.DELETE uri payload >>= k
