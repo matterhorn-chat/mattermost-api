@@ -49,6 +49,7 @@ data WebsocketEventType
   | WMAddedToTeam
   | WMLeaveTeam
   | WMUpdateTeam
+  | WMTeamDeleted
   | WMUserAdded
   | WMUserUpdated
   | WMUserRemoved
@@ -85,6 +86,7 @@ instance FromJSON WebsocketEventType where
     "status_change"      -> return WMStatusChange
     "hello"              -> return WMHello
     "update_team"        -> return WMUpdateTeam
+    "delete_team"        -> return WMTeamDeleted
     "reaction_added"     -> return WMReactionAdded
     "reaction_removed"   -> return WMReactionRemoved
     "channel_created"    -> return WMChannelCreated
@@ -117,6 +119,7 @@ instance ToJSON WebsocketEventType where
   toJSON WMStatusChange      = "status_change"
   toJSON WMHello             = "hello"
   toJSON WMUpdateTeam        = "update_team"
+  toJSON WMTeamDeleted       = "delete_team"
   toJSON WMReactionAdded     = "reaction_added"
   toJSON WMReactionRemoved   = "reaction_removed"
   toJSON WMChannelCreated    = "channel_created"

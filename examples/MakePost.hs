@@ -74,13 +74,12 @@ main = do
   opts <- foldl (>>=) (return defaultOptions) actions
 
   config <- getConfig -- see LocalConfig import
-  ctx    <- initConnectionContext
-  let cd      = mkConnectionData (configHostname config)
-                                 (fromIntegral (configPort config))
-                                 ctx
-      login   = Login { username = configUsername config
-                      , password = configPassword config
-                      }
+  cd <- initConnectionData (configHostname config) (fromIntegral (configPort config))
+                           defaultConnectionPoolConfig
+
+  let login = Login { username = configUsername config
+                    , password = configPassword config
+                    }
 
   (session, mmUser) <- join (hoistE <$> mmLogin cd login)
   when (optVerbose opts) $ do
