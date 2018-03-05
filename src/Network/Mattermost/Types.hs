@@ -649,6 +649,16 @@ data PostProps
   , postPropsOldHeader        :: Maybe Text
   } deriving (Read, Show, Eq)
 
+emptyPostProps :: PostProps
+emptyPostProps
+  = PostProps
+  { postPropsOverrideIconUrl  = Nothing
+  , postPropsOverrideUsername = Nothing
+  , postPropsAttachments      = Nothing
+  , postPropsNewHeader        = Nothing
+  , postPropsOldHeader        = Nothing
+  }
+
 instance A.FromJSON PostProps where
   parseJSON = A.withObject "Props" $ \v -> do
     postPropsOverrideIconUrl  <- v .:? "override_icon_url"
@@ -757,7 +767,7 @@ instance A.FromJSON Post where
   parseJSON = A.withObject "Post" $ \v -> do
     postPendingPostId <- maybeFail (v .: "pending_post_id")
     postOriginalId    <- maybeFail (v .: "original_id")
-    postProps         <- v .: "props"
+    postProps         <- (v .: "props") <|> (return emptyPostProps)
     postRootId        <- maybeFail (v .: "root_id")
     postFileIds       <- (v .: "file_ids") <|> (return mempty)
     postId            <- v .: "id"
