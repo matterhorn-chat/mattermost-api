@@ -24,6 +24,7 @@ import           Data.Aeson.Types ( ToJSONKey
                                   , typeMismatch
                                   )
 import qualified Data.HashMap.Strict as HM
+import           Data.Maybe (fromMaybe)
 import           Data.Monoid ( (<>) )
 import qualified Data.Pool as Pool
 import           Data.Ratio ( (%) )
@@ -793,9 +794,9 @@ instance A.FromJSON Post where
   parseJSON = A.withObject "Post" $ \v -> do
     postPendingPostId <- maybeFail (v .: "pending_post_id")
     postOriginalId    <- maybeFail (v .: "original_id")
-    postProps         <- (v .: "props") <|> (return emptyPostProps)
+    postProps         <- fromMaybe emptyPostProps <$> v .: "props"
     postRootId        <- maybeFail (v .: "root_id")
-    postFileIds       <- (v .: "file_ids") <|> (return mempty)
+    postFileIds       <- v .:? "file_ids" .!= mempty
     postId            <- v .: "id"
     postType          <- v .: "type"
     postMessage       <- v .: "message"
@@ -807,7 +808,7 @@ instance A.FromJSON Post where
     postCreateAt      <- timeFromServer <$> v .: "create_at"
     postParentId      <- maybeFail (v .: "parent_id")
     postChannelId     <- v .: "channel_id"
-    postHasReactions  <- (v .: "has_reactions") <|> (return False)
+    postHasReactions  <- v .:? "has_reactions" .!= False
     return Post { .. }
 
 instance A.ToJSON Post where
@@ -916,7 +917,7 @@ instance FromJSON FileInfo where
     fileInfoMimeType   <- o .: "mime_type"
     fileInfoWidth      <- o .:? "width"
     fileInfoHeight     <- o .:? "height"
-    fileInfoHasPreview <- (o .: "has_preview_image") <|> pure False
+    fileInfoHasPreview <- o .:? "has_preview_image" .!= False
     return FileInfo { .. }
 
 --
