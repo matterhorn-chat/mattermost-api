@@ -4011,4 +4011,4 @@ mmUnflagPost uId pId =
         , flaggedPostId     = pId
         , flaggedPostStatus = False
         }
-  in inPut (printf "/users/%s/preferences" uId) (jsonBody [body]) noResponse
+  in inPost (printf "/users/%s/preferences/delete" uId) (jsonBody [body]) noResponse
