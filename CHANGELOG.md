@@ -1,4 +1,14 @@
 
+40800.0.0
+=========
+
+ * Fixed the URI for the mmUnflagPost API call.
+ * Some JSON instances now more precisely handle missing optional
+   fields.
+ * mattermost-api now supports connection pooling with persistent server
+   connections. A connection pool configuration is required to connect
+   to Mattermost servers (thanks to Abhinav Sarkar)
+
 40700.0.0
 =========
 
