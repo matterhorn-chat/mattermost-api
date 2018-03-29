@@ -80,21 +80,21 @@ mkConnectionDataInsecure host port pool ctx = ConnectionData
   , cdUseTLS         = False
   }
 
-createPool :: Hostname -> Port -> ConnectionContext -> ConnectionPoolConfig -> IO (Pool.Pool MMConn)
-createPool host port ctx cpc =
-  Pool.createPool (mkConnection ctx host port True) closeMMConn
+createPool :: Hostname -> Port -> ConnectionContext -> ConnectionPoolConfig -> Bool -> IO (Pool.Pool MMConn)
+createPool host port ctx cpc secure =
+  Pool.createPool (mkConnection ctx host port secure) closeMMConn
                   (cpStripesCount cpc) (cpIdleConnTimeout cpc) (cpMaxConnCount cpc)
 
 initConnectionData :: Hostname -> Port -> ConnectionPoolConfig -> IO ConnectionData
 initConnectionData host port cpc = do
   ctx  <- initConnectionContext
-  pool <- createPool host port ctx cpc
+  pool <- createPool host port ctx cpc True
   return (mkConnectionData host port pool ctx)
 
 initConnectionDataInsecure :: Hostname -> Port -> ConnectionPoolConfig -> IO ConnectionData
 initConnectionDataInsecure host port cpc = do
   ctx  <- initConnectionContext
-  pool <- createPool host port ctx cpc
+  pool <- createPool host port ctx cpc False
   return (mkConnectionDataInsecure host port pool ctx)
 
 destroyConnectionData :: ConnectionData -> IO ()
