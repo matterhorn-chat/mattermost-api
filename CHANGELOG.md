@@ -1,4 +1,11 @@
 
+40800.0.1
+=========
+
+ * `createPool` now requires a secure connection argument. Previously it
+   always defaulted to `True` which broke insecure connection setups.
+ * Removed the upper bound from `memory` to support GHC 8.4.
+
 40800.0.0
 =========
 
