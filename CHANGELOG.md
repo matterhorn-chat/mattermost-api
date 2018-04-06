@@ -1,4 +1,10 @@
 
+40800.0.2
+=========
+
+ * The websocket connection now uses the V4 API endpoint.
+ * submitRequest now also retries on "resource vanished" exceptions.
+
 40800.0.1
 =========
 
