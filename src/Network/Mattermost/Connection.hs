@@ -130,17 +130,17 @@ submitRequest cd mToken method uri payload = do
                   return $ Right response
 
   rawResponse <- do
-      -- Try to submit the request. If we got an EOF exception, that
-      -- means that the connection pool contained a connection that
-      -- had been severed since it was last used. That means it's
-      -- very likely that the pool has other stale connections in it,
-      -- so we destroy all idle connections in the pool and try the
-      -- request one more time. All other errors and exceptions are just
-      -- propagated.
+      -- Try to submit the request. If we got an exception that we think
+      -- indicates a network problem, we assume that to mean that the
+      -- connection pool contained a connection that had been severed
+      -- since it was last used. That means it's very likely that the
+      -- pool has other stale connections in it, so we destroy all idle
+      -- connections in the pool and try the request one more time. All
+      -- other errors and exceptions are just propagated.
       resp :: Either IOException (Either HTTP.ConnError HTTP.Response_String)
            <- try go
       case resp of
-          Left e | isEOFError e -> do
+          Left e | isConnectionError e -> do
               destroyAllResources (cdConnectionPool cd)
               go
           Left e -> throwIO e
@@ -155,6 +155,14 @@ submitRequest cd mToken method uri payload = do
           throwIO (err :: MattermostError)
         Left _ ->
           throwIO (HTTPResponseException ("Server returned unexpected " ++ show code ++ " response"))
+
+isConnectionError :: IOException -> Bool
+isConnectionError e =
+    or [ isEOFError e
+       -- There is not a specific predicate for "resource vanished"
+       -- exceptions so "show" is as good as it gets.
+       , "resource vanished" `List.isInfixOf` show e
+       ]
 
 shouldClose :: HTTP.Response_String -> Bool
 shouldClose r =
