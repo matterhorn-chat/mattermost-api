@@ -725,7 +725,7 @@ instance PrintfArg FileId where
 
 urlForFile :: FileId -> Text
 urlForFile fId =
-  "/api/v3/files/" <> idString fId <> "/get"
+  "/api/v4/files/" <> idString fId
 
 data PostType
   = PostTypeJoinChannel
