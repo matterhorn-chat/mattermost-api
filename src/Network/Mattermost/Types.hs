@@ -1508,15 +1508,14 @@ instance A.ToJSON PostUpdate where
     [ "file_ids" A..= p | Just p <- [postUpdateFileIds] ] ++
     [ "props" A..= p | Just p <- [postUpdateProps] ]
 
-postUpdate :: Text -> PostUpdate
-postUpdate message = PostUpdate
-  { postUpdateIsPinned = Nothing
-  , postUpdateMessage = message
-  , postUpdateHasReactions = Nothing
-  , postUpdateFileIds = Nothing
-  , postUpdateProps = Nothing
-  }
-
+postUpdateBody :: Text -> PostUpdate
+postUpdateBody message =
+    PostUpdate { postUpdateIsPinned = Nothing
+               , postUpdateMessage = message
+               , postUpdateHasReactions = Nothing
+               , postUpdateFileIds = Nothing
+               , postUpdateProps = Nothing
+               }
 
 data ChannelPatch = ChannelPatch
   { channelPatchHeader :: Maybe Text

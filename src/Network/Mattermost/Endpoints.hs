@@ -733,15 +733,15 @@ mmGetListOfFlaggedPosts userId FlaggedPostsQuery { .. } =
 -- mmUnpinPostToChannel postId =
 --   inPost (printf "/posts/%s/unpin" postId) noBody jsonResponse
 
--- -- | Partially update a post by providing only the fields you want to
--- --   update. Omitted fields will not be updated. The fields that can be
--- --   updated are defined in the request body, all other provided fields
--- --   will be ignored.
--- --
--- --   /Permissions/: Must have the @edit_post@ permission.
--- mmPatchPost :: PostId -> XX27 -> Session -> IO Post
--- mmPatchPost postId body =
---   inPut (printf "/posts/%s/patch" postId) (jsonBody body) jsonResponse
+-- | Partially update a post by providing only the fields you want to
+--   update. Omitted fields will not be updated. The fields that can be
+--   updated are defined in the request body, all other provided fields
+--   will be ignored.
+--
+--   /Permissions/: Must have the @edit_post@ permission.
+mmPatchPost :: PostId -> PostUpdate -> Session -> IO Post
+mmPatchPost postId body =
+  inPut (printf "/posts/%s/patch" postId) (jsonBody body) jsonResponse
 
 data PostQuery = PostQuery
   { postQueryPage    :: Maybe Int
@@ -3483,38 +3483,6 @@ getUserStatusesByIds body =
 --   toJSON XX26 { .. } = A.object
 --     [ "message" A..= xx26Message
 --     , "level" A..= xx26Level
---     ]
-
--- --
-
--- data XX27 = XX27
---   { xx27IsPinned :: Bool
---   , xx27Message :: Text
---     -- ^ The message text of the post
---   , xx27HasReactions :: UnknownType
---     -- ^ Set to `true` if the post has reactions to it
---   , xx27FileIds :: (Seq UnknownType)
---     -- ^ The list of files attached to this post
---   , xx27Props :: Text
---     -- ^ A general JSON property bag to attach to the post
---   } deriving (Read, Show, Eq)
-
--- instance A.FromJSON XX27 where
---   parseJSON = A.withObject "xx27" $ \v -> do
---     xx27IsPinned <- v A..: "is_pinned"
---     xx27Message <- v A..: "message"
---     xx27HasReactions <- v A..: "has_reactions"
---     xx27FileIds <- v A..: "file_ids"
---     xx27Props <- v A..: "props"
---     return XX27 { .. }
-
--- instance A.ToJSON XX27 where
---   toJSON XX27 { .. } = A.object
---     [ "is_pinned" A..= xx27IsPinned
---     , "message" A..= xx27Message
---     , "has_reactions" A..= xx27HasReactions
---     , "file_ids" A..= xx27FileIds
---     , "props" A..= xx27Props
 --     ]
 
 -- --
