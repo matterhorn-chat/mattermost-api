@@ -43,6 +43,18 @@ import           Network.Mattermost.Types.Base
 import           Network.Mattermost.Types.Internal
 import           Network.Mattermost.Util (mkConnection)
 
+newtype UserText = UserText Text
+                 deriving (Eq, Show, Ord, Read)
+
+instance A.ToJSON UserText where
+    toJSON (UserText t) = A.toJSON t
+
+instance A.FromJSON UserText where
+    parseJSON v = UserText <$> A.parseJSON v
+
+unsafeUserText :: UserText -> Text
+unsafeUserText (UserText t) = t
+
 runLogger :: ConnectionData -> String -> LogEventType -> IO ()
 runLogger ConnectionData { cdLogger = Just l } n ev =
   l (LogEvent n ev)
@@ -224,12 +236,12 @@ data Team
   , teamCreateAt        :: ServerTime
   , teamUpdateAt        :: ServerTime
   , teamDeleteAt        :: ServerTime
-  , teamDisplayName     :: Text
-  , teamName            :: Text
-  , teamEmail           :: Text
+  , teamDisplayName     :: UserText
+  , teamName            :: UserText
+  , teamEmail           :: UserText
   , teamType            :: Type
-  , teamCompanyName     :: Text
-  , teamAllowedDomains  :: Text
+  , teamCompanyName     :: UserText
+  , teamAllowedDomains  :: UserText
   , teamInviteId        :: Id
   , teamAllowOpenInvite :: Bool
   }
@@ -310,7 +322,7 @@ instance A.FromJSON NotifyOption where
   parseJSON xs                   = fail ("Unknown NotifyOption value: " ++ show xs)
 
 data UserNotifyProps = UserNotifyProps
-  { userNotifyPropsMentionKeys  :: [Text]
+  { userNotifyPropsMentionKeys  :: [UserText]
   , userNotifyPropsEmail        :: Bool
   , userNotifyPropsPush         :: NotifyOption
   , userNotifyPropsDesktop      :: NotifyOption
@@ -360,7 +372,7 @@ instance A.ToJSON BoolString where
 
 instance A.FromJSON UserNotifyProps where
   parseJSON = A.withObject "UserNotifyProps" $ \v -> do
-    userNotifyPropsMentionKeys  <- T.split (==',') <$>
+    userNotifyPropsMentionKeys  <- (fmap UserText) <$> T.split (==',') <$>
                                      (v .:? "mention_keys" .!= "")
     userNotifyPropsPush         <- v .:? "push" .!= NotifyOptionMention
     userNotifyPropsDesktop      <- v .:? "desktop" .!= NotifyOptionAll
@@ -372,7 +384,7 @@ instance A.FromJSON UserNotifyProps where
 
 instance A.ToJSON UserNotifyProps where
   toJSON UserNotifyProps { .. } = A.object
-    [ "mention_keys"  .= T.intercalate "," userNotifyPropsMentionKeys
+    [ "mention_keys"  .= T.intercalate "," (unsafeUserText <$> userNotifyPropsMentionKeys)
     , "push"          .= userNotifyPropsPush
     , "desktop"       .= userNotifyPropsDesktop
     , "email"         .= BoolString userNotifyPropsEmail
@@ -418,10 +430,10 @@ data Channel
   , channelDeleteAt      :: ServerTime
   , channelTeamId        :: Maybe TeamId
   , channelType          :: Type
-  , channelDisplayName   :: Text
-  , channelName          :: Text
-  , channelHeader        :: Text
-  , channelPurpose       :: Text
+  , channelDisplayName   :: UserText
+  , channelName          :: UserText
+  , channelHeader        :: UserText
+  , channelPurpose       :: UserText
   , channelLastPostAt    :: ServerTime
   , channelTotalMsgCount :: Int
   , channelExtraUpdateAt :: ServerTime
@@ -570,11 +582,11 @@ data User
   , userUsername           :: Text
   , userAuthData           :: Text
   , userAuthService        :: Text
-  , userEmail              :: Text
+  , userEmail              :: UserText
   , userEmailVerified      :: Bool
-  , userNickname           :: Text
-  , userFirstName          :: Text
-  , userLastName           :: Text
+  , userNickname           :: UserText
+  , userFirstName          :: UserText
+  , userLastName           :: UserText
   , userRoles              :: Text
   , userNotifyProps        :: UserNotifyProps
   , userLastPasswordUpdate :: Maybe ServerTime
@@ -775,7 +787,7 @@ data Post
   , postFileIds       :: Seq FileId
   , postId            :: PostId
   , postType          :: PostType
-  , postMessage       :: Text
+  , postMessage       :: UserText
   , postDeleteAt      :: Maybe ServerTime
   , postHashtags      :: Text
   , postUpdateAt      :: ServerTime
