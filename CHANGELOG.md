@@ -1,4 +1,12 @@
 
+40900.1.0
+=========
+
+API changes:
+ * Added a `newtype`, `UserText`, to wrap many API response fields to
+   indicate that they may contain unsafe or unsanitized user input. Also
+   added `unsafeUserText` to unwrap such values when the caller knows
+   that using the unsafe value is appropriate.
 
 40900.0.0
 =========
