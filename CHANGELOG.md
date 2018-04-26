@@ -1,4 +1,12 @@
 
+
+40900.0.0
+=========
+
+ * Endpoints: enabled `mmPatchPost` and removed duplicate argument type
+   for `PostUpdate`.
+ * Ensure that file fetching uses the V4 API endpoint.
+
 40800.0.2
 =========
 
