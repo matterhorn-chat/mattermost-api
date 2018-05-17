@@ -436,7 +436,6 @@ data Channel
   , channelPurpose       :: UserText
   , channelLastPostAt    :: ServerTime
   , channelTotalMsgCount :: Int
-  , channelExtraUpdateAt :: ServerTime
   , channelCreatorId     :: Maybe UserId
   } deriving (Read, Show, Eq, Ord)
 
@@ -457,7 +456,6 @@ instance A.FromJSON Channel where
     channelPurpose         <- v .: "purpose"
     channelLastPostAt      <- timeFromServer <$> v .: "last_post_at"
     channelTotalMsgCount   <- v .: "total_msg_count"
-    channelExtraUpdateAt   <- timeFromServer <$> v .: "extra_update_at"
     channelCreatorId       <- maybeFail (v .: "creator_id")
     return Channel { .. }
 
