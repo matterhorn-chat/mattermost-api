@@ -174,7 +174,6 @@ data ClientConfig = ClientConfig
   , clientConfigSiteURL :: T.Text
   , clientConfigSiteName :: T.Text
   , clientConfigEnableTeamCreation :: T.Text
-  , clientConfigEnableUserCreation :: T.Text
   , clientConfigEnableOpenServer :: T.Text
   , clientConfigRestrictDirectMessage :: T.Text
   , clientConfigRestrictTeamInvite :: T.Text
@@ -268,7 +267,6 @@ instance A.FromJSON ClientConfig where
     clientConfigSiteURL <- o A..: "SiteURL"
     clientConfigSiteName <- o A..: "SiteName"
     clientConfigEnableTeamCreation <- o A..: "EnableTeamCreation"
-    clientConfigEnableUserCreation <- o A..: "EnableUserCreation"
     clientConfigEnableOpenServer <- o A..: "EnableOpenServer"
     clientConfigRestrictDirectMessage <- o A..: "RestrictDirectMessage"
     clientConfigRestrictTeamInvite <- o A..: "RestrictTeamInvite"
