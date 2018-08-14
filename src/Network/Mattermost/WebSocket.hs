@@ -111,7 +111,7 @@ mmWithWebSocket :: Session
                 -> IO ()
 mmWithWebSocket (Session cd (Token tk)) recv body = do
   con <- mkConnection (cdConnectionCtx cd) (cdHostname cd) (cdPort cd) (cdUseTLS cd)
-  stream <- connectionToStream $ fromMMConn con
+  stream <- connectionToStream con
   health <- newIORef 0
   myId <- myThreadId
   let doLog = runLogger cd "websocket"

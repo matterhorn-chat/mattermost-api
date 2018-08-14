@@ -74,22 +74,22 @@ withConnection cd action = do
 -- * Only SOCKS version 4 and 5 proxies are supported using socks4://
 --   and socks5:// URIs, and
 -- * No proxy authentication is supported.
-mkConnection :: ConnectionData -> IO Connection
-mkConnection cd = do
-  proxy' <- proxyForScheme (if cdUseTLS cd then HTTPS else HTTP)
-  canUseProxy <- proxyHostPermitted (T.unpack $ cdHostname cd)
+mkConnection :: ConnectionContext -> Hostname -> Port -> Bool -> IO Connection
+mkConnection ctx host port secure = do
+  proxy' <- proxyForScheme (if secure then HTTPS else HTTP)
+  canUseProxy <- proxyHostPermitted (T.unpack host)
   let proxy = if canUseProxy then proxy' else Nothing
-  connectTo (cdConnectionCtx cd) $ ConnectionParams
-    { connectionHostname  = T.unpack $ cdHostname cd
-    , connectionPort      = fromIntegral (cdPort cd)
-    , connectionUseSecure = if cdUseTLS cd
+  connectTo ctx $ ConnectionParams
+    { connectionHostname  = T.unpack host
+    , connectionPort      = fromIntegral port
+    , connectionUseSecure = if secure
                                then Just (TLSSettingsSimple False False False)
                                else Nothing
     , connectionUseSocks  = do
-        (ty, host, port) <- proxy
+        (ty, cHost, cPort) <- proxy
         case ty of
-            Socks -> return $ SockSettingsSimple host (toEnum port)
-            Other -> return $ OtherProxy host (toEnum port)
+            Socks -> return $ SockSettingsSimple cHost (toEnum cPort)
+            Other -> return $ OtherProxy cHost (toEnum cPort)
     }
 
 -- | Get exact count of bytes from a connection.

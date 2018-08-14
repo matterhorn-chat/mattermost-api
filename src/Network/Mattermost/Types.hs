@@ -80,8 +80,8 @@ mkConnectionData host port pool ctx = ConnectionData
   }
 
 -- | Plaintext HTTP instead of a TLS connection.
-mkConnectionDataInsecure :: Hostname -> Port -> Pool.Pool MMConn -> ConnectionContext -> ConnectionData
-mkConnectionDataInsecure host port pool ctx = ConnectionData
+mkConnectionDataInsecure :: Hostname -> Port -> ConnectionContext -> Pool.Pool MMConn -> ConnectionData
+mkConnectionDataInsecure host port ctx pool = ConnectionData
   { cdHostname       = host
   , cdPort           = port
   , cdConnectionCtx  = ctx
@@ -94,7 +94,7 @@ mkConnectionDataInsecure host port pool ctx = ConnectionData
 
 createPool :: Hostname -> Port -> ConnectionContext -> ConnectionPoolConfig -> Bool -> IO (Pool.Pool MMConn)
 createPool host port ctx cpc secure =
-  Pool.createPool (mkConnection ctx host port secure) closeMMConn
+  Pool.createPool (mkConnection ctx host port secure >>= newMMConn) closeMMConn
                   (cpStripesCount cpc) (cpIdleConnTimeout cpc) (cpMaxConnCount cpc)
 
 initConnectionData :: Hostname -> Port -> ConnectionPoolConfig -> IO ConnectionData
@@ -107,7 +107,7 @@ initConnectionDataInsecure :: Hostname -> Port -> ConnectionPoolConfig -> IO Con
 initConnectionDataInsecure host port cpc = do
   ctx  <- initConnectionContext
   pool <- createPool host port ctx cpc False
-  return (mkConnectionDataInsecure host port pool ctx)
+  return (mkConnectionDataInsecure host port ctx pool)
 
 destroyConnectionData :: ConnectionData -> IO ()
 destroyConnectionData = Pool.destroyAllResources . cdConnectionPool
