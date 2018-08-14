@@ -1,13 +1,13 @@
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE TupleSections        #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Network.Mattermost
 ( -- * Types
   -- ** Mattermost-Related Types (deprecated: use Network.Mattermost.Types instead)
   -- n.b. the deprecation notice is in that haddock header because we're
   -- still waiting for https://ghc.haskell.org/trac/ghc/ticket/4879 ...
-  Login(..)
+  ConnectionPoolConfig(..)
+, Login(..)
 , Hostname
 , Port
 , ConnectionData
@@ -56,12 +56,15 @@ module Network.Mattermost
 -- * Typeclasses
 , HasId(..)
 -- * HTTP API Functions
+, defaultConnectionPoolConfig
 , mkConnectionData
 , initConnectionData
 , initConnectionDataInsecure
+, mmCloseSession
 , mmLogin
 , mmCreateDirect
 , mmCreateChannel
+, mmCreateGroupChannel
 , mmCreateTeam
 , mmDeleteChannel
 , mmLeaveChannel
@@ -80,6 +83,7 @@ module Network.Mattermost
 , mmGetPostsSince
 , mmGetPostsBefore
 , mmGetPostsAfter
+, mmSearchPosts
 , mmGetReactionsForPost
 , mmGetFileInfo
 , mmGetFile
@@ -95,6 +99,7 @@ module Network.Mattermost
 , mmSaveConfig
 , mmSetChannelHeader
 , mmChannelAddUser
+, mmChannelRemoveUser
 , mmTeamAddUser
 , mmUsersCreate
 , mmUsersCreateWithSession
@@ -102,6 +107,8 @@ module Network.Mattermost
 , mmUpdatePost
 , mmExecute
 , mmGetConfig
+, mmGetClientConfig
+, mmSetPreferences
 , mmSavePreferences
 , mmDeletePreferences
 , mmFlagPost
@@ -121,11 +128,6 @@ import           Data.Monoid ((<>))
 import           Text.Printf ( printf )
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as BL
-import           Data.Time.Clock ( UTCTime )
-import           Network.Connection ( Connection
-                                    , connectionGetLine
-                                    , connectionPut
-                                    , connectionClose )
 import           Network.HTTP.Headers ( HeaderName(..)
                                       , mkHeader
                                       , lookupHeader )
@@ -134,7 +136,6 @@ import           Network.HTTP.Base ( Request(..)
                                    , defaultUserAgent
                                    , Response_String
                                    , Response(..) )
-import           Network.Stream as NS ( Stream(..) )
 import           Network.URI ( URI, parseRelativeReference )
 import           Network.HTTP.Stream ( simpleHTTP_ )
 import           Data.HashMap.Strict ( HashMap )
@@ -153,23 +154,12 @@ import qualified Data.Sequence as Seq
 import qualified Data.Text as T
 import           Control.Arrow ( left )
 
+import           Network.Mattermost.Connection()
 import           Network.Mattermost.Exceptions
 import           Network.Mattermost.Util
 import           Network.Mattermost.Types.Base
 import           Network.Mattermost.Types.Internal
 import           Network.Mattermost.Types
-
-maxLineLength :: Int
-maxLineLength = 2^(16::Int)
-
--- | This instance allows us to use 'simpleHTTP' from 'Network.HTTP.Stream' with
--- connections from the 'connection' package.
-instance Stream Connection where
-  readLine   con       = Right . B.unpack . dropTrailingChar <$> connectionGetLine maxLineLength con
-  readBlock  con n     = Right . B.unpack <$> connectionGetExact con n
-  writeBlock con block = Right <$> connectionPut con (B.pack block)
-  close      con       = connectionClose con
-  closeOnEnd _   _     = return ()
 
 
 -- MM utility functions
@@ -433,14 +423,14 @@ mmGetPosts sess teamid chanid offset limit =
 mmGetPostsSince :: Session
            -> TeamId
            -> ChannelId
-           -> UTCTime
+           -> ServerTime
            -> IO Posts
 mmGetPostsSince sess teamid chanid since =
   mmDoRequest sess "mmGetPostsSince" $
   printf "/api/v3/teams/%s/channels/%s/posts/since/%d"
          (idString teamid)
          (idString chanid)
-         (utcTimeToMilliseconds since :: Int)
+         (timeToServer since)
 
 -- |
 -- route: @\/api\/v3\/teams\/{team_id}\/channels\/{channel_id}\/posts\/{post_id}\/get@
@@ -496,6 +486,25 @@ mmGetPostsBefore sess teamid chanid postid offset limit =
          (idString postid)
          offset
          limit
+
+-- |
+-- route: @\/api\/v4\/teams\/{team_id}\/posts\/search@
+mmSearchPosts :: Session
+              -> TeamId
+              -> T.Text
+              -> Bool
+              -> IO Posts
+mmSearchPosts sess teamid terms isOrSearch = do
+  let path = printf "/api/v4/teams/%s/posts/search" $ idString teamid
+  uri <- mmPath path
+  let req = SearchPosts terms isOrSearch
+  runLoggerS sess "mmSearchPosts" $
+    HttpRequest POST path (Just (toJSON req))
+  rsp <- mmPOST sess uri req
+  (raw, value) <- mmGetJSONBody "SearchPostsResult" rsp
+  runLoggerS sess "mmSearchPosts" $
+    HttpResponse 200 path (Just raw)
+  return value
 
 -- |
 -- route: @\/api\/v3\/files\/{file_id}\/get_info@
@@ -698,6 +707,16 @@ mmGetConfig :: Session
 mmGetConfig sess =
   mmDoRequest sess "mmGetConfig" "/api/v3/admin/config"
 
+-- | Get a subset of the server configuration needed by the client. Does not
+-- require administrative permission. The format query parameter is currently
+-- required with the value of "old".
+--
+-- route: @\/api\/v4\/config\/client@
+mmGetClientConfig :: Session
+                  -> IO Value
+mmGetClientConfig sess =
+  mmDoRequest sess "mmGetClientConfig" "/api/v4/config/client?format=old"
+
 mmSaveConfig :: Session
              -> Value
              -> IO ()
@@ -814,6 +833,15 @@ mmGetReactionsForPost sess tId cId pId = do
                     (idString pId)
   mmDoRequest sess "mmGetReactionsForPost" path
 
+mmSetPreferences :: Session
+                 -> UserId
+                 -> Seq.Seq Preference
+                 -> IO ()
+mmSetPreferences sess uId prefs = do
+  uri <- mmPath $ printf "/api/v4/users/%s/preferences" (idString uId)
+  _ <- mmPUT sess uri prefs
+  return ()
+
 -- |
 -- route: @\/api\/v3\/preferences\/save@
 mmSavePreferences :: Session
@@ -892,6 +920,47 @@ mmGetMyPreferences :: Session
 mmGetMyPreferences sess =
   mmDoRequest sess "mmMyPreferences" "/api/v4/users/me/preferences"
 
+-- | Remove the specified user from the specified channel.
+mmChannelRemoveUser :: Session
+                    -> ChannelId
+                    -> UserId
+                    -> IO ()
+mmChannelRemoveUser sess cId uId =
+  let path = printf "/api/v4/channels/%s/members/%s" (idString cId) (idString uId)
+  in mmDeleteRequest sess =<< mmPath path
+
+-- | Create a group channel containing the specified users in addition
+-- to the user making the request.
+mmCreateGroupChannel :: Session
+                     -> [UserId]
+                     -> IO Channel
+mmCreateGroupChannel sess@(Session cd _) uIds = do
+  let path = "/api/v4/channels/group"
+      fnname = "mmCreateGroupChannel"
+  uri <- mmPath path
+  runLoggerS sess fnname $
+    HttpRequest POST path (Just (toJSON uIds))
+  rsp <- mmPOST sess uri uIds
+  (raw, json) <- mmGetJSONBody fnname rsp
+  runLogger cd fnname $
+    HttpResponse 200 path (Just raw)
+  return json
+
+mmDeleteRequest :: Session -> URI -> IO ()
+mmDeleteRequest (Session cd token) path = do
+  rawRsp <- withConnection cd $ \con -> do
+    let request = Request
+          { rqURI     = path
+          , rqMethod  = DELETE
+          , rqHeaders = [ mkHeader HdrAuthorization ("Bearer " ++ getTokenString token)
+                        , mkHeader HdrHost          (T.unpack $ cdHostname cd)
+                        , mkHeader HdrUserAgent     defaultUserAgent
+                        ] ++ autoCloseToHeader (cdAutoClose cd)
+          , rqBody    = ""
+          }
+    simpleHTTP_ con request
+  rsp <- hoistE $ left ConnectionException rawRsp
+  assert200Response path rsp
 
 -- | This is for making a generic authenticated request.
 mmRequest :: Session -> URI -> IO Response_String
@@ -940,6 +1009,10 @@ mmPOST :: ToJSON t => Session -> URI -> t -> IO Response_String
 mmPOST sess path json =
   mmRawPOST sess path (BL.toStrict (encode json))
 
+mmPUT :: ToJSON t => Session -> URI -> t -> IO Response_String
+mmPUT sess path json =
+  mmRawPUT sess path (BL.toStrict (encode json))
+
 -- |
 -- route: @\/api\/v3\/teams\/{team_id}\/channels\/update_header@
 mmSetChannelHeader :: Session -> TeamId -> ChannelId -> T.Text -> IO Channel
@@ -974,9 +1047,31 @@ mmRawPOST (Session cd token) path content = do
   assert200Response path rsp
   return rsp
 
+mmRawPUT :: Session -> URI -> B.ByteString -> IO Response_String
+mmRawPUT (Session cd token) path content = do
+  rawRsp <- withConnection cd $ \con -> do
+    let contentLength = B.length content
+        request       = Request
+          { rqURI     = path
+          , rqMethod  = PUT
+          , rqHeaders = [ mkHeader HdrAuthorization ("Bearer " ++ getTokenString token)
+                        , mkHeader HdrHost          (T.unpack $ cdHostname cd)
+                        , mkHeader HdrUserAgent     defaultUserAgent
+                        , mkHeader HdrContentType   "application/json"
+                        , mkHeader HdrContentLength (show contentLength)
+                        ] ++ autoCloseToHeader (cdAutoClose cd)
+          , rqBody    = B.unpack content
+          }
+    simpleHTTP_ con request
+  rsp <- hoistE $ left ConnectionException rawRsp
+  assert200Response path rsp
+  return rsp
+
 assert200Response :: URI -> Response_String -> IO ()
 assert200Response path rsp =
-    when (rspCode rsp /= (2,0,0)) $
+    let is20x (2, 0, _) = True
+        is20x _ = False
+    in when (not $ is20x $ rspCode rsp) $
         let httpExc = HTTPResponseException $ "mmRequest: expected 200 response, got " <>
                                               (show $ rspCode rsp)
         in case eitherDecode $ BL.pack $ rspBody rsp of
@@ -987,3 +1082,6 @@ assert200Response path rsp =
                         in throwIO $ MattermostServerError newMsg
                     _ -> throwIO $ httpExc
             _ -> throwIO $ httpExc
+
+mmCloseSession :: Session -> IO ()
+mmCloseSession (Session cd _) = destroyConnectionData cd

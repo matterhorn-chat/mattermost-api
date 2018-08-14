@@ -7,6 +7,7 @@ module Network.Mattermost.WebSocket.Types
 , WebsocketEvent(..)
 , WEData(..)
 , WEBroadcast(..)
+, WebsocketAction(..)
 ) where
 
 import           Control.Applicative
@@ -48,6 +49,7 @@ data WebsocketEventType
   | WMAddedToTeam
   | WMLeaveTeam
   | WMUpdateTeam
+  | WMTeamDeleted
   | WMUserAdded
   | WMUserUpdated
   | WMUserRemoved
@@ -63,6 +65,7 @@ data WebsocketEventType
   | WMChannelViewed
   | WMChannelUpdated
   | WMEmojiAdded
+  | WMUserRoleUpdated
   deriving (Read, Show, Eq, Ord)
 
 instance FromJSON WebsocketEventType where
@@ -83,6 +86,7 @@ instance FromJSON WebsocketEventType where
     "status_change"      -> return WMStatusChange
     "hello"              -> return WMHello
     "update_team"        -> return WMUpdateTeam
+    "delete_team"        -> return WMTeamDeleted
     "reaction_added"     -> return WMReactionAdded
     "reaction_removed"   -> return WMReactionRemoved
     "channel_created"    -> return WMChannelCreated
@@ -94,6 +98,7 @@ instance FromJSON WebsocketEventType where
     "channel_viewed"     -> return WMChannelViewed
     "channel_updated"    -> return WMChannelUpdated
     "emoji_added"        -> return WMEmojiAdded
+    "user_role_updated"  -> return WMUserRoleUpdated
     _                    -> fail ("Unknown websocket message: " ++ show s)
 
 instance ToJSON WebsocketEventType where
@@ -114,6 +119,7 @@ instance ToJSON WebsocketEventType where
   toJSON WMStatusChange      = "status_change"
   toJSON WMHello             = "hello"
   toJSON WMUpdateTeam        = "update_team"
+  toJSON WMTeamDeleted       = "delete_team"
   toJSON WMReactionAdded     = "reaction_added"
   toJSON WMReactionRemoved   = "reaction_removed"
   toJSON WMChannelCreated    = "channel_created"
@@ -124,6 +130,7 @@ instance ToJSON WebsocketEventType where
   toJSON WMChannelViewed           = "channel_viewed"
   toJSON WMChannelUpdated          = "channel_updated"
   toJSON WMEmojiAdded              = "emoji_added"
+  toJSON WMUserRoleUpdated   = "user_role_updated"
 
 --
 
@@ -252,3 +259,29 @@ instance ToJSON WEBroadcast where
     , "user_id"    .= webUserId
     , "omit_users" .= webOmitUsers
     ]
+
+--
+
+data WebsocketAction =
+    UserTyping { waSeq          :: Int64
+               , waChannelId    :: ChannelId
+               , waParentPostId :: Maybe PostId
+               }
+  -- --  | GetStatuses { waSeq :: Int64 }
+  -- --  | GetStatusesByIds { waSeq :: Int64, waUserIds :: [UserId] }
+  deriving (Read, Show, Eq, Ord)
+
+instance ToJSON WebsocketAction where
+  toJSON (UserTyping s cId pId) = A.object
+    [ "seq"    .= s
+    , "action" .= T.pack "user_typing"
+    , "data"   .= A.object
+                  [ "channel_id" .= unId (toId cId)
+                  , "parent_id"  .= maybe "" (unId . toId) pId
+                  ]
+    ]
+
+instance WebSocketsData WebsocketAction where
+  fromDataMessage _ = error "Not implemented"
+  fromLazyByteString _ = error "Not implemented"
+  toLazyByteString = A.encode

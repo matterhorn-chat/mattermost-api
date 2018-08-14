@@ -5,10 +5,14 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-module Network.Mattermost.Types where
+module Network.Mattermost.Types
+    ( module Network.Mattermost.Types
+    , module Network.Mattermost.Types.Base
+    )
+    where
 
 import           Control.Applicative
-import           Text.Printf ( printf )
+import           Text.Printf ( PrintfArg(..), printf )
 import           Data.Hashable ( Hashable )
 import qualified Data.Aeson as A
 import           Data.Aeson ( (.:), (.=), (.:?), (.!=) )
@@ -20,18 +24,36 @@ import           Data.Aeson.Types ( ToJSONKey
                                   , typeMismatch
                                   )
 import qualified Data.HashMap.Strict as HM
+import           Data.Maybe (fromMaybe)
 import           Data.Monoid ( (<>) )
+import qualified Data.Pool as Pool
 import           Data.Ratio ( (%) )
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as S
+import           Data.Time (NominalDiffTime)
 import           Data.Text (Text)
 import qualified Data.Text as T
-import           Data.Time.Clock ( UTCTime, getCurrentTime )
+import           Data.Time.Clock ( getCurrentTime )
 import           Data.Time.Clock.POSIX ( posixSecondsToUTCTime
                                        , utcTimeToPOSIXSeconds )
-import           Network.Connection (ConnectionContext, initConnectionContext)
+import           Network.Connection ( ConnectionContext
+                                    , initConnectionContext
+                                    )
 import           Network.Mattermost.Types.Base
 import           Network.Mattermost.Types.Internal
+import           Network.Mattermost.Util (mkConnection)
+
+newtype UserText = UserText Text
+                 deriving (Eq, Show, Ord, Read)
+
+instance A.ToJSON UserText where
+    toJSON (UserText t) = A.toJSON t
+
+instance A.FromJSON UserText where
+    parseJSON v = UserText <$> A.parseJSON v
+
+unsafeUserText :: UserText -> Text
+unsafeUserText (UserText t) = t
 
 runLogger :: ConnectionData -> String -> LogEventType -> IO ()
 runLogger ConnectionData { cdLogger = Just l } n ev =
@@ -45,38 +67,50 @@ maybeFail :: Parser a -> Parser (Maybe a)
 maybeFail p = (Just <$> p) <|> (return Nothing)
 
 -- | Creates a structure representing a TLS connection to the server.
-mkConnectionData :: Hostname -> Port -> ConnectionContext -> ConnectionData
-mkConnectionData host port ctx = ConnectionData
-  { cdHostname      = host
-  , cdPort          = port
-  , cdConnectionCtx = ctx
-  , cdAutoClose     = Yes
-  , cdToken         = Nothing
-  , cdLogger        = Nothing
-  , cdUseTLS        = True
+mkConnectionData :: Hostname -> Port -> Pool.Pool MMConn -> ConnectionContext -> ConnectionData
+mkConnectionData host port pool ctx = ConnectionData
+  { cdHostname       = host
+  , cdPort           = port
+  , cdConnectionCtx  = ctx
+  , cdAutoClose      = No
+  , cdConnectionPool = pool
+  , cdToken          = Nothing
+  , cdLogger         = Nothing
+  , cdUseTLS         = True
   }
 
 -- | Plaintext HTTP instead of a TLS connection.
-mkConnectionDataInsecure :: Hostname -> Port -> ConnectionContext -> ConnectionData
-mkConnectionDataInsecure host port ctx = ConnectionData
-  { cdHostname      = host
-  , cdPort          = port
-  , cdConnectionCtx = ctx
-  , cdAutoClose     = Yes
-  , cdToken         = Nothing
-  , cdLogger        = Nothing
-  , cdUseTLS        = False
+mkConnectionDataInsecure :: Hostname -> Port -> Pool.Pool MMConn -> ConnectionContext -> ConnectionData
+mkConnectionDataInsecure host port pool ctx = ConnectionData
+  { cdHostname       = host
+  , cdPort           = port
+  , cdConnectionCtx  = ctx
+  , cdAutoClose      = No
+  , cdConnectionPool = pool
+  , cdToken          = Nothing
+  , cdLogger         = Nothing
+  , cdUseTLS         = False
   }
 
-initConnectionData :: Hostname -> Port -> IO ConnectionData
-initConnectionData host port = do
-  ctx <- initConnectionContext
-  return (mkConnectionData host port ctx)
+createPool :: Hostname -> Port -> ConnectionContext -> ConnectionPoolConfig -> Bool -> IO (Pool.Pool MMConn)
+createPool host port ctx cpc secure =
+  Pool.createPool (mkConnection ctx host port secure) closeMMConn
+                  (cpStripesCount cpc) (cpIdleConnTimeout cpc) (cpMaxConnCount cpc)
 
-initConnectionDataInsecure :: Hostname -> Port -> IO ConnectionData
-initConnectionDataInsecure host port = do
-  ctx <- initConnectionContext
-  return (mkConnectionDataInsecure host port ctx)
+initConnectionData :: Hostname -> Port -> ConnectionPoolConfig -> IO ConnectionData
+initConnectionData host port cpc = do
+  ctx  <- initConnectionContext
+  pool <- createPool host port ctx cpc True
+  return (mkConnectionData host port pool ctx)
+
+initConnectionDataInsecure :: Hostname -> Port -> ConnectionPoolConfig -> IO ConnectionData
+initConnectionDataInsecure host port cpc = do
+  ctx  <- initConnectionContext
+  pool <- createPool host port ctx cpc False
+  return (mkConnectionDataInsecure host port pool ctx)
+
+destroyConnectionData :: ConnectionData -> IO ()
+destroyConnectionData = Pool.destroyAllResources . cdConnectionPool
 
 withLogger :: ConnectionData -> Logger -> ConnectionData
 withLogger cd logger = cd { cdLogger = Just logger }
@@ -84,15 +118,19 @@ withLogger cd logger = cd { cdLogger = Just logger }
 noLogger :: ConnectionData -> ConnectionData
 noLogger cd = cd { cdLogger = Nothing }
 
+data ConnectionPoolConfig = ConnectionPoolConfig
+  { cpStripesCount    :: Int
+  , cpIdleConnTimeout :: NominalDiffTime
+  , cpMaxConnCount    :: Int
+  }
+
+defaultConnectionPoolConfig :: ConnectionPoolConfig
+defaultConnectionPoolConfig = ConnectionPoolConfig 1 30 5
+
 data Session = Session
   { sessConn :: ConnectionData
   , sessTok  :: Token
   }
-
-mkSession :: ConnectionData -> Token -> Session
-mkSession = Session
-
---
 
 data Login
   = Login
@@ -116,6 +154,17 @@ instance A.ToJSON SetChannelHeader where
       A.object ["channel_id" A..= cId
                ,"channel_header" A..= p
                ]
+
+data SearchPosts = SearchPosts
+ { searchPostsTerms      :: Text
+ , searchPostsIsOrSearch :: Bool
+ }
+
+instance A.ToJSON SearchPosts where
+ toJSON (SearchPosts t os) =
+     A.object ["terms" A..= t
+              ,"is_or_search" A..= os
+              ]
 
 data Type = Ordinary
           | Direct
@@ -178,18 +227,21 @@ instance IsId TeamId where
   toId   = unTI
   fromId = TI
 
+instance PrintfArg TeamId where
+  formatArg = formatArg . idString
+
 data Team
   = Team
   { teamId              :: TeamId
-  , teamCreateAt        :: UTCTime
-  , teamUpdateAt        :: UTCTime
-  , teamDeleteAt        :: UTCTime
-  , teamDisplayName     :: Text
-  , teamName            :: Text
-  , teamEmail           :: Text
+  , teamCreateAt        :: ServerTime
+  , teamUpdateAt        :: ServerTime
+  , teamDeleteAt        :: ServerTime
+  , teamDisplayName     :: UserText
+  , teamName            :: UserText
+  , teamEmail           :: UserText
   , teamType            :: Type
-  , teamCompanyName     :: Text
-  , teamAllowedDomains  :: Text
+  , teamCompanyName     :: UserText
+  , teamAllowedDomains  :: UserText
   , teamInviteId        :: Id
   , teamAllowOpenInvite :: Bool
   }
@@ -201,9 +253,9 @@ instance HasId Team TeamId where
 instance A.FromJSON Team where
   parseJSON = A.withObject "Team" $ \v -> do
     teamId              <- v .: "id"
-    teamCreateAt        <- millisecondsToUTCTime <$> v .: "create_at"
-    teamUpdateAt        <- millisecondsToUTCTime <$> v .: "update_at"
-    teamDeleteAt        <- millisecondsToUTCTime <$> v .: "delete_at"
+    teamCreateAt        <- timeFromServer <$> v .: "create_at"
+    teamUpdateAt        <- timeFromServer <$> v .: "update_at"
+    teamDeleteAt        <- timeFromServer <$> v .: "delete_at"
     teamDisplayName     <- v .: "display_name"
     teamName            <- v .: "name"
     teamEmail           <- v .: "email"
@@ -227,12 +279,22 @@ instance A.FromJSON TeamMember where
     teamMemberRoles  <- v .: "roles"
     return TeamMember { .. }
 
+instance A.ToJSON TeamMember where
+  toJSON TeamMember { .. } = A.object
+    [ "user_id" .= teamMemberUserId
+    , "team_id" .= teamMemberTeamId
+    , "roles"   .= teamMemberRoles
+    ]
 --
 
 data WithDefault a
   = IsValue a
   | Default
     deriving (Read, Show, Eq, Ord)
+
+instance A.ToJSON t => A.ToJSON (WithDefault t) where
+  toJSON Default = A.String "default"
+  toJSON (IsValue x) = A.toJSON x
 
 instance A.FromJSON t => A.FromJSON (WithDefault t) where
   parseJSON (A.String "default") = return Default
@@ -248,33 +310,51 @@ data NotifyOption
   | NotifyOptionNone
     deriving (Read, Show, Eq, Ord)
 
+instance A.ToJSON NotifyOption where
+  toJSON NotifyOptionAll     = A.String "all"
+  toJSON NotifyOptionMention = A.String "mention"
+  toJSON NotifyOptionNone    = A.String "none"
+
 instance A.FromJSON NotifyOption where
   parseJSON (A.String "all")     = return NotifyOptionAll
   parseJSON (A.String "mention") = return NotifyOptionMention
   parseJSON (A.String "none")    = return NotifyOptionNone
   parseJSON xs                   = fail ("Unknown NotifyOption value: " ++ show xs)
 
-data NotifyProps = NotifyProps
-  { notifyPropsMentionKeys  :: [Text]
-  , notifyPropsEmail        :: WithDefault Bool
-  , notifyPropsPush         :: WithDefault NotifyOption
-  , notifyPropsDesktop      :: WithDefault NotifyOption
-  , notifyPropsDesktopSound :: WithDefault Bool
-  , notifyPropsChannel      :: WithDefault Bool
-  , notifyPropsFirstName    :: WithDefault Bool
-  , notifyPropsMarkUnread   :: WithDefault NotifyOption
+data UserNotifyProps = UserNotifyProps
+  { userNotifyPropsMentionKeys  :: [UserText]
+  , userNotifyPropsEmail        :: Bool
+  , userNotifyPropsPush         :: NotifyOption
+  , userNotifyPropsDesktop      :: NotifyOption
+  , userNotifyPropsDesktopSound :: Bool
+  , userNotifyPropsChannel      :: Bool
+  , userNotifyPropsFirstName    :: Bool
   } deriving (Eq, Show, Read, Ord)
 
-emptyNotifyProps :: NotifyProps
-emptyNotifyProps = NotifyProps
-  { notifyPropsMentionKeys  = []
-  , notifyPropsEmail        = IsValue False
-  , notifyPropsPush         = IsValue NotifyOptionNone
-  , notifyPropsDesktop      = IsValue NotifyOptionNone
-  , notifyPropsDesktopSound = IsValue False
-  , notifyPropsChannel      = IsValue False
-  , notifyPropsFirstName    = IsValue False
-  , notifyPropsMarkUnread   = IsValue NotifyOptionNone
+data ChannelNotifyProps = ChannelNotifyProps
+  { channelNotifyPropsEmail      :: WithDefault Bool
+  , channelNotifyPropsDesktop    :: WithDefault NotifyOption
+  , channelNotifyPropsPush       :: WithDefault NotifyOption
+  , channelNotifyPropsMarkUnread :: WithDefault NotifyOption
+  } deriving (Eq, Show, Read, Ord)
+
+emptyUserNotifyProps :: UserNotifyProps
+emptyUserNotifyProps = UserNotifyProps
+  { userNotifyPropsMentionKeys  = []
+  , userNotifyPropsEmail        = False
+  , userNotifyPropsPush         = NotifyOptionNone
+  , userNotifyPropsDesktop      = NotifyOptionNone
+  , userNotifyPropsDesktopSound = False
+  , userNotifyPropsChannel      = False
+  , userNotifyPropsFirstName    = False
+  }
+
+emptyChannelNotifyProps :: ChannelNotifyProps
+emptyChannelNotifyProps = ChannelNotifyProps
+  { channelNotifyPropsEmail      = Default
+  , channelNotifyPropsPush       = Default
+  , channelNotifyPropsDesktop    = Default
+  , channelNotifyPropsMarkUnread = Default
   }
 
 newtype BoolString = BoolString { fromBoolString :: Bool }
@@ -286,22 +366,49 @@ instance A.FromJSON BoolString where
       "false" -> return (BoolString False)
       _       -> fail "Expected \"true\" or \"false\""
 
-instance A.FromJSON NotifyProps where
-  parseJSON = A.withObject "NotifyProps" $ \v -> do
-    notifyPropsMentionKeys  <- T.split (==',') <$>
-                                 (v .:? "mention_keys" .!= "")
-    notifyPropsEmail        <- fmap fromBoolString <$>
-                                 (v .:? "email" .!= IsValue (BoolString True))
-    notifyPropsPush         <- v .:? "push" .!= IsValue NotifyOptionMention
-    notifyPropsDesktop      <- v .:? "desktop" .!= IsValue NotifyOptionAll
-    notifyPropsDesktopSound <- fmap fromBoolString <$>
-                                 (v .:? "desktop_sound" .!= IsValue (BoolString True))
-    notifyPropsChannel      <- fmap fromBoolString <$>
-                                 (v .:? "channel" .!= IsValue (BoolString True))
-    notifyPropsFirstName    <- fmap fromBoolString <$>
-                                 (v .:? "first_name" .!= IsValue (BoolString False))
-    notifyPropsMarkUnread   <- v .:? "mark_unread" .!= IsValue NotifyOptionAll
-    return NotifyProps { .. }
+instance A.ToJSON BoolString where
+  toJSON (BoolString True) = A.String "true"
+  toJSON (BoolString False) = A.String "false"
+
+instance A.FromJSON UserNotifyProps where
+  parseJSON = A.withObject "UserNotifyProps" $ \v -> do
+    userNotifyPropsMentionKeys  <- (fmap UserText) <$> T.split (==',') <$>
+                                     (v .:? "mention_keys" .!= "")
+    userNotifyPropsPush         <- v .:? "push" .!= NotifyOptionMention
+    userNotifyPropsDesktop      <- v .:? "desktop" .!= NotifyOptionAll
+    userNotifyPropsEmail        <- fromBoolString <$> (v .:? "email"         .!= BoolString True)
+    userNotifyPropsDesktopSound <- fromBoolString <$> (v .:? "desktop_sound" .!= BoolString True)
+    userNotifyPropsChannel      <- fromBoolString <$> (v .:? "channel"       .!= BoolString True)
+    userNotifyPropsFirstName    <- fromBoolString <$> (v .:? "first_name"    .!= BoolString False)
+    return UserNotifyProps { .. }
+
+instance A.ToJSON UserNotifyProps where
+  toJSON UserNotifyProps { .. } = A.object
+    [ "mention_keys"  .= T.intercalate "," (unsafeUserText <$> userNotifyPropsMentionKeys)
+    , "push"          .= userNotifyPropsPush
+    , "desktop"       .= userNotifyPropsDesktop
+    , "email"         .= BoolString userNotifyPropsEmail
+    , "desktop_sound" .= BoolString userNotifyPropsDesktopSound
+    , "channel"       .= BoolString userNotifyPropsChannel
+    , "first_name"    .= BoolString userNotifyPropsFirstName
+    ]
+
+instance A.FromJSON ChannelNotifyProps where
+  parseJSON = A.withObject "ChannelNotifyProps" $ \v -> do
+    channelNotifyPropsEmail      <- fmap fromBoolString <$>
+                                    (v .:? "email" .!= IsValue (BoolString True))
+    channelNotifyPropsPush       <- v .:? "push" .!= IsValue NotifyOptionMention
+    channelNotifyPropsDesktop    <- v .:? "desktop" .!= IsValue NotifyOptionAll
+    channelNotifyPropsMarkUnread <- v .:? "mark_unread" .!= IsValue NotifyOptionAll
+    return ChannelNotifyProps { .. }
+
+instance A.ToJSON ChannelNotifyProps where
+  toJSON ChannelNotifyProps { .. } = A.object
+    [ "email"       .= fmap BoolString channelNotifyPropsEmail
+    , "push"        .= channelNotifyPropsPush
+    , "desktop"     .= channelNotifyPropsDesktop
+    , "mark_unread" .= channelNotifyPropsMarkUnread
+    ]
 
 --
 
@@ -312,21 +419,24 @@ instance IsId ChannelId where
   toId   = unCI
   fromId = CI
 
+instance PrintfArg ChannelId where
+  formatArg = formatArg . idString
+
 data Channel
   = Channel
   { channelId            :: ChannelId
-  , channelCreateAt      :: UTCTime
-  , channelUpdateAt      :: UTCTime
-  , channelDeleteAt      :: UTCTime
+  , channelCreateAt      :: ServerTime
+  , channelUpdateAt      :: ServerTime
+  , channelDeleteAt      :: ServerTime
   , channelTeamId        :: Maybe TeamId
   , channelType          :: Type
-  , channelDisplayName   :: Text
-  , channelName          :: Text
-  , channelHeader        :: Text
-  , channelPurpose       :: Text
-  , channelLastPostAt    :: UTCTime
+  , channelDisplayName   :: UserText
+  , channelName          :: UserText
+  , channelHeader        :: UserText
+  , channelPurpose       :: UserText
+  , channelLastPostAt    :: ServerTime
   , channelTotalMsgCount :: Int
-  , channelExtraUpdateAt :: UTCTime
+  , channelExtraUpdateAt :: ServerTime
   , channelCreatorId     :: Maybe UserId
   } deriving (Read, Show, Eq, Ord)
 
@@ -336,18 +446,18 @@ instance HasId Channel ChannelId where
 instance A.FromJSON Channel where
   parseJSON = A.withObject "Channel" $ \v -> do
     channelId              <- v .: "id"
-    channelCreateAt        <- millisecondsToUTCTime <$> v .: "create_at"
-    channelUpdateAt        <- millisecondsToUTCTime <$> v .: "update_at"
-    channelDeleteAt        <- millisecondsToUTCTime <$> v .: "delete_at"
+    channelCreateAt        <- timeFromServer <$> v .: "create_at"
+    channelUpdateAt        <- timeFromServer <$> v .: "update_at"
+    channelDeleteAt        <- timeFromServer <$> v .: "delete_at"
     channelTeamId          <- maybeFail (v .: "team_id")
     channelType            <- v .: "type"
     channelDisplayName     <- v .: "display_name"
     channelName            <- v .: "name"
     channelHeader          <- v .: "header"
     channelPurpose         <- v .: "purpose"
-    channelLastPostAt      <- millisecondsToUTCTime <$> v .: "last_post_at"
+    channelLastPostAt      <- timeFromServer <$> v .: "last_post_at"
     channelTotalMsgCount   <- v .: "total_msg_count"
-    channelExtraUpdateAt   <- millisecondsToUTCTime <$> v .: "extra_update_at"
+    channelExtraUpdateAt   <- timeFromServer <$> v .: "extra_update_at"
     channelCreatorId       <- maybeFail (v .: "creator_id")
     return Channel { .. }
 
@@ -370,11 +480,11 @@ data ChannelData
   { channelDataChannelId    :: ChannelId
   , channelDataUserId       :: UserId
   , channelDataRoles        :: Text
-  , channelDataLastViewedAt :: UTCTime
+  , channelDataLastViewedAt :: ServerTime
   , channelDataMsgCount     :: Int
   , channelDataMentionCount :: Int
-  , channelDataNotifyProps  :: NotifyProps
-  , channelDataLastUpdateAt :: UTCTime
+  , channelDataNotifyProps  :: ChannelNotifyProps
+  , channelDataLastUpdateAt :: ServerTime
   } deriving (Read, Show, Eq)
 
 instance A.FromJSON ChannelData where
@@ -382,11 +492,11 @@ instance A.FromJSON ChannelData where
     channelDataChannelId <- o .: "channel_id"
     channelDataUserId    <- o .: "user_id"
     channelDataRoles     <- o .: "roles"
-    channelDataLastViewedAt <- millisecondsToUTCTime <$> o .: "last_viewed_at"
+    channelDataLastViewedAt <- timeFromServer <$> o .: "last_viewed_at"
     channelDataMsgCount     <- o .: "msg_count"
     channelDataMentionCount <- o .: "mention_count"
     channelDataNotifyProps  <- o .: "notify_props"
-    channelDataLastUpdateAt <- millisecondsToUTCTime <$> o .: "last_update_at"
+    channelDataLastUpdateAt <- timeFromServer <$> o .: "last_update_at"
     return ChannelData { .. }
 
 data ChannelWithData = ChannelWithData Channel ChannelData
@@ -406,6 +516,7 @@ data MinChannel = MinChannel
   , minChannelPurpose     :: Maybe Text
   , minChannelHeader      :: Maybe Text
   , minChannelType        :: Type
+  , minChannelTeamId      :: TeamId
   } deriving (Read, Eq, Show)
 
 instance A.ToJSON MinChannel where
@@ -413,6 +524,7 @@ instance A.ToJSON MinChannel where
     [ "name"         .= minChannelName
     , "display_name" .= minChannelDisplayName
     , "type"         .= minChannelType
+    , "team_id"      .= minChannelTeamId
     ] ++
     [ "purpose" .= p | Just p <- [minChannelPurpose] ] ++
     [ "header"  .= h | Just h <- [minChannelHeader] ]
@@ -424,6 +536,21 @@ newtype UserId = UI { unUI :: Id }
 instance IsId UserId where
   toId   = unUI
   fromId = UI
+
+instance PrintfArg UserId where
+  formatArg = formatArg . idString
+
+data UserParam
+  = UserById UserId
+  | UserMe
+  deriving (Read, Show, Eq, Ord)
+
+instance PrintfArg UserParam where
+  formatArg = formatArg . userParamString
+
+userParamString :: UserParam -> Text
+userParamString (UserById uid) = idString uid
+userParamString UserMe         = "me"
 
 --
 
@@ -449,30 +576,30 @@ instance HasId User UserId where
 data User
   = User
   { userId                 :: UserId
-  , userCreateAt           :: UTCTime
-  , userUpdateAt           :: UTCTime
-  , userDeleteAt           :: UTCTime
+  , userCreateAt           :: ServerTime
+  , userUpdateAt           :: ServerTime
+  , userDeleteAt           :: ServerTime
   , userUsername           :: Text
   , userAuthData           :: Text
   , userAuthService        :: Text
-  , userEmail              :: Text
+  , userEmail              :: UserText
   , userEmailVerified      :: Bool
-  , userNickname           :: Text
-  , userFirstName          :: Text
-  , userLastName           :: Text
+  , userNickname           :: UserText
+  , userFirstName          :: UserText
+  , userLastName           :: UserText
   , userRoles              :: Text
-  , userNotifyProps        :: NotifyProps
-  , userLastPasswordUpdate :: Maybe UTCTime
-  , userLastPictureUpdate  :: Maybe UTCTime
+  , userNotifyProps        :: UserNotifyProps
+  , userLastPasswordUpdate :: Maybe ServerTime
+  , userLastPictureUpdate  :: Maybe ServerTime
   , userLocale             :: Text
   } deriving (Read, Show, Eq)
 
 instance A.FromJSON User where
   parseJSON = A.withObject "User" $ \o -> do
     userId                 <- o .: "id"
-    userCreateAt           <- millisecondsToUTCTime <$> o .: "create_at"
-    userUpdateAt           <- millisecondsToUTCTime <$> o .: "update_at"
-    userDeleteAt           <- millisecondsToUTCTime <$> o .: "delete_at"
+    userCreateAt           <- timeFromServer <$> o .: "create_at"
+    userUpdateAt           <- timeFromServer <$> o .: "update_at"
+    userDeleteAt           <- timeFromServer <$> o .: "delete_at"
     userUsername           <- o .:  "username"
     userAuthData           <- o .:  "auth_data"
     userAuthService        <- o .:  "auth_service"
@@ -482,10 +609,10 @@ instance A.FromJSON User where
     userFirstName          <- o .:  "first_name"
     userLastName           <- o .:  "last_name"
     userRoles              <- o .:  "roles"
-    userNotifyProps        <- o .:? "notify_props" .!= emptyNotifyProps
-    userLastPasswordUpdate <- (millisecondsToUTCTime <$>) <$>
+    userNotifyProps        <- o .:? "notify_props" .!= emptyUserNotifyProps
+    userLastPasswordUpdate <- (timeFromServer <$>) <$>
                               (o .:? "last_password_update")
-    userLastPictureUpdate  <- (millisecondsToUTCTime <$>) <$> (o .:? "last_picture_update")
+    userLastPictureUpdate  <- (timeFromServer <$>) <$> (o .:? "last_picture_update")
     userLocale             <- o .: "locale"
     return User { .. }
 
@@ -561,6 +688,16 @@ data PostProps
   , postPropsOldHeader        :: Maybe Text
   } deriving (Read, Show, Eq)
 
+emptyPostProps :: PostProps
+emptyPostProps
+  = PostProps
+  { postPropsOverrideIconUrl  = Nothing
+  , postPropsOverrideUsername = Nothing
+  , postPropsAttachments      = Nothing
+  , postPropsNewHeader        = Nothing
+  , postPropsOldHeader        = Nothing
+  }
+
 instance A.FromJSON PostProps where
   parseJSON = A.withObject "Props" $ \v -> do
     postPropsOverrideIconUrl  <- v .:? "override_icon_url"
@@ -585,6 +722,9 @@ instance IsId PostId where
   toId   = unPI
   fromId = PI
 
+instance PrintfArg PostId where
+  formatArg = formatArg . idString
+
 newtype FileId = FI { unFI :: Id }
   deriving (Read, Show, Eq, Ord, Hashable, ToJSON, ToJSONKey, FromJSONKey, FromJSON)
 
@@ -592,9 +732,12 @@ instance IsId FileId where
   toId = unFI
   fromId = FI
 
+instance PrintfArg FileId where
+  formatArg = formatArg . idString
+
 urlForFile :: FileId -> Text
 urlForFile fId =
-  "/api/v3/files/" <> idString fId <> "/get"
+  "/api/v4/files/" <> idString fId
 
 data PostType
   = PostTypeJoinChannel
@@ -644,12 +787,13 @@ data Post
   , postFileIds       :: Seq FileId
   , postId            :: PostId
   , postType          :: PostType
-  , postMessage       :: Text
-  , postDeleteAt      :: Maybe UTCTime
+  , postMessage       :: UserText
+  , postDeleteAt      :: Maybe ServerTime
   , postHashtags      :: Text
-  , postUpdateAt      :: UTCTime
+  , postUpdateAt      :: ServerTime
+  , postEditAt        :: ServerTime
   , postUserId        :: Maybe UserId
-  , postCreateAt      :: UTCTime
+  , postCreateAt      :: ServerTime
   , postParentId      :: Maybe PostId
   , postChannelId     :: ChannelId
   , postHasReactions  :: Bool
@@ -662,20 +806,21 @@ instance A.FromJSON Post where
   parseJSON = A.withObject "Post" $ \v -> do
     postPendingPostId <- maybeFail (v .: "pending_post_id")
     postOriginalId    <- maybeFail (v .: "original_id")
-    postProps         <- v .: "props"
+    postProps         <- fromMaybe emptyPostProps <$> v .: "props"
     postRootId        <- maybeFail (v .: "root_id")
-    postFileIds       <- (v .: "file_ids") <|> (return mempty)
+    postFileIds       <- v .:? "file_ids" .!= mempty
     postId            <- v .: "id"
     postType          <- v .: "type"
     postMessage       <- v .: "message"
-    postDeleteAt      <- (millisecondsToUTCTime <$>) <$> v .:? "delete_at"
+    postDeleteAt      <- (timeFromServer <$>) <$> v .:? "delete_at"
     postHashtags      <- v .: "hashtags"
-    postUpdateAt      <- millisecondsToUTCTime <$> v .: "update_at"
+    postUpdateAt      <- timeFromServer <$> v .: "update_at"
+    postEditAt        <- timeFromServer <$> v .: "edit_at"
     postUserId        <- maybeFail (v .: "user_id")
-    postCreateAt      <- millisecondsToUTCTime <$> v .: "create_at"
+    postCreateAt      <- timeFromServer <$> v .: "create_at"
     postParentId      <- maybeFail (v .: "parent_id")
     postChannelId     <- v .: "channel_id"
-    postHasReactions  <- (v .: "has_reactions") <|> (return False)
+    postHasReactions  <- v .:? "has_reactions" .!= False
     return Post { .. }
 
 instance A.ToJSON Post where
@@ -688,11 +833,11 @@ instance A.ToJSON Post where
     , "id"              .= postId
     , "type"            .= postType
     , "message"         .= postMessage
-    , "delete_at"       .= (utcTimeToMilliseconds <$> postDeleteAt)
+    , "delete_at"       .= (timeToServer <$> postDeleteAt)
     , "hashtags"        .= postHashtags
-    , "update_at"       .= utcTimeToMilliseconds postUpdateAt
+    , "update_at"       .= timeToServer postUpdateAt
     , "user_id"         .= postUserId
-    , "create_at"       .= utcTimeToMilliseconds postCreateAt
+    , "create_at"       .= timeToServer postCreateAt
     , "parent_id"       .= postParentId
     , "channel_id"      .= postChannelId
     , "has_reactions"   .= postHasReactions
@@ -701,7 +846,7 @@ instance A.ToJSON Post where
 data PendingPost
   = PendingPost
   { pendingPostChannelId :: ChannelId
-  , pendingPostCreateAt  :: Maybe UTCTime
+  , pendingPostCreateAt  :: Maybe ServerTime
   , pendingPostFilenames :: Seq FilePath
   , pendingPostMessage   :: Text
   , pendingPostId        :: PendingPostId
@@ -713,7 +858,7 @@ data PendingPost
 instance A.ToJSON PendingPost where
   toJSON post = A.object
     [ "channel_id"      .= pendingPostChannelId post
-    , "create_at"       .= maybe 0 utcTimeToMilliseconds (pendingPostCreateAt post)
+    , "create_at"       .= maybe 0 timeToServer (pendingPostCreateAt post)
     , "filenames"       .= pendingPostFilenames post
     , "message"         .= pendingPostMessage   post
     , "pending_post_id" .= pendingPostId        post
@@ -734,8 +879,10 @@ instance HasId PendingPost PendingPostId where
 
 mkPendingPost :: Text -> UserId -> ChannelId -> IO PendingPost
 mkPendingPost msg userid channelid = do
+  -- locally generating a ServerTime: ok because it's just used for an
+  -- initial string ID for this post and not an actual time value.
   now <- getCurrentTime
-  let ms  = utcTimeToMilliseconds now :: Int
+  let ms  = timeToServer (ServerTime now) :: Int
       pid = T.pack $ printf "%s:%d" (idString userid) ms
   return PendingPost
     { pendingPostId        = PPI (Id pid)
@@ -753,9 +900,9 @@ data FileInfo
   { fileInfoId         :: FileId
   , fileInfoUserId     :: UserId
   , fileInfoPostId     :: Maybe PostId
-  , fileInfoCreateAt   :: UTCTime
-  , fileInfoUpdateAt   :: UTCTime
-  , fileInfoDeleteAt   :: UTCTime
+  , fileInfoCreateAt   :: ServerTime
+  , fileInfoUpdateAt   :: ServerTime
+  , fileInfoDeleteAt   :: ServerTime
   , fileInfoName       :: Text
   , fileInfoExtension  :: Text
   , fileInfoSize       :: Int
@@ -765,21 +912,24 @@ data FileInfo
   , fileInfoHasPreview :: Bool
   } deriving (Read, Show, Eq)
 
+instance ToJSON FileInfo where
+  toJSON = error "file info"
+
 instance FromJSON FileInfo where
   parseJSON = A.withObject "file_info" $ \o -> do
     fileInfoId         <- o .: "id"
     fileInfoUserId     <- o .: "user_id"
     fileInfoPostId     <- o .: "post_id"
-    fileInfoCreateAt   <- millisecondsToUTCTime <$> o .: "create_at"
-    fileInfoUpdateAt   <- millisecondsToUTCTime <$> o .: "update_at"
-    fileInfoDeleteAt   <- millisecondsToUTCTime <$> o .: "delete_at"
+    fileInfoCreateAt   <- timeFromServer <$> o .: "create_at"
+    fileInfoUpdateAt   <- timeFromServer <$> o .: "update_at"
+    fileInfoDeleteAt   <- timeFromServer <$> o .: "delete_at"
     fileInfoName       <- o .: "name"
     fileInfoExtension  <- o .: "extension"
     fileInfoSize       <- o .: "size"
     fileInfoMimeType   <- o .: "mime_type"
     fileInfoWidth      <- o .:? "width"
     fileInfoHeight     <- o .:? "height"
-    fileInfoHasPreview <- (o .: "has_preview_image") <|> pure False
+    fileInfoHasPreview <- o .:? "has_preview_image" .!= False
     return FileInfo { .. }
 
 --
@@ -798,11 +948,15 @@ instance A.FromJSON Posts where
 
 --
 
-millisecondsToUTCTime :: Integer -> UTCTime
-millisecondsToUTCTime ms = posixSecondsToUTCTime (fromRational (ms%1000))
+-- The JSON specification of times exchanged with the server are in
+-- integer milliSeconds; convert to and from the local ServerTime
+-- internal value.
 
-utcTimeToMilliseconds :: UTCTime -> Int
-utcTimeToMilliseconds utc = truncate ((utcTimeToPOSIXSeconds utc)*1000)
+timeFromServer :: Integer -> ServerTime
+timeFromServer ms = ServerTime $ posixSecondsToUTCTime (fromRational (ms%1000))
+
+timeToServer :: ServerTime -> Int
+timeToServer time = truncate ((utcTimeToPOSIXSeconds $ withServerTime time)*1000)
 
 --
 
@@ -812,6 +966,7 @@ data MinCommand
   , minComCommand   :: Text
   , minComParentId  :: Maybe PostId
   , minComRootId    :: Maybe PostId
+  , minComTeamId    :: TeamId
   } deriving (Read, Show, Eq)
 
 instance A.ToJSON MinCommand where
@@ -820,6 +975,7 @@ instance A.ToJSON MinCommand where
     , "command"   .= minComCommand
     , "parent_id" .= minComParentId
     , "root_id" .= minComRootId
+    , "team_id" .= minComTeamId
     ]
 
 --
@@ -828,9 +984,9 @@ data Command
   = Command
   { commandId               :: CommandId
   , commandToken            :: Token
-  , commandCreateAt         :: UTCTime
-  , commandUpdateAt         :: UTCTime
-  , commandDeleteAt         :: UTCTime
+  , commandCreateAt         :: ServerTime
+  , commandUpdateAt         :: ServerTime
+  , commandDeleteAt         :: ServerTime
   , commandCreatorId        :: UserId
   , commandTeamId           :: TeamId
   , commandTrigger          :: Text
@@ -854,6 +1010,9 @@ instance IsId CommandId where
 
 instance HasId Command CommandId where
   getId = commandId
+
+instance PrintfArg CommandId where
+  formatArg = formatArg . idString
 
 data CommandResponseType
   = CommandResponseInChannel
@@ -926,7 +1085,7 @@ data Reaction
   { reactionUserId    :: UserId
   , reactionPostId    :: PostId
   , reactionEmojiName :: Text
-  , reactionCreateAt  :: UTCTime
+  , reactionCreateAt  :: ServerTime
   } deriving (Read, Show, Eq)
 
 instance A.FromJSON Reaction where
@@ -934,7 +1093,7 @@ instance A.FromJSON Reaction where
     reactionUserId    <- v .: "user_id"
     reactionPostId    <- v .: "post_id"
     reactionEmojiName <- v .: "emoji_name"
-    reactionCreateAt  <- millisecondsToUTCTime <$> v .: "create_at"
+    reactionCreateAt  <- timeFromServer <$> v .: "create_at"
     return Reaction { .. }
 
 instance A.ToJSON Reaction where
@@ -942,13 +1101,14 @@ instance A.ToJSON Reaction where
     [ "user_id"    .= reactionUserId
     , "post_id"    .= reactionPostId
     , "emoji_name" .= reactionEmojiName
-    , "create_at"  .= utcTimeToMilliseconds reactionCreateAt
+    , "create_at"  .= timeToServer reactionCreateAt
     ]
 
 -- * Preferences
 
 data PreferenceCategory
   = PreferenceCategoryDirectChannelShow
+  | PreferenceCategoryGroupChannelShow
   | PreferenceCategoryTutorialStep
   | PreferenceCategoryAdvancedSettings
   | PreferenceCategoryFlaggedPost
@@ -963,6 +1123,7 @@ data PreferenceCategory
 instance A.FromJSON PreferenceCategory where
   parseJSON = A.withText "PreferenceCategory" $ \t -> return $ case t of
     "direct_channel_show" -> PreferenceCategoryDirectChannelShow
+    "group_channel_show"  -> PreferenceCategoryGroupChannelShow
     "tutorial_step"       -> PreferenceCategoryTutorialStep
     "advanced_settings"   -> PreferenceCategoryAdvancedSettings
     "flagged_post"        -> PreferenceCategoryFlaggedPost
@@ -976,6 +1137,7 @@ instance A.FromJSON PreferenceCategory where
 instance A.ToJSON PreferenceCategory where
   toJSON cat = A.String $ case cat of
     PreferenceCategoryDirectChannelShow  -> "direct_channel_show"
+    PreferenceCategoryGroupChannelShow   -> "group_channel_show"
     PreferenceCategoryTutorialStep       -> "tutorial_step"
     PreferenceCategoryAdvancedSettings   -> "advanced_settings"
     PreferenceCategoryFlaggedPost        -> "flagged_post"
@@ -1030,6 +1192,24 @@ instance A.ToJSON Preference where
     , "value"    .= preferenceValue
     ]
 
+data GroupChannelPreference =
+    GroupChannelPreference { groupChannelId :: ChannelId
+                           , groupChannelShow :: Bool
+                           } deriving (Read, Show, Eq)
+
+-- | Attempt to expose a 'Preference' as a 'FlaggedPost'
+preferenceToGroupChannelPreference :: Preference -> Maybe GroupChannelPreference
+preferenceToGroupChannelPreference
+  Preference
+    { preferenceCategory = PreferenceCategoryGroupChannelShow
+    , preferenceName     = PreferenceName name
+    , preferenceValue    = PreferenceValue value
+    } = Just GroupChannelPreference
+          { groupChannelId = CI (Id name)
+          , groupChannelShow = value == "true"
+          }
+preferenceToGroupChannelPreference _ = Nothing
+
 data FlaggedPost = FlaggedPost
   { flaggedPostUserId :: UserId
   , flaggedPostId     :: PostId
@@ -1062,3 +1242,387 @@ instance A.ToJSON FlaggedPost where
           , preferenceValue    = PreferenceValue (if status then "true" else "false")
           , preferenceUserId   = userId
           }
+
+--
+
+newtype HookId = HI { unHI :: Id }
+  deriving (Read, Show, Eq, Ord, Hashable, ToJSON, ToJSONKey, FromJSONKey, FromJSON)
+
+instance IsId HookId where
+  toId   = unHI
+  fromId = HI
+
+instance PrintfArg HookId where
+  formatArg = formatArg . idString
+
+--
+
+newtype InviteId = II { unII :: Id }
+  deriving (Read, Show, Eq, Ord, Hashable, ToJSON, ToJSONKey, FromJSONKey, FromJSON)
+
+instance IsId InviteId where
+  toId   = unII
+  fromId = II
+
+instance PrintfArg InviteId where
+  formatArg = formatArg . idString
+
+--
+
+newtype TokenId = TkI { unTkI :: Id }
+  deriving (Read, Show, Eq, Ord, Hashable, ToJSON, ToJSONKey, FromJSONKey, FromJSON)
+
+instance IsId TokenId where
+  toId   = unTkI
+  fromId = TkI
+
+instance PrintfArg TokenId where
+  formatArg = formatArg . idString
+
+--
+
+newtype AppId = AI { unAI :: Id }
+  deriving (Read, Show, Eq, Ord, Hashable, ToJSON, ToJSONKey, FromJSONKey, FromJSON)
+
+instance IsId AppId where
+  toId   = unAI
+  fromId = AI
+
+instance PrintfArg AppId where
+  formatArg = formatArg . idString
+
+--
+
+newtype JobId = JI { unJI :: Id }
+  deriving (Read, Show, Eq, Ord, Hashable, ToJSON, ToJSONKey, FromJSONKey, FromJSON)
+
+instance IsId JobId where
+  toId   = unJI
+  fromId = JI
+
+instance PrintfArg JobId where
+  formatArg = formatArg . idString
+
+--
+
+newtype EmojiId = EI { unEI :: Id }
+  deriving (Read, Show, Eq, Ord, Hashable, ToJSON, ToJSONKey, FromJSONKey, FromJSON)
+
+instance IsId EmojiId where
+  toId   = unEI
+  fromId = EI
+
+instance PrintfArg EmojiId where
+  formatArg = formatArg . idString
+
+--
+
+newtype ReportId = RI { unRI :: Id }
+  deriving (Read, Show, Eq, Ord, Hashable, ToJSON, ToJSONKey, FromJSONKey, FromJSON)
+
+instance IsId ReportId where
+  toId   = unRI
+  fromId = RI
+
+instance PrintfArg ReportId where
+  formatArg = formatArg . idString
+
+-- FIXMES
+
+instance A.ToJSON User where toJSON = error "to user"
+instance A.ToJSON Team where toJSON = error "to team"
+instance A.FromJSON Command where parseJSON = error "from command"
+instance A.ToJSON Command where toJSON = error "to command"
+
+
+-- --
+
+data MinChannelMember = MinChannelMember
+  { minChannelMemberUserId :: UserId
+  , minChannelMemberChannelId :: ChannelId
+  } deriving (Read, Show, Eq)
+
+instance A.FromJSON MinChannelMember where
+  parseJSON = A.withObject "channelMember" $ \v -> do
+    minChannelMemberUserId <- v A..: "user_id"
+    minChannelMemberChannelId <- v A..: "channel_id"
+    return MinChannelMember { .. }
+
+instance A.ToJSON MinChannelMember where
+  toJSON MinChannelMember { .. } = A.object
+    [ "user_id"    A..= minChannelMemberUserId
+    , "channel_id" A..= minChannelMemberChannelId
+    ]
+
+data ChannelMember = ChannelMember
+  { channelMemberMsgCount :: Integer
+  , channelMemberUserId :: UserId
+  , channelMemberRoles :: Text
+  , channelMemberMentionCount :: Int
+  , channelMemberLastViewedAt :: ServerTime
+  , channelMemberChannelId :: ChannelId
+  , channelMemberLastUpdateAt :: ServerTime
+  , channelMemberNotifyProps :: ChannelNotifyProps
+  } deriving (Read, Show, Eq)
+
+instance A.FromJSON ChannelMember where
+  parseJSON = A.withObject "channelMember" $ \v -> do
+    channelMemberMsgCount <- v A..: "msg_count"
+    channelMemberUserId <- v A..: "user_id"
+    channelMemberRoles <- v A..: "roles"
+    channelMemberMentionCount <- v A..: "mention_count"
+    channelMemberLastViewedAt <- timeFromServer <$> v A..: "last_viewed_at"
+    channelMemberChannelId <- v A..: "channel_id"
+    channelMemberLastUpdateAt <- timeFromServer <$> v A..: "last_update_at"
+    channelMemberNotifyProps <- v A..: "notify_props"
+    return ChannelMember { .. }
+
+instance A.ToJSON ChannelMember where
+  toJSON ChannelMember { .. } = A.object
+    [ "msg_count" A..= channelMemberMsgCount
+    , "user_id" A..= channelMemberUserId
+    , "roles" A..= channelMemberRoles
+    , "mention_count" A..= channelMemberMentionCount
+    , "last_viewed_at" A..= timeToServer channelMemberLastViewedAt
+    , "channel_id" A..= channelMemberChannelId
+    , "last_update_at" A..= timeToServer channelMemberLastUpdateAt
+    , "notify_props" A..= channelMemberNotifyProps
+    ]
+
+
+data Status = Status
+  { statusUserId :: UserId
+  , statusStatus :: T.Text
+  , statusManual :: Bool
+  , statusLastActivityAt :: ServerTime
+  }
+
+instance A.FromJSON Status where
+  parseJSON = A.withObject "Status" $ \o -> do
+    statusUserId <- o A..: "user_id"
+    statusStatus <- o A..: "status"
+    statusManual <- o A..: "manual"
+    statusLastActivityAt <- timeFromServer <$> o A..: "last_activity_at"
+    return Status { .. }
+
+instance A.ToJSON Status where
+  toJSON Status { .. } = A.object
+    [ "user_id" A..= statusUserId
+    , "status"  A..= statusStatus
+    , "manual"  A..= statusManual
+    , "last_activity_at" A..= timeToServer statusLastActivityAt
+    ]
+
+
+data UserSearch = UserSearch
+  { userSearchTerm :: Text
+  , userSearchAllowInactive :: Bool
+    -- ^ When `true`, include deactivated users in the results
+  , userSearchWithoutTeam :: Bool
+    -- ^ Set this to `true` if you would like to search for users that are not on a team. This option takes precendence over `team_id`, `in_channel_id`, and `not_in_channel_id`.
+  , userSearchInChannelId :: Maybe ChannelId
+    -- ^ If provided, only search users in this channel
+  , userSearchNotInTeamId :: Maybe TeamId
+    -- ^ If provided, only search users not on this team
+  , userSearchNotInChannelId :: Maybe ChannelId
+    -- ^ If provided, only search users not in this channel. Must specifiy `team_id` when using this option
+  , userSearchTeamId :: Maybe TeamId
+    -- ^ If provided, only search users on this team
+  } deriving (Read, Show, Eq)
+
+instance A.FromJSON UserSearch where
+  parseJSON = A.withObject "userSearch" $ \v -> do
+    userSearchTerm <- v A..: "term"
+    userSearchAllowInactive <- v A..: "allow_inactive"
+    userSearchWithoutTeam <- v A..: "without_team"
+    userSearchInChannelId <- v A..: "in_channel_id"
+    userSearchNotInTeamId <- v A..: "not_in_team_id"
+    userSearchNotInChannelId <- v A..: "not_in_channel_id"
+    userSearchTeamId <- v A..: "team_id"
+    return UserSearch { .. }
+
+instance A.ToJSON UserSearch where
+  toJSON UserSearch { .. } = A.object
+    [ "term" A..= userSearchTerm
+    , "allow_inactive" A..= userSearchAllowInactive
+    , "without_team" A..= userSearchWithoutTeam
+    , "in_channel_id" A..= userSearchInChannelId
+    , "not_in_team_id" A..= userSearchNotInTeamId
+    , "not_in_channel_id" A..= userSearchNotInChannelId
+    , "team_id" A..= userSearchTeamId
+    ]
+
+-- --
+
+data RawPost = RawPost
+  { rawPostChannelId :: ChannelId
+  , rawPostMessage :: Text
+    -- ^ The message contents, can be formatted with Markdown
+  , rawPostFileIds :: Seq FileId
+    -- ^ A list of file IDs to associate with the post
+  , rawPostRootId :: Maybe PostId
+    -- ^ The post ID to comment on
+  } deriving (Read, Show, Eq)
+
+instance A.FromJSON RawPost where
+  parseJSON = A.withObject "rawPost" $ \v -> do
+    rawPostChannelId <- v A..: "channel_id"
+    rawPostMessage <- v A..: "message"
+    rawPostFileIds <- v A..: "file_ids"
+    rawPostRootId <- v A..:? "root_id"
+    return RawPost { .. }
+
+instance A.ToJSON RawPost where
+  toJSON RawPost { .. } = A.object
+    ( "channel_id" A..= rawPostChannelId
+    : "message" A..= rawPostMessage
+    : "file_ids" A..= rawPostFileIds
+    : case rawPostRootId of
+        Nothing -> []
+        Just rId -> [("root_id" A..= rId)]
+    )
+
+rawPost :: Text -> ChannelId -> RawPost
+rawPost message channelId = RawPost
+  { rawPostChannelId = channelId
+  , rawPostMessage   = message
+  , rawPostFileIds   = mempty
+  , rawPostRootId    = Nothing
+  }
+
+
+data PostUpdate = PostUpdate
+  { postUpdateIsPinned :: Maybe Bool
+  , postUpdateMessage :: Text
+    -- ^ The message text of the post
+  , postUpdateHasReactions :: Maybe Bool
+    -- ^ Set to `true` if the post has reactions to it
+  , postUpdateFileIds :: Maybe (Seq FileId)
+    -- ^ The list of files attached to this post
+  , postUpdateProps :: Maybe Text
+    -- ^ A general JSON property bag to attach to the post
+  } deriving (Read, Show, Eq)
+
+instance A.FromJSON PostUpdate where
+  parseJSON = A.withObject "postUpdate" $ \v -> do
+    postUpdateIsPinned <- v A..:? "is_pinned" A..!= Nothing
+    postUpdateMessage <- v A..: "message"
+    postUpdateHasReactions <- v A..:? "has_reactions" A..!= Nothing
+    postUpdateFileIds <- v A..:? "file_ids" A..!= Nothing
+    postUpdateProps <- v A..:? "props" A..!= Nothing
+    return PostUpdate { .. }
+
+instance A.ToJSON PostUpdate where
+  toJSON PostUpdate { .. } = A.object $
+    [ "is_pinned" A..= p | Just p <- [postUpdateIsPinned] ] ++
+    [ "message" A..= postUpdateMessage ] ++
+    [ "has_reactions" A..= p | Just p <- [postUpdateHasReactions] ] ++
+    [ "file_ids" A..= p | Just p <- [postUpdateFileIds] ] ++
+    [ "props" A..= p | Just p <- [postUpdateProps] ]
+
+postUpdateBody :: Text -> PostUpdate
+postUpdateBody message =
+    PostUpdate { postUpdateIsPinned = Nothing
+               , postUpdateMessage = message
+               , postUpdateHasReactions = Nothing
+               , postUpdateFileIds = Nothing
+               , postUpdateProps = Nothing
+               }
+
+data ChannelPatch = ChannelPatch
+  { channelPatchHeader :: Maybe Text
+  , channelPatchDisplayName :: Maybe Text
+    -- ^ The non-unique UI name for the channel
+  , channelPatchName :: Maybe Text
+    -- ^ The unique handle for the channel, will be present in the channel URL
+  , channelPatchPurpose :: Maybe Text
+    -- ^ A short description of the purpose of the channel
+  } deriving (Read, Show, Eq)
+
+instance A.FromJSON ChannelPatch where
+  parseJSON = A.withObject "channelPatch" $ \v -> do
+    channelPatchHeader <- v A..:? "header"
+    channelPatchDisplayName <- v A..:? "display_name"
+    channelPatchName <- v A..:? "name"
+    channelPatchPurpose <- v A..:? "purpose"
+    return ChannelPatch { .. }
+
+instance A.ToJSON ChannelPatch where
+  toJSON ChannelPatch { .. } = A.object $
+    [ "header" A..= x | Just x <- [ channelPatchHeader] ] ++
+    [ "display_name" A..= x | Just x <- [channelPatchDisplayName] ] ++
+    [ "name" A..= x | Just x <- [channelPatchName] ] ++
+    [ "purpose" A..= x | Just x <- [channelPatchPurpose] ]
+
+defaultChannelPatch :: ChannelPatch
+defaultChannelPatch = ChannelPatch
+  { channelPatchHeader = Nothing
+  , channelPatchDisplayName = Nothing
+  , channelPatchName = Nothing
+  , channelPatchPurpose = Nothing
+  }
+
+
+data InitialTeamData = InitialTeamData
+  { initialTeamDataDisplayName :: Text
+  , initialTeamDataType :: Text
+    -- ^ `'O'` for open, `'I'` for invite only
+  , initialTeamDataName :: Text
+    -- ^ Unique handler for a team, will be present in the team URL
+  } deriving (Read, Show, Eq)
+
+instance A.FromJSON InitialTeamData where
+  parseJSON = A.withObject "initialTeamData" $ \v -> do
+    initialTeamDataDisplayName <- v A..: "display_name"
+    initialTeamDataType <- v A..: "type"
+    initialTeamDataName <- v A..: "name"
+    return InitialTeamData { .. }
+
+instance A.ToJSON InitialTeamData where
+  toJSON InitialTeamData { .. } = A.object
+    [ "display_name" A..= initialTeamDataDisplayName
+    , "type" A..= initialTeamDataType
+    , "name" A..= initialTeamDataName
+    ]
+
+data ChannelStats = ChannelStats
+  { channelStatsChannelId   :: Text
+  , channelStatsMemberCount :: Int
+  } deriving (Read, Show, Eq)
+
+instance A.FromJSON ChannelStats where
+  parseJSON = A.withObject "channelStats" $ \v -> do
+    channelStatsChannelId   <- v A..: "channel_id"
+    channelStatsMemberCount <- v A..: "member_count"
+    return ChannelStats { .. }
+
+instance A.ToJSON ChannelStats where
+  toJSON ChannelStats { .. } = A.object
+    [ "channel_id"   A..= channelStatsChannelId
+    , "member_count" A..= channelStatsMemberCount
+    ]
+
+-- --
+
+data ChannelUnread = ChannelUnread
+  { channelUnreadChannelId :: Text
+  , channelUnreadTeamId :: Text
+  , channelUnreadMsgCount :: Int
+  , channelUnreadMentionCount :: Int
+  } deriving (Read, Show, Eq)
+
+instance A.FromJSON ChannelUnread where
+  parseJSON = A.withObject "channelUnread" $ \v -> do
+    channelUnreadChannelId <- v A..: "channel_id"
+    channelUnreadTeamId <- v A..: "team_id"
+    channelUnreadMsgCount <- v A..: "msg_count"
+    channelUnreadMentionCount <- v A..: "mention_count"
+    return ChannelUnread { .. }
+
+instance A.ToJSON ChannelUnread where
+  toJSON ChannelUnread { .. } = A.object
+    [ "channel_id" A..= channelUnreadChannelId
+    , "team_id" A..= channelUnreadTeamId
+    , "msg_count" A..= channelUnreadMsgCount
+    , "mention_count" A..= channelUnreadMentionCount
+    ]

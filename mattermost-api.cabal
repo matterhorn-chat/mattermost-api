@@ -1,5 +1,5 @@
 name:                mattermost-api
-version:             40000.0.1
+version:             40900.1.0
 synopsis:            Client API for Mattermost chat system
 description:         Client API for Mattermost chat system
 license:             BSD3
@@ -33,8 +33,11 @@ library
                        Network.Mattermost.Version
                        Network.Mattermost.Types
                        Network.Mattermost.Types.Base
+                       Network.Mattermost.Types.Config
                        Network.Mattermost.Types.Internal
+                       Network.Mattermost.Endpoints
   other-modules:       Network.Mattermost.TH
+                       Network.Mattermost.Connection
                        Paths_mattermost_api
   -- other-extensions:
   build-depends:       base >=4.4 && <5
@@ -42,7 +45,8 @@ library
                      , stm
                      , aeson >= 1.0.0.0
                      , connection
-                     , memory <0.14.3
+                     , memory
+                     , resource-pool >= 0.2.3
                      -- To prevent broken websockets versions from using
                      -- incompatible versions of binary (for details, see
                      -- https://github.com/matterhorn-chat/mattermost-api/issues/36):

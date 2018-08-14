@@ -3,16 +3,17 @@ module Tests.Util
   , print_
   , getConnection
   , getSession
-  , getInitialLoad
+  , getTeams
   , createChannel
   , deleteChannel
   , joinChannel
   , leaveChannel
-  , getMoreChannels
+--  , getMoreChannels
   , getChannels
   , getChannelMembers
   , getUserByName
   , getConfig
+  , getClientConfig
   , saveConfig
   , teamAddUser
   , reportJSONExceptions
@@ -24,6 +25,7 @@ module Tests.Util
   , createTeam
   , findChannel
   , connectFromConfig
+  , getMe
 
   -- * Testing Websocket Events
   , expectWSEvent
@@ -38,18 +40,20 @@ module Tests.Util
   , isNewUserEvent
   , isChannelCreatedEvent
   , isChannelDeleteEvent
+  , isAddedToTeam
   , isUserJoin
   , isUserLeave
+  , isViewedChannel
   , wsHas
   , (&&&)
   )
 where
 
-import qualified Data.Aeson as A
 import qualified Control.Exception as E
 import qualified Control.Concurrent.STM as STM
 import Control.Concurrent (forkIO)
 import Control.Concurrent.MVar
+import qualified Data.Foldable as F
 import Data.Monoid ((<>))
 import qualified Data.Sequence as Seq
 import qualified Data.Text as T
@@ -57,15 +61,18 @@ import Test.Tasty (TestTree)
 import Test.Tasty.HUnit (testCaseSteps)
 import Control.Monad.State.Lazy
 import System.Timeout (timeout)
-import qualified Data.HashMap.Lazy as HM
 
-import Network.Mattermost
+import Network.Mattermost (ConnectionData)
+import Network.Mattermost.Endpoints
+import Network.Mattermost.Types
+import Network.Mattermost.Types.Config
 import Network.Mattermost.WebSocket
 import Network.Mattermost.Exceptions
+import Network.Mattermost.Util
 
 import Tests.Types
 
-mmTestCase :: String -> Config -> TestM () -> TestTree
+mmTestCase :: String -> TestConfig -> TestM () -> TestTree
 mmTestCase testName cfg act =
     testCaseSteps testName $ \prnt -> do
       cd <- connectFromConfig cfg
@@ -101,7 +108,7 @@ reportJSONExceptions io = io
   putStrLn badJson
   E.throwIO e
 
-adminAccount :: Config -> UsersCreate
+adminAccount :: TestConfig -> UsersCreate
 adminAccount cfg =
     UsersCreate { usersCreateEmail          = configEmail    cfg
                 , usersCreatePassword       = configPassword cfg
@@ -113,7 +120,7 @@ createAdminAccount :: TestM User
 createAdminAccount = do
   cd <- getConnection
   cfg <- gets tsConfig
-  u <- liftIO $ mmUsersCreate cd $ adminAccount cfg
+  u <- liftIO $ mmInitialUser cd $ adminAccount cfg
   print_ "Admin Account created"
   return u
 
@@ -124,8 +131,9 @@ loginAccount login = do
   print_ $ "Authenticated as " ++ T.unpack (username login)
   chan <- gets tsWebsocketChan
   doneMVar <- gets tsDone
+  printFunc <- gets tsPrinter
   void $ liftIO $ forkIO $ mmWithWebSocket session
-                           (STM.atomically . STM.writeTChan chan)
+                           (either printFunc (STM.atomically . STM.writeTChan chan))
                            (const $ takeMVar doneMVar)
   modify $ \ts -> ts { tsSession = Just session }
 
@@ -194,6 +202,20 @@ isNewUserEvent :: User
                -> Bool
 isNewUserEvent u =
     hasWSEventType WMNewUser &&& forUser u
+
+isViewedChannel :: WebsocketEvent -> Bool
+isViewedChannel = hasWSEventType WMChannelViewed
+
+-- | Is the websocket event indicating that a new user was added to the
+-- team
+isAddedToTeam :: User
+              -- ^ The user that was added
+              -> Team
+              -- ^ The team to which the user was added
+              -> WebsocketEvent
+              -> Bool
+isAddedToTeam u _ =
+    hasWSEventType WMAddedToTeam &&& forUser u
 
 isChannelCreatedEvent :: Channel
                       -> WebsocketEvent
@@ -281,14 +303,14 @@ loginAdminAccount = do
 createAccount :: UsersCreate -> TestM User
 createAccount account = do
   session <- getSession
-  newUser <- liftIO $ mmUsersCreateWithSession session account
+  newUser <- liftIO $ mmCreateUser account session
   print_ $ "account created for " <> (T.unpack $ usersCreateUsername account)
   return newUser
 
 createTeam :: TeamsCreate -> TestM Team
 createTeam tc = do
   session <- getSession
-  team <- liftIO $ mmCreateTeam session tc
+  team <- liftIO $ mmCreateTeam tc session
   print_ $ "Team created: " <> (T.unpack $ teamsCreateName tc)
   return team
 
@@ -306,10 +328,10 @@ findChannel chans name =
             in error $ "Expected to find channel by name " <>
                      show name <> " but got " <> show namePairs
 
-connectFromConfig :: Config -> IO ConnectionData
+connectFromConfig :: TestConfig -> IO ConnectionData
 connectFromConfig cfg =
-  initConnectionDataInsecure (configHostname cfg)
-                             (fromIntegral (configPort cfg))
+  initConnectionDataInsecure (configHostname cfg) (fromIntegral (configPort cfg))
+                             defaultConnectionPoolConfig
 
 getConnection :: TestM ConnectionData
 getConnection = gets tsConnectionData
@@ -321,73 +343,95 @@ getSession = do
         Just s -> return s
         Nothing -> error "Expected authentication token but none was present"
 
-getInitialLoad :: TestM InitialLoad
-getInitialLoad = do
+getTeams :: TestM (Seq.Seq Team)
+getTeams = do
   session <- getSession
-  liftIO $ mmGetInitialLoad session
+  liftIO $ mmGetUsersTeams UserMe session
+
+getMe :: TestM User
+getMe = do
+  session <- getSession
+  liftIO $ mmGetUser UserMe session
 
 getUserByName :: T.Text -> TestM (Maybe User)
 getUserByName uname = do
     session <- getSession
-    allUserMap <- liftIO $ mmGetUsers session 0 10000
+    let query = defaultUserQuery
+          { userQueryPage = Just 0
+          , userQueryPerPage = Just 10000
+          }
+    allUserMap <- liftIO $ mmGetUsers query session
     -- Find the user matching the username and get its ID
-    let matches = HM.filter matchingUser allUserMap
+    let matches = Seq.filter matchingUser allUserMap
         matchingUser u = userUsername u == uname
 
-    case HM.size matches == 1 of
-        False -> return Nothing
-        True -> do
-            let uId = fst $ HM.toList matches !! 0
+    case Seq.viewl matches of
+        user Seq.:< _ -> do
+            let uId = userId user
             -- Then load the User record
-            Just <$> (liftIO $ mmGetUser session uId)
+            Just <$> (liftIO $ mmGetUser (UserById uId) session)
+        _ -> return Nothing
 
-createChannel :: Team -> MinChannel -> TestM Channel
-createChannel team mc = do
+createChannel :: MinChannel -> TestM Channel
+createChannel mc = do
   session <- getSession
-  liftIO $ mmCreateChannel session (teamId team) mc
+  liftIO $ mmCreateChannel mc session
 
-deleteChannel :: Team -> Channel -> TestM ()
-deleteChannel team ch = do
+deleteChannel :: Channel -> TestM ()
+deleteChannel ch = do
   session <- getSession
-  liftIO $ mmDeleteChannel session (teamId team) (channelId ch)
+  liftIO $ mmDeleteChannel (channelId ch) session
 
-joinChannel :: Team -> Channel -> TestM ()
-joinChannel team chan = do
+joinChannel :: User -> Channel -> TestM ()
+joinChannel user chan = do
   session <- getSession
-  liftIO $ mmJoinChannel session (teamId team) (channelId chan)
+  let member = MinChannelMember
+        { minChannelMemberUserId = userId user
+        , minChannelMemberChannelId = channelId chan
+        }
+  liftIO $ void $ mmAddUser (channelId chan) member session
 
-getMoreChannels :: Team -> TestM Channels
-getMoreChannels team = do
+leaveChannel :: Channel -> TestM ()
+leaveChannel chan = do
   session <- getSession
-  liftIO $ mmGetMoreChannels session (teamId team) 0 100
+  liftIO $ mmRemoveUserFromChannel (channelId chan) UserMe session
 
-leaveChannel :: Team -> Channel -> TestM ()
-leaveChannel team chan = do
+getChannelMembers :: Channel -> TestM [User]
+getChannelMembers chan = do
   session <- getSession
-  liftIO $ mmLeaveChannel session (teamId team) (channelId chan)
-
-getChannelMembers :: Team -> Channel -> TestM [User]
-getChannelMembers team chan = do
-  session <- getSession
-  (snd <$>) <$> HM.toList <$>
-      (liftIO $ mmGetChannelMembers session (teamId team) (channelId chan) 0 10000)
+  let query = defaultUserQuery
+        { userQueryPage = Just 0
+        , userQueryPerPage = Just 10000
+        , userQueryInChannel = Just (channelId chan)
+        }
+  F.toList <$> (liftIO $ mmGetUsers query session)
 
 getChannels :: Team -> TestM Channels
 getChannels team = do
   session <- getSession
-  liftIO $ mmGetChannels session (teamId team)
+  liftIO $ mmGetPublicChannels (teamId team) Nothing Nothing session
 
-getConfig :: TestM A.Value
+getConfig :: TestM ServerConfig
 getConfig = do
   session <- getSession
-  liftIO $ mmGetConfig session
+  liftIO $ mmGetConfiguration session
 
-saveConfig :: A.Value -> TestM ()
+getClientConfig :: TestM ClientConfig -- A.Value
+getClientConfig = do
+  session <- getSession
+  liftIO $ mmGetClientConfiguration (Just (T.pack "old")) session
+
+saveConfig :: ServerConfig -> TestM ()
 saveConfig newConfig = do
   session <- getSession
-  liftIO $ mmSaveConfig session newConfig
+  liftIO $ void $ mmUpdateConfiguration newConfig session
 
 teamAddUser :: Team -> User -> TestM ()
 teamAddUser team user = do
   session <- getSession
-  liftIO $ mmTeamAddUser session (teamId team) (userId user)
+  let member = TeamMember
+        { teamMemberUserId = userId user
+        , teamMemberTeamId = teamId team
+        , teamMemberRoles  = T.empty
+        }
+  liftIO $ void $ mmAddUserToTeam (teamId team) member session

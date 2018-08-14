@@ -6,27 +6,28 @@ module Network.Mattermost.Util
 , noteE
 , hoistE
 , (~=)
-, dropTrailingChar
 , withConnection
 , mkConnection
 , connectionGetExact
 ) where
 
+import           Control.Exception (finally, onException)
 import           Data.Char ( toUpper )
 import qualified Data.ByteString.Char8 as B
 import qualified Data.Text as T
 
 import           Control.Exception ( Exception
-                                   , throwIO
-                                   , bracket )
+                                   , throwIO )
+import           Data.Pool (takeResource, putResource, destroyResource)
 import           Network.Connection ( Connection
+                                    , ConnectionContext
                                     , ConnectionParams(..)
                                     , ProxySettings(..)
                                     , TLSSettings(..)
                                     , connectionGet
-                                    , connectionClose
                                     , connectTo )
 
+import           Network.Mattermost.Types.Base
 import           Network.Mattermost.Types.Internal
 import           Network.Mattermost.Proxy
 
@@ -52,20 +53,16 @@ assertE False e = throwIO e
 (~=) :: String -> String -> Bool
 a ~= b = map toUpper a == map toUpper b
 
--- | HTTP ends newlines with \r\n sequence, but the 'connection' package doesn't
--- know this so we need to drop the \r after reading lines. This should only be
--- needed in your compatibility with the HTTP library.
-dropTrailingChar :: B.ByteString -> B.ByteString
-dropTrailingChar bs | not (B.null bs) = B.init bs
-dropTrailingChar _ = ""
-
--- | Creates a new connection to 'Hostname' from an already initialized 'ConnectionContext'.
--- Internally it uses 'bracket' to cleanup the connection.
-withConnection :: ConnectionData -> (Connection -> IO a) -> IO a
-withConnection cd action =
-  bracket (mkConnection cd)
-          connectionClose
-          action
+-- | Creates a new connection to 'Hostname' from an already initialized
+-- 'ConnectionContext'.
+withConnection :: ConnectionData -> (MMConn -> IO a) -> IO a
+withConnection cd action = do
+    (conn, lp) <- takeResource (cdConnectionPool cd)
+    (action conn `onException` closeMMConn conn) `finally` do
+        c <- isConnected conn
+        if c then
+             putResource lp conn else
+             destroyResource (cdConnectionPool cd) lp conn
 
 -- | Creates a connection from a 'ConnectionData' value, returning it. It
 --   is the user's responsibility to close this appropriately.
@@ -94,7 +91,6 @@ mkConnection cd = do
             Socks -> return $ SockSettingsSimple host (toEnum port)
             Other -> return $ OtherProxy host (toEnum port)
     }
-
 
 -- | Get exact count of bytes from a connection.
 --

@@ -24,8 +24,11 @@ suffixLenses ''Team
 -- * 'TeamMember' lenses
 suffixLenses ''TeamMember
 
--- * 'NotifyProps' lenses
-suffixLenses ''NotifyProps
+-- * 'UserNotifyProps' lenses
+suffixLenses ''UserNotifyProps
+
+-- * 'ChannelNotifyProps' lenses
+suffixLenses ''ChannelNotifyProps
 
 -- * 'Channel' lenses
 suffixLenses ''Channel

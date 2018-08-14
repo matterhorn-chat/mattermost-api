@@ -1,4 +1,4 @@
-[![Build
+[![Hackage](https://img.shields.io/hackage/v/mattermost-api.svg)](https://hackage.haskell.org/package/mattermost-api) [![Build
 Status](https://travis-ci.org/matterhorn-chat/mattermost-api.svg?branch=master)](https://travis-ci.org/matterhorn-chat/mattermost-api)
 # mattermost-api
 Client side API for communicating with a Mattermost server, in Haskell.

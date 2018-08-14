@@ -1,4 +1,127 @@
 
+40900.1.0
+=========
+
+API changes:
+ * Added a `newtype`, `UserText`, to wrap many API response fields to
+   indicate that they may contain unsafe or unsanitized user input. Also
+   added `unsafeUserText` to unwrap such values when the caller knows
+   that using the unsafe value is appropriate.
+
+40900.0.0
+=========
+
+ * Endpoints: enabled `mmPatchPost` and removed duplicate argument type
+   for `PostUpdate`.
+ * Ensure that file fetching uses the V4 API endpoint.
+
+40800.0.2
+=========
+
+ * The websocket connection now uses the V4 API endpoint.
+ * submitRequest now also retries on "resource vanished" exceptions.
+
+40800.0.1
+=========
+
+ * `createPool` now requires a secure connection argument. Previously it
+   always defaulted to `True` which broke insecure connection setups.
+ * Removed the upper bound from `memory` to support GHC 8.4.
+
+40800.0.0
+=========
+
+ * Fixed the URI for the mmUnflagPost API call.
+ * Some JSON instances now more precisely handle missing optional
+   fields.
+ * mattermost-api now supports connection pooling with persistent server
+   connections. A connection pool configuration is required to connect
+   to Mattermost servers (thanks to Abhinav Sarkar)
+
+40700.0.0
+=========
+
+API changes:
+ * Added a websocket event constructor for the `delete_team` event added
+   in 4.7.
+
+40600.1.0
+=========
+
+API changes:
+ * The `UserSearch` type now wraps optional fields with `Maybe`. The
+   field types changed from `Text` to the appropriate ID type.
+ * Removed defunct `Network.Mattermost.Types.mkSession` function.
+ * Added an API endpoint function `mmGetUsersByIds` for getting users by
+   ID.
+
+Other changes:
+ * The `doRequest` function used by APIv4 endpoint functions now invokes
+   the connection's logger to log request method and URI.
+
+40600.0.0
+=========
+
+API changes:
+ * This release provides implementations of many of Mattermost's version
+   4 API endpoints in the new Network.Mattermost.Endpoints module. The
+   old version 3 API is still provided by Network.Mattermost but will
+   be deprecated in a future release, and removed after that. Note
+   that this release chiefly exposes version 4 endpoints used by the
+   Matterhorn application; endpoints not used there have not been tested
+   and so are left commented out in this release and may be enabled in
+   future releases as needed.
+ * This release also provides first-class Haskell types corresponding to
+   the server-side configuration; see Network.Mattermost.Types.Config.
+ * The Post data type got a new postEditAt field corresponding to the
+   (at the time) undocumented `edit_at` field of posts.
+ * Websockets got action support; see
+   Network.Mattermost.WebSocket.mmSendWSAction and the new
+   WebsocketAction type (thanks to Abhinav Sarkar for this change)
+ * All UTCTimes received from the Mattermost server are wrapped in a
+   `ServerTime` newtype to ensure that users cannot accidentally compare
+   such timestamps to local UTCTimes, since the server time is not
+   necessarily comparable.
+ * Added Network.Mattermost.Endpoints.mmGetClientConfig to get the
+   client configuration from the server (Thanks to Kelly McLaughlin for
+   this change)
+
+40400.0.0
+=========
+
+API changes:
+ * Added endpoints for some preference endpoints, group channels, and
+   post search:
+   * `mmChannelRemoveUser`
+   * `mmCreateGroupChannel`
+   * `mmSearchPosts`
+   * `mmSetPreferences`
+ * Added `GroupChannelPreferences` type for showing/hiding group
+   channels
+ * Separated the previous `NotifyProps` type into `UserNotifyProps`
+   and `ChannelNotifyProps`.
+ * Websocket parse failures are now captured and appear to the library
+   user as an `Either String WebsocketEvent`, where the `String`
+   represent a parse failure.
+ * Add support for `user_role_updated` websocket event type.
+
+40000.1.0
+=========
+
+API changes:
+ * The postRootId of Post is now a Maybe PostId to better reflect the
+   actual wire format.
+ * MinCommand now has fields for reply parent and root post IDs to
+   support replying to posts with commands such as /me.
+ * CommandResponse's commandResponseType is now Maybe to permit optional
+   types.
+ * PreferenceCategory got a new constructor, PreferenceCategoryLast,
+   mapping to the "last" preference category.
+ * Added functions for bulk fetching for channel/user data:
+   * mmGetAllChannelsForUser
+   * mmGetAllChannelDataForUser
+   * mmGetAllChannelsWithDataForUser
+
 40000.0.1
 =========
 
