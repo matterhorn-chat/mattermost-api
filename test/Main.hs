@@ -12,7 +12,6 @@ import           Text.Show.Pretty ( ppShow )
 
 import           Data.Monoid ((<>))
 import qualified Data.Sequence as Seq
-import qualified Data.Text as T (Text)
 
 import           Test.Tasty
 
@@ -58,8 +57,8 @@ testMinChannel tId = MinChannel
   , minChannelTeamId      = tId
   }
 
-testMinChannelName :: T.Text
-testMinChannelName = "test-channel"
+testMinChannelName :: UserText
+testMinChannelName = UserText "test-channel"
 
 
 testTeamsCreate :: TeamsCreate
@@ -117,8 +116,8 @@ setup = mmTestCase "Setup" testConfig $ do
   -- Load channels so we can get the IDs of joined channels
   chans <- getChannels testTeam
 
-  let townSquare = findChannel chans "Town Square"
-      offTopic   = findChannel chans "Off-Topic"
+  let townSquare = findChannel chans (UserText "Town Square")
+      offTopic   = findChannel chans (UserText "Off-Topic")
 
   print_ "Getting Config"
   config <- getConfig
@@ -131,7 +130,7 @@ setup = mmTestCase "Setup" testConfig $ do
   saveConfig newConfig
 
   expectWSEvent "admin joined town square"
-    (isPost adminUser townSquare "testadmin has joined the channel.")
+    (isPost adminUser townSquare (UserText "testadmin has joined the channel."))
 
   expectWSEvent "admin joined test team"
     (isAddedToTeam adminUser testTeam)
@@ -146,10 +145,10 @@ setup = mmTestCase "Setup" testConfig $ do
     (isNewUserEvent testUser)
 
   expectWSEvent "test user joined town square"
-    (isPost testUser townSquare "test-user has joined the channel.")
+    (isPost testUser townSquare (UserText "test-user has joined the channel."))
 
   expectWSEvent "test user joined off-topic"
-    (isPost testUser offTopic "test-user has joined the channel.")
+    (isPost testUser offTopic (UserText "test-user has joined the channel."))
 
   expectWSDone
 
@@ -188,7 +187,7 @@ createChannelTest =
 
         expectWSEvent "hello" (hasWSEventType WMHello)
         expectWSEvent "test user joins test channel"
-          (isPost testUser chan "test-user has joined the channel.")
+          (isPost testUser chan (UserText "test-user has joined the channel."))
         expectWSEvent "new channel event" (isChannelCreatedEvent chan)
         expectWSDone
 
@@ -247,7 +246,7 @@ joinChannelTest =
         expectWSEvent "hello" (hasWSEventType WMHello)
         expectWSEvent "join channel" (isUserJoin testUser chan)
         expectWSEvent "join post"
-          (isPost testUser chan "test-user has joined the channel.")
+          (isPost testUser chan (UserText "test-user has joined the channel."))
         expectWSEvent "view channel" isViewedChannel
         expectWSDone
 
@@ -268,7 +267,7 @@ deleteChannelTest =
         expectWSEvent "hello" (hasWSEventType WMHello)
 
         expectWSEvent "channel deletion post"
-            (isPost testUser toDelete "test-user has archived the channel.")
+            (isPost testUser toDelete (UserText "test-user has archived the channel."))
 
         expectWSEvent "channel delete event"
             (isChannelDeleteEvent toDelete)
