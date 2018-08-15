@@ -258,7 +258,7 @@ isPost :: User
        -- ^ The user who posted
        -> Channel
        -- ^ The channel to which the new post was added
-       -> T.Text
+       -> UserText
        -- ^ The content of the new post
        -> WebsocketEvent
        -> Bool
@@ -314,7 +314,7 @@ createTeam tc = do
   print_ $ "Team created: " <> (T.unpack $ teamsCreateName tc)
   return team
 
-findChannel :: Channels -> T.Text -> Channel
+findChannel :: Channels -> UserText -> Channel
 findChannel chans name =
     let result = Seq.viewl (Seq.filter nameMatches chans)
         nameMatches c = name `elem` [ channelName c
