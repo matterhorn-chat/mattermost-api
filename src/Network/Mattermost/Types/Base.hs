@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 -- | These are the fundamental types that are used for building
 -- everything else.  Specifically, these types are used by the
 -- Network.Mattermost.Types.Internal, but are not subject to the
@@ -8,6 +10,7 @@ module Network.Mattermost.Types.Base where
 import qualified Data.Aeson as A
 import           Data.Text (Text)
 import           Data.Time.Clock ( UTCTime )
+import           GHC.Generics
 import           Network.HTTP.Base (RequestMethod)
 
 type Hostname = Text
@@ -41,4 +44,4 @@ data LogEventType
 -- and local times are not necessarily synchronized.
 
 newtype ServerTime = ServerTime { withServerTime :: UTCTime }
-    deriving (Eq, Ord, Read, Show)
+    deriving (Eq, Ord, Read, Show, A.FromJSON, A.ToJSON, Generic)
