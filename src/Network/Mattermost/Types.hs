@@ -648,6 +648,27 @@ instance A.FromJSON User where
     userLocale             <- o .: "locale"
     return User { .. }
 
+instance A.ToJSON User where
+  toJSON (User {..}) = A.object $
+    [ "create_at" A..= timeToServer userCreateAt
+    , "update_at" A..= timeToServer userUpdateAt
+    , "delete_at" A..= timeToServer userDeleteAt
+    , "id" A..= userId
+    , "username" A..= userUsername
+    , "auth_data" A..= userAuthData
+    , "auth_service" A..= userAuthService
+    , "email" A..= userEmail
+    , "nickname" A..= userNickname
+    , "first_name" A..= userFirstName
+    , "last_name" A..= userLastName
+    , "roles" A..= userRoles
+    , "locale" A..= userLocale
+    , "email_verified" A..= userEmailVerified
+    , "notify_props" A..= userNotifyProps
+    ] <> catMaybes [ ("last_password_update" A..=) <$> (timeToServer <$> userLastPasswordUpdate)
+                   , ("last_picture_update" A..=)  <$> (timeToServer <$> userLastPictureUpdate)
+                   ]
+
 -- The PostPropAttachment and PostPropAttachmentField types are
 -- actually defined by Slack, and simply used by Mattermost; the
 -- description of these fields can be found in this document:
