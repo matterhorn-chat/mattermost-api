@@ -267,6 +267,22 @@ instance A.FromJSON Team where
     teamAllowOpenInvite <- v .: "allow_open_invite"
     return Team { .. }
 
+instance A.ToJSON Team where
+  toJSON (Team {..}) = A.object
+    [ "id" A..= teamId
+    , "create_at" A..= timeToServer teamCreateAt
+    , "update_at" A..= timeToServer teamUpdateAt
+    , "delete_at" A..= timeToServer teamDeleteAt
+    , "display_name" A..= teamDisplayName
+    , "name" A..= teamName
+    , "email" A..= teamEmail
+    , "type" A..= teamType
+    , "company_name" A..= teamCompanyName
+    , "allowed_domains" A..= teamAllowedDomains
+    , "invite_id" A..= teamInviteId
+    , "allow_open_invite" A..= teamAllowOpenInvite
+    ]
+
 data TeamMember = TeamMember
   { teamMemberUserId :: UserId
   , teamMemberTeamId :: TeamId
