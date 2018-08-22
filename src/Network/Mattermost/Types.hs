@@ -928,9 +928,6 @@ data FileInfo
   , fileInfoHasPreview :: Bool
   } deriving (Read, Show, Eq)
 
-instance ToJSON FileInfo where
-  toJSON = error "file info"
-
 instance FromJSON FileInfo where
   parseJSON = A.withObject "file_info" $ \o -> do
     fileInfoId         <- o .: "id"
