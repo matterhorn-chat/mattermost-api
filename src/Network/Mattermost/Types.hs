@@ -25,7 +25,7 @@ import           Data.Aeson.Types ( ToJSONKey
                                   , typeMismatch
                                   )
 import qualified Data.HashMap.Strict as HM
-import           Data.Maybe (fromMaybe)
+import           Data.Maybe (fromMaybe, catMaybes)
 import           Data.Monoid ( (<>) )
 import qualified Data.Pool as Pool
 import           Data.Ratio ( (%) )
@@ -459,6 +459,23 @@ instance A.FromJSON Channel where
     channelTotalMsgCount   <- v .: "total_msg_count"
     channelCreatorId       <- maybeFail (v .: "creator_id")
     return Channel { .. }
+
+instance A.ToJSON Channel where
+  toJSON (Channel {..}) = A.object $
+    [ "id" A..= channelId
+    , "type" A..= channelType
+    , "display_name" A..= channelDisplayName
+    , "name" A..= channelName
+    , "header" A..= channelHeader
+    , "purpose" A..= channelPurpose
+    , "total_msg_count" A..= channelTotalMsgCount
+    , "create_at" A..= timeToServer channelCreateAt
+    , "update_at" A..= timeToServer channelUpdateAt
+    , "delete_at" A..= timeToServer channelDeleteAt
+    , "last_post_at" A..= timeToServer channelLastPostAt
+    ] <> catMaybes [ ("team_id" A..=) <$> channelTeamId
+                   , ("creator_id" A..=) <$> channelCreatorId
+                   ]
 
 -- This type only exists so that we can strip off the
 -- outer most layer in mmGetChannel. See the
