@@ -1359,14 +1359,6 @@ instance IsId ReportId where
 instance PrintfArg ReportId where
   formatArg = formatArg . idString
 
--- FIXMES
-
-instance A.ToJSON User where toJSON = error "to user"
-instance A.ToJSON Team where toJSON = error "to team"
-instance A.FromJSON Command where parseJSON = error "from command"
-instance A.ToJSON Command where toJSON = error "to command"
-
-
 -- --
 
 data MinChannelMember = MinChannelMember
