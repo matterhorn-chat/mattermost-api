@@ -263,7 +263,6 @@ instance A.FromJSON ClientConfig where
     clientConfigBuildHash <- o A..: "BuildHash"
     clientConfigBuildHashEnterprise <- o A..: "BuildHashEnterprise"
     clientConfigBuildEnterpriseReady <- o A..: "BuildEnterpriseReady"
-
     clientConfigSiteURL <- o A..: "SiteURL"
     clientConfigSiteName <- o A..: "SiteName"
     clientConfigEnableTeamCreation <- o A..: "EnableTeamCreation"
@@ -278,7 +277,6 @@ instance A.FromJSON ClientConfig where
     clientConfigRestrictPrivateChannelDeletion <- o A..: "RestrictPrivateChannelDeletion"
     clientConfigRestrictPrivateChannelManageMembers <- o A..: "RestrictPrivateChannelManageMembers"
     clientConfigTeammateNameDisplay <- o A..: "TeammateNameDisplay"
-
     clientConfigEnableOAuthServiceProvider <- o A..: "EnableOAuthServiceProvider"
     clientConfigGoogleDeveloperKey <- o A..: "GoogleDeveloperKey"
     clientConfigEnableIncomingWebhooks <- o A..: "EnableIncomingWebhooks"
@@ -294,7 +292,6 @@ instance A.FromJSON ClientConfig where
     clientConfigRestrictPostDelete <- o A..: "RestrictPostDelete"
     clientConfigAllowEditPost <- o A..: "AllowEditPost"
     clientConfigPostEditTimeLimit <- o A..: "PostEditTimeLimit"
-
     clientConfigSendEmailNotifications <- o A..: "SendEmailNotifications"
     clientConfigSendPushNotifications <- o A..: "SendPushNotifications"
     clientConfigEnableSignUpWithEmail <- o A..: "EnableSignUpWithEmail"
@@ -302,11 +299,8 @@ instance A.FromJSON ClientConfig where
     clientConfigEnableSignInWithUsername <- o A..: "EnableSignInWithUsername"
     clientConfigRequireEmailVerification <- o A..: "RequireEmailVerification"
     clientConfigEnableEmailBatching <- o A..: "EnableEmailBatching"
-
     clientConfigEnableSignUpWithGitLab <- o A..: "EnableSignUpWithGitLab"
-
     clientConfigShowEmailAddress <- o A..: "ShowEmailAddress"
-
     clientConfigTermsOfServiceLink <- o A..: "TermsOfServiceLink"
     clientConfigPrivacyPolicyLink <- o A..: "PrivacyPolicyLink"
     clientConfigAboutLink <- o A..: "AboutLink"
@@ -316,37 +310,28 @@ instance A.FromJSON ClientConfig where
     clientConfigTroubleshootingForumLink <- o A..:? "TroubleshootingForumLink"
     clientConfigCommercialSupportLink <- o A..:? "CommercialSupportLink"
     clientConfigSupportEmail <- o A..: "SupportEmail"
-
     clientConfigEnableFileAttachments <- o A..: "EnableFileAttachments"
     clientConfigEnablePublicLink <- o A..: "EnablePublicLink"
-
     clientConfigWebsocketPort <- o A..: "WebsocketPort"
     clientConfigWebsocketSecurePort <- o A..: "WebsocketSecurePort"
-
     clientConfigDefaultClientLocale <- o A..: "DefaultClientLocale"
     clientConfigAvailableLocales <- o A..: "AvailableLocales"
     clientConfigSQLDriverName <- o A..: "SQLDriverName"
-
     clientConfigEnableCustomEmoji <- o A..: "EnableCustomEmoji"
     clientConfigEnableEmojiPicker <- o A..: "EnableEmojiPicker"
     clientConfigRestrictCustomEmojiCreation <- o A..: "RestrictCustomEmojiCreation"
     clientConfigMaxFileSize <- o A..: "MaxFileSize"
-
     clientConfigAppDownloadLink <- o A..: "AppDownloadLink"
     clientConfigAndroidAppDownloadLink <- o A..: "AndroidAppDownloadLink"
     clientConfigIosAppDownloadLink <- o A..: "IosAppDownloadLink"
-
     clientConfigEnableWebrtc <- o A..: "EnableWebrtc"
-
     clientConfigMaxNotificationsPerChannel <- o A..: "MaxNotificationsPerChannel"
     clientConfigTimeBetweenUserTypingUpdatesMilliseconds <- o A..: "TimeBetweenUserTypingUpdatesMilliseconds"
     clientConfigEnableUserTypingMessages <- o A..: "EnableUserTypingMessages"
     clientConfigEnableChannelViewedMessages <- o A..: "EnableChannelViewedMessages"
-
     clientConfigDiagnosticId <- o A..: "DiagnosticId"
     clientConfigDiagnosticsEnabled <- o A..: "DiagnosticsEnabled"
     return ClientConfig { .. }
-
 
 data TeamSettings = TeamSettings
   { teamSettingsRestrictpublicchanneldeletion :: Text
