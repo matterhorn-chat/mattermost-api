@@ -4,6 +4,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Network.Mattermost.Types
     ( module Network.Mattermost.Types
@@ -1240,6 +1241,22 @@ instance A.ToJSON FlaggedPost where
           , preferenceValue    = PreferenceValue (if status then "true" else "false")
           , preferenceUserId   = userId
           }
+
+instance A.FromJSON FlaggedPost where
+  parseJSON v = do
+      pref :: Preference
+           <- A.parseJSON v
+      case preferenceCategory pref of
+          PreferenceCategoryFlaggedPost -> do
+              status <- case fromRawPreferenceValue $ preferenceValue pref of
+                  "true" -> return True
+                  "false" -> return False
+                  _ -> fail "Invalid flagged post"
+              return $ FlaggedPost { flaggedPostUserId = preferenceUserId pref
+                                   , flaggedPostId = PI (Id $ fromRawPreferenceName $ preferenceName pref)
+                                   , flaggedPostStatus = status
+                                   }
+          _ -> fail "Invalid flagged post"
 
 --
 
