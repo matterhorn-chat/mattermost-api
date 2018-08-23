@@ -889,6 +889,7 @@ instance A.ToJSON Post where
     , "delete_at"       .= (timeToServer <$> postDeleteAt)
     , "hashtags"        .= postHashtags
     , "update_at"       .= timeToServer postUpdateAt
+    , "edit_at"         .= timeToServer postEditAt
     , "user_id"         .= postUserId
     , "create_at"       .= timeToServer postCreateAt
     , "parent_id"       .= postParentId
