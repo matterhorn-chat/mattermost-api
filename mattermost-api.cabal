@@ -51,6 +51,7 @@ library
                      -- https://github.com/matterhorn-chat/mattermost-api/issues/36):
                      , binary >= 0.8.1
                      , bytestring
+                     , deepseq
                      , process
                      , HTTP
                      , network-uri

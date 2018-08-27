@@ -13,6 +13,7 @@ module Network.Mattermost.Types
     where
 
 import           Control.Applicative
+import           Control.DeepSeq
 import           Text.Printf ( PrintfArg(..), printf )
 import           Data.Hashable ( Hashable )
 import qualified Data.Aeson as A
@@ -200,7 +201,7 @@ class HasId x y | x -> y where
   getId :: x -> y
 
 newtype Id = Id { unId :: Text }
-  deriving (Read, Show, Eq, Ord, Hashable, ToJSON, ToJSONKey, FromJSONKey)
+  deriving (Read, Show, Eq, Ord, Hashable, ToJSON, ToJSONKey, FromJSONKey, NFData)
 
 idString :: IsId x => x -> Text
 idString x = unId i
@@ -430,7 +431,7 @@ instance A.ToJSON ChannelNotifyProps where
 --
 
 newtype ChannelId = CI { unCI :: Id }
-  deriving (Read, Show, Eq, Ord, Hashable, ToJSON, ToJSONKey, FromJSONKey, FromJSON)
+  deriving (Read, Show, Eq, Ord, Hashable, ToJSON, ToJSONKey, FromJSONKey, FromJSON, NFData)
 
 instance IsId ChannelId where
   toId   = unCI
