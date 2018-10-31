@@ -163,6 +163,31 @@ instance A.ToJSON EmailSettings where
     ] ++
     [ "PasswordResetSalt" A..= x | Just x <- [emailSettingsPasswordresetsalt] ]
 
+data TeammateNameDisplayMode =
+    TMUsername
+    | TMNicknameOrFullname
+    | TMFullname
+    | TMUnknown T.Text
+    deriving (Eq, Show, Read)
+
+teammateDisplayModeFromText :: Text -> TeammateNameDisplayMode
+teammateDisplayModeFromText t =
+    case t of
+        "username"           -> TMUsername
+        "nickname_full_name" -> TMNicknameOrFullname
+        "full_name"          -> TMFullname
+        _                    -> TMUnknown t
+
+instance A.FromJSON TeammateNameDisplayMode where
+    parseJSON = A.withText "TeammateNameDisplayMode"
+        (return . teammateDisplayModeFromText)
+
+instance A.ToJSON TeammateNameDisplayMode where
+    toJSON TMUsername           = "username"
+    toJSON TMNicknameOrFullname = "nickname_full_name"
+    toJSON TMFullname           = "full_name"
+    toJSON (TMUnknown t)        = A.toJSON t
+
 data ClientConfig = ClientConfig
   { clientConfigVersion :: T.Text
   , clientConfigBuildNumber :: T.Text
@@ -175,7 +200,7 @@ data ClientConfig = ClientConfig
   , clientConfigSiteName :: T.Text
   , clientConfigEnableOpenServer :: T.Text
   , clientConfigRestrictDirectMessage :: T.Text
-  , clientConfigTeammateNameDisplay :: T.Text
+  , clientConfigTeammateNameDisplay :: TeammateNameDisplayMode
 
   , clientConfigEnableOAuthServiceProvider :: T.Text
   , clientConfigGoogleDeveloperKey :: T.Text
