@@ -1,7 +1,9 @@
+{-# LANGUAGE OverloadedStrings #-}
 module LocalConfig where
 import           Config
 import           System.Process ( readProcess )
 import qualified Data.Text as T
+import           Network.Mattermost.Types ( UserText (..) )
 
 getConfig :: IO Config
 getConfig = do
@@ -9,9 +11,9 @@ getConfig = do
   let cmd = words "pass ldap"
   pass <- takeWhile (/='\n') <$> readProcess (head cmd) (tail cmd) ""
   return $ Config
-         { configUsername = T.pack "USERNAME"
-         , configHostname = T.pack "mattermost.example.com"
-         , configTeam     = T.pack "TEAMNAME"
+         { configUsername = "USERNAME"
+         , configHostname = "mattermost.example.com"
+         , configTeam     = UserText "TEAMNAME"
          , configPort     = 443 -- currently we only support HTTPS
          , configPassword = T.pack pass
          }

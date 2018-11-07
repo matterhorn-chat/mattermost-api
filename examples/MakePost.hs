@@ -30,14 +30,14 @@ import           LocalConfig -- You will need to define a function:
 
 data Options
   = Options
-  { optChannel :: T.Text
+  { optChannel :: UserText
   , optVerbose :: Bool
   , optMessage :: T.Text
   } deriving (Read, Show)
 
 defaultOptions :: Options
 defaultOptions = Options
-  { optChannel = "town-square"
+  { optChannel = UserText "town-square"
   , optVerbose = False
   , optMessage = ""
   }
@@ -46,7 +46,7 @@ options :: [ OptDescr (Options -> IO Options) ]
 options =
   [ Option "c" ["channel"]
       (ReqArg
-        (\arg opt -> return opt { optChannel = T.pack arg })
+        (\arg opt -> return opt { optChannel = UserText . T.pack $ arg })
         "CHANNEL")
       "Channel to fetch posts from"
   , Option "v" ["verbose"]
