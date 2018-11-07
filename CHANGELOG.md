@@ -1,4 +1,22 @@
 
+50200.0.0
+=========
+
+API changes:
+ * Expose new type, TeammateNameDisplayMode, as the type of the
+   clientConfigTeammateNameDisplay field
+ * Removed various fields from TeamSettings and ClientConfig that seem
+   to have been removed in 4.9
+ * Remove `parent_id` fields from Post and PendingPost since they are
+   unused and thus confusing
+ * Added basic parsing support for websocket events new in 5.2 (fixes #408)
+ * ClientConfig: removed EnableUserCreation field that is removed in 5.0
+ * Removed `extra_update_at` channel data field
+
+Bug fixes:
+ * Fixed examples and tests to use the UserText type instead of
+   Data.Text (thanks Carlos D <m@cdagostino.io>)
+
 40900.1.0
 =========
 
