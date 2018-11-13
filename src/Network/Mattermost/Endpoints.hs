@@ -9,7 +9,6 @@ import qualified Data.HashMap.Strict as HM
 import           Data.Sequence (Seq)
 import           Data.Text (Text)
 import qualified Data.Text as T
-import           Data.Time.Clock ( UTCTime )
 import qualified Network.HTTP.Base as HTTP
 import qualified Network.HTTP.Headers as HTTP
 import           Text.Printf (printf)
@@ -746,7 +745,7 @@ mmPatchPost postId body =
 data PostQuery = PostQuery
   { postQueryPage    :: Maybe Int
   , postQueryPerPage :: Maybe Int
-  , postQuerySince   :: Maybe UTCTime
+  , postQuerySince   :: Maybe ServerTime
   , postQueryBefore  :: Maybe PostId
   , postQueryAfter   :: Maybe PostId
   }
@@ -765,7 +764,7 @@ postQueryToQueryString PostQuery { .. } =
   mkQueryString
     [ sequence ("page", fmap show postQueryPage)
     , sequence ("per_page", fmap show postQueryPerPage)
-    , sequence ("since", fmap show postQuerySince)
+    , sequence ("since", fmap (show . timeToServer) postQuerySince)
     , sequence ("before", fmap (T.unpack . idString) postQueryBefore)
     , sequence ("after", fmap (T.unpack . idString) postQueryAfter)
     ]
