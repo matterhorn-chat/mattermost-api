@@ -1208,6 +1208,23 @@ data FlaggedPost = FlaggedPost
   , flaggedPostStatus :: Bool
   } deriving (Read, Show, Eq)
 
+data DirectChannelShowStatus =
+    DirectChannelShowStatus { directChannelShowUserId :: UserId
+                            , directChannelShowValue :: Bool
+                            }
+
+preferenceToDirectChannelShowStatus :: Preference -> Maybe DirectChannelShowStatus
+preferenceToDirectChannelShowStatus
+  Preference
+    { preferenceCategory = PreferenceCategoryDirectChannelShow
+    , preferenceName     = PreferenceName name
+    , preferenceValue    = PreferenceValue value
+    } = Just DirectChannelShowStatus
+          { directChannelShowUserId = UI (Id name)
+          , directChannelShowValue = value == "true"
+          }
+preferenceToDirectChannelShowStatus _ = Nothing
+
 -- | Attempt to expose a 'Preference' as a 'FlaggedPost'
 preferenceToFlaggedPost :: Preference -> Maybe FlaggedPost
 preferenceToFlaggedPost
