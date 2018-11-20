@@ -1,3 +1,11 @@
+50200.0.1
+=========
+
+Bug fixes:
+ * Fix the specification of the QuerySince time for fetching channel
+   posts.  The previous version generated a user-displayable date-time
+   which contained spaces and created a malformed URL as well as not
+   being in the proper format for the server.
 
 50200.0.0
 =========
