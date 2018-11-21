@@ -172,7 +172,9 @@ shouldClose r =
 
 mkQueryString :: [Maybe (String, String)] -> String
 mkQueryString ls =
-  List.intercalate "&" [ k ++ "=" ++ v | Just (k, v) <- ls ]
+  List.intercalate "&" [ URI.escapeURIString URI.isUnescapedInURIComponent k ++ "=" ++
+                         URI.escapeURIString URI.isUnescapedInURIComponent v
+                       | Just (k, v) <- ls ]
 
 jsonBody :: A.ToJSON i => i -> B.ByteString
 jsonBody = BL.toStrict . A.encode
