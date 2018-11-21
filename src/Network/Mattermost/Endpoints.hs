@@ -1,5 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections #-}
 
 module Network.Mattermost.Endpoints where
 
@@ -1708,18 +1709,34 @@ mmGetUsers userQuery =
 -- mmPatchUser userId body =
 --   inPut (printf "/users/%s/patch" userId) (jsonBody body) jsonResponse
 
--- -- | Get a list of users for the purpose of autocompleting based on the
--- --   provided search term. Specify a combination of @team_id@ and
--- --   @channel_id@ to filter results further.
--- --
--- --   /Permissions/: Requires an active session and @view_team@ and
--- --   @read_channel@ on any teams or channels used to filter the results
--- --   further.
--- mmAutocompleteUsers :: TeamId -> ChannelId -> Text -> Session -> IO UserAutocomplete
--- mmAutocompleteUsers teamId channelId name =
---   inGet (printf "/users/autocomplete?%s" (mkQueryString [ Just ("team_id", T.unpack (idString teamId)) , Just ("channel_id", T.unpack (idString channelId)) , Just ("name", T.unpack name) ])) noBody jsonResponse
+-- | Get a list of users for the purpose of autocompleting based on the
+--   provided search term. Specify a combination of @team_id@ and
+--   @channel_id@ to filter results further.
+--
+--   /Permissions/: Requires an active session and @view_team@ and
+--   @read_channel@ on any teams or channels used to filter the results
+--   further.
+mmAutocompleteUsers :: Maybe TeamId
+                    -> Maybe ChannelId
+                    -> Text -> Session -> IO UserAutocomplete
+mmAutocompleteUsers mTeamId mChannelId name =
+    let queryString = mkQueryString args
+        args = [ (("team_id",) . T.unpack . idString) <$> mTeamId
+               , (("channel_id",) . T.unpack . idString) <$> mChannelId
+               , Just ("name", T.unpack name)
+               ]
+    in inGet (printf "/users/autocomplete?%s" queryString) noBody jsonResponse
 
-
+-- | Get a list of channels for the purpose of autocompleting based on
+--   the provided search term.
+mmAutocompleteChannels :: TeamId -> Text -> Session -> IO (Seq Channel)
+mmAutocompleteChannels teamId name =
+    let queryString = mkQueryString args
+        args = [ Just ("team_id", T.unpack $ idString teamId)
+               , Just ("name", T.unpack name)
+               ]
+    in inGet (printf "/teams/%s/channels/autocomplete?%s" teamId queryString)
+             noBody jsonResponse
 
 -- * Webhooks
 
@@ -3073,23 +3090,24 @@ getUserStatusesByIds body =
 
 -- --
 
--- data UserAutocomplete = UserAutocomplete
---   { userAutocompleteUsers :: (Seq User)
---   , userAutocompleteOutOfChannel :: (Seq User)
---     -- ^ A special case list of users returned when autocompleting in a specific channel. Omitted when empty or not relevant
---   } deriving (Read, Show, Eq)
+data UserAutocomplete = UserAutocomplete
+  { userAutocompleteUsers :: Seq User
+  , userAutocompleteOutOfChannel :: Maybe (Seq User)
+    -- ^ A special case list of users returned when autocompleting in a
+    -- specific channel. Omitted when empty or not relevant
+  } deriving (Read, Show, Eq)
 
--- instance A.FromJSON UserAutocomplete where
---   parseJSON = A.withObject "userAutocomplete" $ \v -> do
---     userAutocompleteUsers <- v A..: "users"
---     userAutocompleteOutOfChannel <- v A..: "out_of_channel"
---     return UserAutocomplete { .. }
+instance A.FromJSON UserAutocomplete where
+  parseJSON = A.withObject "userAutocomplete" $ \v -> do
+    userAutocompleteUsers <- v A..: "users"
+    userAutocompleteOutOfChannel <- v A..:? "out_of_channel"
+    return UserAutocomplete { .. }
 
--- instance A.ToJSON UserAutocomplete where
---   toJSON UserAutocomplete { .. } = A.object
---     [ "users" A..= userAutocompleteUsers
---     , "out_of_channel" A..= userAutocompleteOutOfChannel
---     ]
+instance A.ToJSON UserAutocomplete where
+  toJSON UserAutocomplete { .. } = A.object
+    [ "users" A..= userAutocompleteUsers
+    , "out_of_channel" A..= userAutocompleteOutOfChannel
+    ]
 
 -- --
 
