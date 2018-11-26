@@ -1732,8 +1732,7 @@ mmAutocompleteUsers mTeamId mChannelId name =
 mmAutocompleteChannels :: TeamId -> Text -> Session -> IO (Seq Channel)
 mmAutocompleteChannels teamId name =
     let queryString = mkQueryString args
-        args = [ Just ("team_id", T.unpack $ idString teamId)
-               , Just ("name", T.unpack name)
+        args = [ Just ("name", T.unpack name)
                ]
     in inGet (printf "/teams/%s/channels/autocomplete?%s" teamId queryString)
              noBody jsonResponse
