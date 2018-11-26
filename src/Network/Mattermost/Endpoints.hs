@@ -1721,8 +1721,8 @@ mmAutocompleteUsers :: Maybe TeamId
                     -> Text -> Session -> IO UserAutocomplete
 mmAutocompleteUsers mTeamId mChannelId name =
     let queryString = mkQueryString args
-        args = [ (("team_id",) . T.unpack . idString) <$> mTeamId
-               , (("channel_id",) . T.unpack . idString) <$> mChannelId
+        args = [ (("in_team",) . T.unpack . idString) <$> mTeamId
+               , (("in_channel",) . T.unpack . idString) <$> mChannelId
                , Just ("name", T.unpack name)
                ]
     in inGet (printf "/users/autocomplete?%s" queryString) noBody jsonResponse
