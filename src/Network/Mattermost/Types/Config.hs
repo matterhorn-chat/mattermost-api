@@ -188,6 +188,24 @@ instance A.ToJSON TeammateNameDisplayMode where
     toJSON TMFullname           = "full_name"
     toJSON (TMUnknown t)        = A.toJSON t
 
+data RestrictDirectMessageSetting =
+    RestrictAny
+    | RestrictTeam
+    | RestrictUnknown T.Text
+    deriving (Show, Eq, Read)
+
+instance A.FromJSON RestrictDirectMessageSetting where
+    parseJSON = A.withText "RestrictDirectMessageSetting" $ \t ->
+        case t of
+            "any" -> return RestrictAny
+            "team" -> return RestrictTeam
+            _ -> return $ RestrictUnknown t
+
+instance A.ToJSON RestrictDirectMessageSetting where
+    toJSON RestrictAny = A.toJSON ("any" :: T.Text)
+    toJSON RestrictTeam = A.toJSON ("team" :: T.Text)
+    toJSON (RestrictUnknown t) = A.toJSON t
+
 data ClientConfig = ClientConfig
   { clientConfigVersion :: T.Text
   , clientConfigBuildNumber :: T.Text
@@ -199,7 +217,7 @@ data ClientConfig = ClientConfig
   , clientConfigSiteURL :: T.Text
   , clientConfigSiteName :: T.Text
   , clientConfigEnableOpenServer :: T.Text
-  , clientConfigRestrictDirectMessage :: T.Text
+  , clientConfigRestrictDirectMessage :: RestrictDirectMessageSetting
   , clientConfigTeammateNameDisplay :: TeammateNameDisplayMode
 
   , clientConfigEnableOAuthServiceProvider :: T.Text
