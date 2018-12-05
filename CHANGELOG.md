@@ -1,3 +1,18 @@
+
+50200.1.0
+=========
+
+ * Added `mmUploadFile` and exposed its `UploadResponse` result type.
+ * Fixed the `FileInfo` JSON decoder to permit `post_id` to be omitted.
+ * Added `RestrictDirectMessageSetting` data type for
+   `clientConfigRestrictDirectMessage` field of `ClientConfig`.
+ * Added `mmAutocompleteUsers`.
+ * Added `mmAutocompleteChannels`.
+ * Added `DirectChannelShowStatus` preference type and constructor.
+
+Bug fixes:
+ * `mkQueryString` now properly URI-encodes keys and values.
+
 50200.0.1
 =========
 
