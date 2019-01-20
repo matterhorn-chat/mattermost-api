@@ -792,7 +792,6 @@ data Post
   , postEditAt        :: ServerTime
   , postUserId        :: Maybe UserId
   , postCreateAt      :: ServerTime
-  , postParentId      :: Maybe PostId
   , postChannelId     :: ChannelId
   , postHasReactions  :: Bool
   } deriving (Read, Show, Eq)
@@ -816,7 +815,6 @@ instance A.FromJSON Post where
     postEditAt        <- timeFromServer <$> v .: "edit_at"
     postUserId        <- maybeFail (v .: "user_id")
     postCreateAt      <- timeFromServer <$> v .: "create_at"
-    postParentId      <- maybeFail (v .: "parent_id")
     postChannelId     <- v .: "channel_id"
     postHasReactions  <- v .:? "has_reactions" .!= False
     return Post { .. }
@@ -836,7 +834,6 @@ instance A.ToJSON Post where
     , "update_at"       .= timeToServer postUpdateAt
     , "user_id"         .= postUserId
     , "create_at"       .= timeToServer postCreateAt
-    , "parent_id"       .= postParentId
     , "channel_id"      .= postChannelId
     , "has_reactions"   .= postHasReactions
     ]
@@ -849,7 +846,6 @@ data PendingPost
   , pendingPostMessage   :: Text
   , pendingPostId        :: PendingPostId
   , pendingPostUserId    :: UserId
-  , pendingPostParentId  :: Maybe PostId
   , pendingPostRootId    :: Maybe PostId
   } deriving (Read, Show, Eq)
 
@@ -862,7 +858,6 @@ instance A.ToJSON PendingPost where
     , "pending_post_id" .= pendingPostId        post
     , "user_id"         .= pendingPostUserId    post
     , "root_id"         .= pendingPostRootId    post
-    , "parent_id"       .= pendingPostParentId  post
     ]
 
 newtype PendingPostId = PPI { unPPI :: Id }
@@ -890,7 +885,6 @@ mkPendingPost msg userid channelid = do
     , pendingPostMessage   = msg
     , pendingPostUserId    = userid
     , pendingPostRootId    = Nothing
-    , pendingPostParentId  = Nothing
     }
 
 data FileInfo
@@ -1213,6 +1207,23 @@ data FlaggedPost = FlaggedPost
   , flaggedPostId     :: PostId
   , flaggedPostStatus :: Bool
   } deriving (Read, Show, Eq)
+
+data DirectChannelShowStatus =
+    DirectChannelShowStatus { directChannelShowUserId :: UserId
+                            , directChannelShowValue :: Bool
+                            }
+
+preferenceToDirectChannelShowStatus :: Preference -> Maybe DirectChannelShowStatus
+preferenceToDirectChannelShowStatus
+  Preference
+    { preferenceCategory = PreferenceCategoryDirectChannelShow
+    , preferenceName     = PreferenceName name
+    , preferenceValue    = PreferenceValue value
+    } = Just DirectChannelShowStatus
+          { directChannelShowUserId = UI (Id name)
+          , directChannelShowValue = value == "true"
+          }
+preferenceToDirectChannelShowStatus _ = Nothing
 
 -- | Attempt to expose a 'Preference' as a 'FlaggedPost'
 preferenceToFlaggedPost :: Preference -> Maybe FlaggedPost

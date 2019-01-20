@@ -66,6 +66,9 @@ data WebsocketEventType
   | WMChannelUpdated
   | WMEmojiAdded
   | WMUserRoleUpdated
+  | WMPluginStatusesChanged
+  | WMPluginEnabled
+  | WMPluginDisabled
   deriving (Read, Show, Eq, Ord)
 
 instance FromJSON WebsocketEventType where
@@ -99,38 +102,44 @@ instance FromJSON WebsocketEventType where
     "channel_updated"    -> return WMChannelUpdated
     "emoji_added"        -> return WMEmojiAdded
     "user_role_updated"  -> return WMUserRoleUpdated
+    "plugin_statuses_changed" -> return WMPluginStatusesChanged
+    "plugin_enabled"     -> return WMPluginEnabled
+    "plugin_disabled"    -> return WMPluginDisabled
     _                    -> fail ("Unknown websocket message: " ++ show s)
 
 instance ToJSON WebsocketEventType where
-  toJSON WMTyping            = "typing"
-  toJSON WMPosted            = "posted"
-  toJSON WMPostEdited        = "post_edited"
-  toJSON WMPostDeleted       = "post_deleted"
-  toJSON WMChannelDeleted    = "channel_deleted"
-  toJSON WMDirectAdded       = "direct_added"
-  toJSON WMNewUser           = "new_user"
-  toJSON WMLeaveTeam         = "leave_team"
-  toJSON WMUserAdded         = "user_added"
-  toJSON WMUserUpdated       = "user_updated"
-  toJSON WMUserRemoved       = "user_removed"
-  toJSON WMPreferenceChanged = "preferences_changed"
-  toJSON WMPreferenceDeleted = "preferences_deleted"
-  toJSON WMEphemeralMessage  = "ephemeral_message"
-  toJSON WMStatusChange      = "status_change"
-  toJSON WMHello             = "hello"
-  toJSON WMUpdateTeam        = "update_team"
-  toJSON WMTeamDeleted       = "delete_team"
-  toJSON WMReactionAdded     = "reaction_added"
-  toJSON WMReactionRemoved   = "reaction_removed"
-  toJSON WMChannelCreated    = "channel_created"
-  toJSON WMGroupAdded        = "group_added"
-  toJSON WMAddedToTeam       = "added_to_team"
-  toJSON WMWebRTC            = "webrtc"
+  toJSON WMTyping                  = "typing"
+  toJSON WMPosted                  = "posted"
+  toJSON WMPostEdited              = "post_edited"
+  toJSON WMPostDeleted             = "post_deleted"
+  toJSON WMChannelDeleted          = "channel_deleted"
+  toJSON WMDirectAdded             = "direct_added"
+  toJSON WMNewUser                 = "new_user"
+  toJSON WMLeaveTeam               = "leave_team"
+  toJSON WMUserAdded               = "user_added"
+  toJSON WMUserUpdated             = "user_updated"
+  toJSON WMUserRemoved             = "user_removed"
+  toJSON WMPreferenceChanged       = "preferences_changed"
+  toJSON WMPreferenceDeleted       = "preferences_deleted"
+  toJSON WMEphemeralMessage        = "ephemeral_message"
+  toJSON WMStatusChange            = "status_change"
+  toJSON WMHello                   = "hello"
+  toJSON WMUpdateTeam              = "update_team"
+  toJSON WMTeamDeleted             = "delete_team"
+  toJSON WMReactionAdded           = "reaction_added"
+  toJSON WMReactionRemoved         = "reaction_removed"
+  toJSON WMChannelCreated          = "channel_created"
+  toJSON WMGroupAdded              = "group_added"
+  toJSON WMAddedToTeam             = "added_to_team"
+  toJSON WMWebRTC                  = "webrtc"
   toJSON WMAuthenticationChallenge = "authentication_challenge"
   toJSON WMChannelViewed           = "channel_viewed"
   toJSON WMChannelUpdated          = "channel_updated"
   toJSON WMEmojiAdded              = "emoji_added"
-  toJSON WMUserRoleUpdated   = "user_role_updated"
+  toJSON WMUserRoleUpdated         = "user_role_updated"
+  toJSON WMPluginStatusesChanged   = "plugin_statuses_changed"
+  toJSON WMPluginEnabled           = "plugin_enabled"
+  toJSON WMPluginDisabled          = "plugin_disabled"
 
 --
 

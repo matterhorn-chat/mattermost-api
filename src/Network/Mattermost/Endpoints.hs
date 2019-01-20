@@ -1,5 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections #-}
 
 module Network.Mattermost.Endpoints where
 
@@ -9,7 +10,6 @@ import qualified Data.HashMap.Strict as HM
 import           Data.Sequence (Seq)
 import           Data.Text (Text)
 import qualified Data.Text as T
-import           Data.Time.Clock ( UTCTime )
 import qualified Network.HTTP.Base as HTTP
 import qualified Network.HTTP.Headers as HTTP
 import           Text.Printf (printf)
@@ -746,7 +746,7 @@ mmPatchPost postId body =
 data PostQuery = PostQuery
   { postQueryPage    :: Maybe Int
   , postQueryPerPage :: Maybe Int
-  , postQuerySince   :: Maybe UTCTime
+  , postQuerySince   :: Maybe ServerTime
   , postQueryBefore  :: Maybe PostId
   , postQueryAfter   :: Maybe PostId
   }
@@ -765,7 +765,7 @@ postQueryToQueryString PostQuery { .. } =
   mkQueryString
     [ sequence ("page", fmap show postQueryPage)
     , sequence ("per_page", fmap show postQueryPerPage)
-    , sequence ("since", fmap show postQuerySince)
+    , sequence ("since", fmap (show . timeToServer) postQuerySince)
     , sequence ("before", fmap (T.unpack . idString) postQueryBefore)
     , sequence ("after", fmap (T.unpack . idString) postQueryAfter)
     ]
@@ -1709,18 +1709,33 @@ mmGetUsers userQuery =
 -- mmPatchUser userId body =
 --   inPut (printf "/users/%s/patch" userId) (jsonBody body) jsonResponse
 
--- -- | Get a list of users for the purpose of autocompleting based on the
--- --   provided search term. Specify a combination of @team_id@ and
--- --   @channel_id@ to filter results further.
--- --
--- --   /Permissions/: Requires an active session and @view_team@ and
--- --   @read_channel@ on any teams or channels used to filter the results
--- --   further.
--- mmAutocompleteUsers :: TeamId -> ChannelId -> Text -> Session -> IO UserAutocomplete
--- mmAutocompleteUsers teamId channelId name =
---   inGet (printf "/users/autocomplete?%s" (mkQueryString [ Just ("team_id", T.unpack (idString teamId)) , Just ("channel_id", T.unpack (idString channelId)) , Just ("name", T.unpack name) ])) noBody jsonResponse
+-- | Get a list of users for the purpose of autocompleting based on the
+--   provided search term. Specify a combination of @team_id@ and
+--   @channel_id@ to filter results further.
+--
+--   /Permissions/: Requires an active session and @view_team@ and
+--   @read_channel@ on any teams or channels used to filter the results
+--   further.
+mmAutocompleteUsers :: Maybe TeamId
+                    -> Maybe ChannelId
+                    -> Text -> Session -> IO UserAutocomplete
+mmAutocompleteUsers mTeamId mChannelId name =
+    let queryString = mkQueryString args
+        args = [ (("in_team",) . T.unpack . idString) <$> mTeamId
+               , (("in_channel",) . T.unpack . idString) <$> mChannelId
+               , Just ("name", T.unpack name)
+               ]
+    in inGet (printf "/users/autocomplete?%s" queryString) noBody jsonResponse
 
-
+-- | Get a list of channels for the purpose of autocompleting based on
+--   the provided search term.
+mmAutocompleteChannels :: TeamId -> Text -> Session -> IO (Seq Channel)
+mmAutocompleteChannels teamId name =
+    let queryString = mkQueryString args
+        args = [ Just ("name", T.unpack name)
+               ]
+    in inGet (printf "/teams/%s/channels/autocomplete?%s" teamId queryString)
+             noBody jsonResponse
 
 -- * Webhooks
 
@@ -3074,23 +3089,24 @@ getUserStatusesByIds body =
 
 -- --
 
--- data UserAutocomplete = UserAutocomplete
---   { userAutocompleteUsers :: (Seq User)
---   , userAutocompleteOutOfChannel :: (Seq User)
---     -- ^ A special case list of users returned when autocompleting in a specific channel. Omitted when empty or not relevant
---   } deriving (Read, Show, Eq)
+data UserAutocomplete = UserAutocomplete
+  { userAutocompleteUsers :: Seq User
+  , userAutocompleteOutOfChannel :: Maybe (Seq User)
+    -- ^ A special case list of users returned when autocompleting in a
+    -- specific channel. Omitted when empty or not relevant
+  } deriving (Read, Show, Eq)
 
--- instance A.FromJSON UserAutocomplete where
---   parseJSON = A.withObject "userAutocomplete" $ \v -> do
---     userAutocompleteUsers <- v A..: "users"
---     userAutocompleteOutOfChannel <- v A..: "out_of_channel"
---     return UserAutocomplete { .. }
+instance A.FromJSON UserAutocomplete where
+  parseJSON = A.withObject "userAutocomplete" $ \v -> do
+    userAutocompleteUsers <- v A..: "users"
+    userAutocompleteOutOfChannel <- v A..:? "out_of_channel"
+    return UserAutocomplete { .. }
 
--- instance A.ToJSON UserAutocomplete where
---   toJSON UserAutocomplete { .. } = A.object
---     [ "users" A..= userAutocompleteUsers
---     , "out_of_channel" A..= userAutocompleteOutOfChannel
---     ]
+instance A.ToJSON UserAutocomplete where
+  toJSON UserAutocomplete { .. } = A.object
+    [ "users" A..= userAutocompleteUsers
+    , "out_of_channel" A..= userAutocompleteOutOfChannel
+    ]
 
 -- --
 

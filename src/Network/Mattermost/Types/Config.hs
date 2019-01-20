@@ -163,6 +163,49 @@ instance A.ToJSON EmailSettings where
     ] ++
     [ "PasswordResetSalt" A..= x | Just x <- [emailSettingsPasswordresetsalt] ]
 
+data TeammateNameDisplayMode =
+    TMUsername
+    | TMNicknameOrFullname
+    | TMFullname
+    | TMUnknown T.Text
+    deriving (Eq, Show, Read)
+
+teammateDisplayModeFromText :: Text -> TeammateNameDisplayMode
+teammateDisplayModeFromText t =
+    case t of
+        "username"           -> TMUsername
+        "nickname_full_name" -> TMNicknameOrFullname
+        "full_name"          -> TMFullname
+        _                    -> TMUnknown t
+
+instance A.FromJSON TeammateNameDisplayMode where
+    parseJSON = A.withText "TeammateNameDisplayMode"
+        (return . teammateDisplayModeFromText)
+
+instance A.ToJSON TeammateNameDisplayMode where
+    toJSON TMUsername           = "username"
+    toJSON TMNicknameOrFullname = "nickname_full_name"
+    toJSON TMFullname           = "full_name"
+    toJSON (TMUnknown t)        = A.toJSON t
+
+data RestrictDirectMessageSetting =
+    RestrictAny
+    | RestrictTeam
+    | RestrictUnknown T.Text
+    deriving (Show, Eq, Read)
+
+instance A.FromJSON RestrictDirectMessageSetting where
+    parseJSON = A.withText "RestrictDirectMessageSetting" $ \t ->
+        case t of
+            "any" -> return RestrictAny
+            "team" -> return RestrictTeam
+            _ -> return $ RestrictUnknown t
+
+instance A.ToJSON RestrictDirectMessageSetting where
+    toJSON RestrictAny = A.toJSON ("any" :: T.Text)
+    toJSON RestrictTeam = A.toJSON ("team" :: T.Text)
+    toJSON (RestrictUnknown t) = A.toJSON t
+
 data ClientConfig = ClientConfig
   { clientConfigVersion :: T.Text
   , clientConfigBuildNumber :: T.Text
@@ -173,33 +216,21 @@ data ClientConfig = ClientConfig
 
   , clientConfigSiteURL :: T.Text
   , clientConfigSiteName :: T.Text
-  , clientConfigEnableTeamCreation :: T.Text
   , clientConfigEnableOpenServer :: T.Text
-  , clientConfigRestrictDirectMessage :: T.Text
-  , clientConfigRestrictTeamInvite :: T.Text
-  , clientConfigRestrictPublicChannelCreation :: T.Text
-  , clientConfigRestrictPrivateChannelCreation :: T.Text
-  , clientConfigRestrictPublicChannelManagement :: T.Text
-  , clientConfigRestrictPrivateChannelManagement :: T.Text
-  , clientConfigRestrictPublicChannelDeletion :: T.Text
-  , clientConfigRestrictPrivateChannelDeletion :: T.Text
-  , clientConfigRestrictPrivateChannelManageMembers :: T.Text
-  , clientConfigTeammateNameDisplay :: T.Text
+  , clientConfigRestrictDirectMessage :: RestrictDirectMessageSetting
+  , clientConfigTeammateNameDisplay :: TeammateNameDisplayMode
 
   , clientConfigEnableOAuthServiceProvider :: T.Text
   , clientConfigGoogleDeveloperKey :: T.Text
   , clientConfigEnableIncomingWebhooks :: T.Text
   , clientConfigEnableOutgoingWebhooks :: T.Text
   , clientConfigEnableCommands :: T.Text
-  , clientConfigEnableOnlyAdminIntegrations :: T.Text
   , clientConfigEnablePostUsernameOverride :: T.Text
   , clientConfigEnablePostIconOverride :: T.Text
   , clientConfigEnableLinkPreviews :: T.Text
   , clientConfigEnableTesting :: T.Text
   , clientConfigEnableDeveloper :: T.Text
   , clientConfigEnableDiagnostics :: T.Text
-  , clientConfigRestrictPostDelete :: T.Text
-  , clientConfigAllowEditPost :: T.Text
   , clientConfigPostEditTimeLimit :: T.Text
 
   , clientConfigSendEmailNotifications :: T.Text
@@ -236,14 +267,11 @@ data ClientConfig = ClientConfig
 
   , clientConfigEnableCustomEmoji :: T.Text
   , clientConfigEnableEmojiPicker :: T.Text
-  , clientConfigRestrictCustomEmojiCreation :: T.Text
   , clientConfigMaxFileSize :: T.Text
 
   , clientConfigAppDownloadLink :: T.Text
   , clientConfigAndroidAppDownloadLink :: T.Text
   , clientConfigIosAppDownloadLink :: T.Text
-
-  , clientConfigEnableWebrtc :: T.Text
 
   , clientConfigMaxNotificationsPerChannel :: T.Text
   , clientConfigTimeBetweenUserTypingUpdatesMilliseconds :: T.Text
@@ -266,17 +294,8 @@ instance A.FromJSON ClientConfig where
 
     clientConfigSiteURL <- o A..: "SiteURL"
     clientConfigSiteName <- o A..: "SiteName"
-    clientConfigEnableTeamCreation <- o A..: "EnableTeamCreation"
     clientConfigEnableOpenServer <- o A..: "EnableOpenServer"
     clientConfigRestrictDirectMessage <- o A..: "RestrictDirectMessage"
-    clientConfigRestrictTeamInvite <- o A..: "RestrictTeamInvite"
-    clientConfigRestrictPublicChannelCreation <- o A..: "RestrictPublicChannelCreation"
-    clientConfigRestrictPrivateChannelCreation <- o A..: "RestrictPrivateChannelCreation"
-    clientConfigRestrictPublicChannelManagement <- o A..: "RestrictPublicChannelManagement"
-    clientConfigRestrictPrivateChannelManagement <- o A..: "RestrictPrivateChannelManagement"
-    clientConfigRestrictPublicChannelDeletion <- o A..: "RestrictPublicChannelDeletion"
-    clientConfigRestrictPrivateChannelDeletion <- o A..: "RestrictPrivateChannelDeletion"
-    clientConfigRestrictPrivateChannelManageMembers <- o A..: "RestrictPrivateChannelManageMembers"
     clientConfigTeammateNameDisplay <- o A..: "TeammateNameDisplay"
 
     clientConfigEnableOAuthServiceProvider <- o A..: "EnableOAuthServiceProvider"
@@ -284,15 +303,12 @@ instance A.FromJSON ClientConfig where
     clientConfigEnableIncomingWebhooks <- o A..: "EnableIncomingWebhooks"
     clientConfigEnableOutgoingWebhooks <- o A..: "EnableOutgoingWebhooks"
     clientConfigEnableCommands <- o A..: "EnableCommands"
-    clientConfigEnableOnlyAdminIntegrations <- o A..: "EnableOnlyAdminIntegrations"
     clientConfigEnablePostUsernameOverride <- o A..: "EnablePostUsernameOverride"
     clientConfigEnablePostIconOverride <- o A..: "EnablePostIconOverride"
     clientConfigEnableLinkPreviews <- o A..: "EnableLinkPreviews"
     clientConfigEnableTesting <- o A..: "EnableTesting"
     clientConfigEnableDeveloper <- o A..: "EnableDeveloper"
     clientConfigEnableDiagnostics <- o A..: "EnableDiagnostics"
-    clientConfigRestrictPostDelete <- o A..: "RestrictPostDelete"
-    clientConfigAllowEditPost <- o A..: "AllowEditPost"
     clientConfigPostEditTimeLimit <- o A..: "PostEditTimeLimit"
 
     clientConfigSendEmailNotifications <- o A..: "SendEmailNotifications"
@@ -329,14 +345,11 @@ instance A.FromJSON ClientConfig where
 
     clientConfigEnableCustomEmoji <- o A..: "EnableCustomEmoji"
     clientConfigEnableEmojiPicker <- o A..: "EnableEmojiPicker"
-    clientConfigRestrictCustomEmojiCreation <- o A..: "RestrictCustomEmojiCreation"
     clientConfigMaxFileSize <- o A..: "MaxFileSize"
 
     clientConfigAppDownloadLink <- o A..: "AppDownloadLink"
     clientConfigAndroidAppDownloadLink <- o A..: "AndroidAppDownloadLink"
     clientConfigIosAppDownloadLink <- o A..: "IosAppDownloadLink"
-
-    clientConfigEnableWebrtc <- o A..: "EnableWebrtc"
 
     clientConfigMaxNotificationsPerChannel <- o A..: "MaxNotificationsPerChannel"
     clientConfigTimeBetweenUserTypingUpdatesMilliseconds <- o A..: "TimeBetweenUserTypingUpdatesMilliseconds"
@@ -359,7 +372,6 @@ data TeamSettings = TeamSettings
   , teamSettingsRestrictprivatechanneldeletion :: Text
   , teamSettingsMaxchannelsperteam :: Int
   , teamSettingsRestrictteaminvite :: Text
-  , teamSettingsEnableteamcreation :: Bool
   , teamSettingsSitename :: Text
   , teamSettingsRestrictpublicchannelmanagement :: Text
   , teamSettingsMaxnotificationsperchannel :: Int
@@ -383,7 +395,6 @@ instance A.FromJSON TeamSettings where
     teamSettingsRestrictprivatechanneldeletion <- v A..: "RestrictPrivateChannelDeletion"
     teamSettingsMaxchannelsperteam <- v A..: "MaxChannelsPerTeam"
     teamSettingsRestrictteaminvite <- v A..: "RestrictTeamInvite"
-    teamSettingsEnableteamcreation <- v A..: "EnableTeamCreation"
     teamSettingsSitename <- v A..: "SiteName"
     teamSettingsRestrictpublicchannelmanagement <- v A..: "RestrictPublicChannelManagement"
     teamSettingsMaxnotificationsperchannel <- v A..: "MaxNotificationsPerChannel"
@@ -407,7 +418,6 @@ instance A.ToJSON TeamSettings where
     , "RestrictPrivateChannelDeletion" A..= teamSettingsRestrictprivatechanneldeletion
     , "MaxChannelsPerTeam" A..= teamSettingsMaxchannelsperteam
     , "RestrictTeamInvite" A..= teamSettingsRestrictteaminvite
-    , "EnableTeamCreation" A..= teamSettingsEnableteamcreation
     , "SiteName" A..= teamSettingsSitename
     , "RestrictPublicChannelManagement" A..= teamSettingsRestrictpublicchannelmanagement
     , "MaxNotificationsPerChannel" A..= teamSettingsMaxnotificationsperchannel
