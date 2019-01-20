@@ -461,12 +461,16 @@ mmGetFile :: FileId -> Session -> IO B.ByteString
 mmGetFile fileId =
   inGet (printf "/files/%s" fileId) noBody bytestringResponse
 
--- -- | Uploads a file that can later be attached to a post.
--- --
--- --   /Permissions/: Must have @upload_file@ permission.
--- mmUploadFile :: Session -> IO XX15
--- mmUploadFile =
---   inPost "/files" noBody jsonResponse
+-- | Uploads a file that can later be attached to a post.
+--
+--   /Permissions/: Must have @upload_file@ permission.
+mmUploadFile :: ChannelId -> String -> B.ByteString -> Session -> IO UploadResponse
+mmUploadFile cId filename bytes =
+    let qs = mkQueryString
+                 [ Just ("channel_id", T.unpack $ idString cId)
+                 , Just ("filename", filename)
+                 ]
+    in inPost (printf "/files?%s" qs) bytes jsonResponse
 
 -- | Gets a file's info.
 --
@@ -3264,23 +3268,23 @@ instance A.ToJSON UserAutocomplete where
 
 -- --
 
--- data XX15 = XX15
---   { xx15ClientIds :: (Seq Text)
---   , xx15FileInfos :: (Seq FileInfo)
---     -- ^ A list of file metadata that has been stored in the database
---   } deriving (Read, Show, Eq)
+data UploadResponse = UploadResponse
+  { uploadResponseClientIds :: (Seq Text)
+  , uploadResponseFileInfos :: (Seq FileInfo)
+    -- ^ A list of file metadata that has been stored in the database
+  } deriving (Read, Show, Eq)
 
--- instance A.FromJSON XX15 where
---   parseJSON = A.withObject "xx15" $ \v -> do
---     xx15ClientIds <- v A..: "client_ids"
---     xx15FileInfos <- v A..: "file_infos"
---     return XX15 { .. }
+instance A.FromJSON UploadResponse where
+  parseJSON = A.withObject "UploadResponse" $ \v -> do
+    uploadResponseClientIds <- v A..: "client_ids"
+    uploadResponseFileInfos <- v A..: "file_infos"
+    return UploadResponse { .. }
 
--- instance A.ToJSON XX15 where
---   toJSON XX15 { .. } = A.object
---     [ "client_ids" A..= xx15ClientIds
---     , "file_infos" A..= xx15FileInfos
---     ]
+instance A.ToJSON UploadResponse where
+  toJSON UploadResponse { .. } = A.object
+    [ "client_ids" A..= uploadResponseClientIds
+    , "file_infos" A..= uploadResponseFileInfos
+    ]
 
 -- --
 

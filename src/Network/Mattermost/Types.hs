@@ -911,7 +911,7 @@ instance FromJSON FileInfo where
   parseJSON = A.withObject "file_info" $ \o -> do
     fileInfoId         <- o .: "id"
     fileInfoUserId     <- o .: "user_id"
-    fileInfoPostId     <- o .: "post_id"
+    fileInfoPostId     <- o .:? "post_id"
     fileInfoCreateAt   <- timeFromServer <$> o .: "create_at"
     fileInfoUpdateAt   <- timeFromServer <$> o .: "update_at"
     fileInfoDeleteAt   <- timeFromServer <$> o .: "delete_at"
