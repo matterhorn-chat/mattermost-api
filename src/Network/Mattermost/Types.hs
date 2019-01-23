@@ -574,11 +574,11 @@ instance HasId User UserId where
 data User
   = User
   { userId                 :: UserId
-  , userCreateAt           :: ServerTime
-  , userUpdateAt           :: ServerTime
+  , userCreateAt           :: Maybe ServerTime
+  , userUpdateAt           :: Maybe ServerTime
   , userDeleteAt           :: ServerTime
   , userUsername           :: Text
-  , userAuthData           :: Text
+  , userAuthData           :: Maybe Text
   , userAuthService        :: Text
   , userEmail              :: UserText
   , userEmailVerified      :: Bool
@@ -595,11 +595,11 @@ data User
 instance A.FromJSON User where
   parseJSON = A.withObject "User" $ \o -> do
     userId                 <- o .: "id"
-    userCreateAt           <- timeFromServer <$> o .: "create_at"
-    userUpdateAt           <- timeFromServer <$> o .: "update_at"
+    userCreateAt           <- (timeFromServer <$>) <$> o .:? "create_at"
+    userUpdateAt           <- (timeFromServer <$>) <$> o .:? "update_at"
     userDeleteAt           <- timeFromServer <$> o .: "delete_at"
     userUsername           <- o .:  "username"
-    userAuthData           <- o .:  "auth_data"
+    userAuthData           <- o .:?  "auth_data"
     userAuthService        <- o .:  "auth_service"
     userEmail              <- o .:  "email"
     userEmailVerified      <- o .:? "email_verified" .!= False
