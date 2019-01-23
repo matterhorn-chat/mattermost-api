@@ -1,4 +1,12 @@
 
+50200.1.1
+=========
+
+Bug fixes:
+ * The `userCreateAt`, `userUpdateAt`, and `userAuthData` fields of
+   `User` are now permitted to be optional in the user JSON encoding to
+   be consistent with the server.
+
 50200.1.0
 =========
 
