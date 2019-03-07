@@ -3269,7 +3269,7 @@ instance A.ToJSON UserAutocomplete where
 -- --
 
 data UploadResponse = UploadResponse
-  { uploadResponseClientIds :: (Seq Text)
+  { uploadResponseClientIds :: Maybe (Seq Text) -- might be null
   , uploadResponseFileInfos :: (Seq FileInfo)
     -- ^ A list of file metadata that has been stored in the database
   } deriving (Read, Show, Eq)
