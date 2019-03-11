@@ -1,3 +1,15 @@
+50200.1.2
+=========
+
+Bug fixes:
+ * The server response to an uploaded file may report "null" for
+   client_ids.  This previously failed the parse attempt to create a
+   `Seq ClientId`; this fix updates to conver null to an empty `Seq`.
+   This typically manifested in attempting to attach a file in a
+   common channel.
+
+Compatibility:
+ * Updated supported/tested GHC versions: 8.2.2, 8.4.4, and 8.6.3.
 
 50200.1.1
 =========
