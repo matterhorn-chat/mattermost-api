@@ -175,10 +175,10 @@ data Type = Ordinary
 
 instance A.FromJSON Type where
   parseJSON = A.withText "Type" $ \t ->
-      return $ if | t == "O"  -> Ordinary
-                  | t == "D"  -> Direct
-                  | t == "P"  -> Private
-                  | t == "G"  -> Group
+      return $ if | t == "O"  -> Ordinary   -- public chat channels
+                  | t == "D"  -> Direct     -- between two users only
+                  | t == "P"  -> Private    -- like Ordinary but not visible to non-members
+                  | t == "G"  -> Group      -- between a selected set of users
                   | otherwise -> Unknown t
 
 instance A.ToJSON Type where
