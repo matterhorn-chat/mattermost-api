@@ -681,6 +681,7 @@ data PostProps
   = PostProps
   { postPropsOverrideIconUrl  :: Maybe Text
   , postPropsOverrideUsername :: Maybe Text
+  , postPropsFromWebhook      :: Maybe Bool
   , postPropsAttachments      :: Maybe (Seq PostPropAttachment) -- A.Value
   , postPropsNewHeader        :: Maybe Text
   , postPropsOldHeader        :: Maybe Text
@@ -691,6 +692,7 @@ emptyPostProps
   = PostProps
   { postPropsOverrideIconUrl  = Nothing
   , postPropsOverrideUsername = Nothing
+  , postPropsFromWebhook      = Nothing
   , postPropsAttachments      = Nothing
   , postPropsNewHeader        = Nothing
   , postPropsOldHeader        = Nothing
@@ -700,6 +702,10 @@ instance A.FromJSON PostProps where
   parseJSON = A.withObject "Props" $ \v -> do
     postPropsOverrideIconUrl  <- v .:? "override_icon_url"
     postPropsOverrideUsername <- v .:? "override_username"
+    postPropsFromWebhookStr   <- v .:? "from_webhook"
+    let postPropsFromWebhook = do
+            s <- postPropsFromWebhookStr
+            return $ s == ("true"::Text)
     postPropsAttachments      <- v .:? "attachments"
     postPropsNewHeader        <- v .:? "new_header"
     postPropsOldHeader        <- v .:? "old_header"
@@ -709,6 +715,7 @@ instance A.ToJSON PostProps where
   toJSON PostProps { .. } = A.object $
     [ "override_icon_url" .= v | Just v <- [postPropsOverrideIconUrl ] ] ++
     [ "override_username" .= v | Just v <- [postPropsOverrideUsername] ] ++
+    [ "from_webhook"      .= v | Just v <- [postPropsFromWebhook     ] ] ++
     [ "attachments"       .= v | Just v <- [postPropsAttachments     ] ] ++
     [ "new_header"        .= v | Just v <- [postPropsNewHeader       ] ] ++
     [ "old_header"        .= v | Just v <- [postPropsOldHeader       ] ]
