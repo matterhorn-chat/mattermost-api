@@ -1,3 +1,9 @@
+50200.1.3
+=========
+
+API changes:
+ * The `PostProps` type got support for the `from_webhook` prop
+
 50200.1.2
 =========
 
