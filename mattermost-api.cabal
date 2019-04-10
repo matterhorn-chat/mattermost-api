@@ -60,6 +60,7 @@ library
                      , bytestring
                      , process
                      , HTTP
+                     , http-media
                      , network-uri
                      , text
                      , time

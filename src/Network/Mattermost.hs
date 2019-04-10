@@ -130,7 +130,7 @@ import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as BL
 import           Network.HTTP.Headers ( HeaderName(..)
                                       , mkHeader
-                                      , lookupHeader )
+                                      )
 import           Network.HTTP.Base ( Request(..)
                                    , RequestMethod(..)
                                    , defaultUserAgent
@@ -154,7 +154,7 @@ import qualified Data.Sequence as Seq
 import qualified Data.Text as T
 import           Control.Arrow ( left )
 
-import           Network.Mattermost.Connection()
+import           Network.Mattermost.Connection (assertJSONResponse, mmGetHeader)
 import           Network.Mattermost.Exceptions
 import           Network.Mattermost.Util
 import           Network.Mattermost.Types.Base
@@ -174,12 +174,7 @@ mmPath str =
 --   'application/json' response, or if the parsing failed
 mmGetJSONBody :: FromJSON t => String -> Response_String -> IO (Value, t)
 mmGetJSONBody label rsp = do
-  contentType <- mmGetHeader rsp HdrContentType
-  assertE (contentType ~= "application/json")
-          (ContentTypeException
-            ("mmGetJSONBody: " ++ label ++ ": " ++
-             "Expected content type 'application/json'" ++
-             " found " ++ contentType))
+  assertJSONResponse rsp
 
   let value = left (\s -> JSONDecodeException ("mmGetJSONBody: " ++ label ++ ": " ++ s)
                                               (rspBody rsp))
@@ -191,12 +186,6 @@ mmGetJSONBody label rsp = do
     x <- rawVal
     y <- value
     return (x, y)
-
--- | Grab a header from the response, failing if it isn't present
-mmGetHeader :: Response_String -> HeaderName -> IO String
-mmGetHeader rsp hdr =
-  noteE (lookupHeader hdr (rspHeaders rsp))
-        (HeaderNotFoundException ("mmGetHeader: " ++ show hdr))
 
 -- API calls
 
