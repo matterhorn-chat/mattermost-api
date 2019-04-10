@@ -1,3 +1,10 @@
+50200.1.4
+=========
+
+Bug fixes:
+ * Content-type headers in server API responses are now parsed correctly
+   in the presence of media type parameters as per RFC 2616.
+
 50200.1.3
 =========
 
