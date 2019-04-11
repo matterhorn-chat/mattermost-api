@@ -1346,7 +1346,8 @@ mmSearchUsers :: UserSearch -> Session -> IO (Seq User)
 mmSearchUsers body =
   inPost "/users/search" (jsonBody body) jsonResponse
 
--- | Get a list of users based on a provided list of usernames.
+-- | Get a list of users based on a provided list of usernames. The
+-- input usernames must be usernames without sigils (@).
 --
 --   /Permissions/: Requires an active session but no other permissions.
 mmGetUsersByUsernames :: (Seq Text) -> Session -> IO (Seq User)
