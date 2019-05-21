@@ -865,6 +865,10 @@ mmPostReaction postId userId reac =
                         ]
     in inPost (printf "/reactions") (jsonBody body) noResponse
 
+mmDeleteReaction :: PostId -> UserId -> T.Text -> Session -> IO ()
+mmDeleteReaction postId userId reac =
+    inDelete (printf "/users/%s/posts/%s/reactions/%s" userId postId reac) noBody noResponse
+
 -- * SAML
 
 -- -- | Upload the private key to be used for encryption with your SAML
