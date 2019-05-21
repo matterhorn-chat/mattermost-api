@@ -857,11 +857,13 @@ mmGetReactionsForPost :: PostId -> Session -> IO (Seq Reaction)
 mmGetReactionsForPost postId =
   inGet (printf "/posts/%s/reactions" postId) noBody jsonResponse
 
--- mmPostReaction :: Session -> IO ()
--- mmPostReaction =
---   inPost (printf "/reactions") (jsonBody ()) noResponse
-
-
+mmPostReaction :: PostId -> UserId -> T.Text -> Session -> IO ()
+mmPostReaction postId userId reac =
+    let body = A.object [ "user_id" A..= userId
+                        , "post_id" A..= postId
+                        , "emoji_name" A..= reac
+                        ]
+    in inPost (printf "/reactions") (jsonBody body) noResponse
 
 -- * SAML
 
