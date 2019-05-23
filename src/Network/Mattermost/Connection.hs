@@ -5,6 +5,7 @@ module Network.Mattermost.Connection where
 import           Control.Arrow (left)
 import           Control.Exception (throwIO, IOException, try, throwIO)
 import           Control.Monad (when)
+import           Data.Maybe (isJust)
 import           Data.Monoid ((<>))
 import           Data.Pool (destroyAllResources)
 import qualified Data.Aeson as A
@@ -16,6 +17,7 @@ import qualified Data.Text as T
 import qualified Network.HTTP.Base as HTTP
 import qualified Network.HTTP.Headers as HTTP
 import qualified Network.HTTP.Stream as HTTP
+import qualified Network.HTTP.Media as HTTPM
 import qualified Network.URI as URI
 import           System.IO.Error (isEOFError)
 
@@ -30,16 +32,21 @@ mmPath str =
   noteE (URI.parseRelativeReference str)
         (URIParseException ("mmPath: " ++ str))
 
+assertJSONResponse :: HTTP.Response_String -> IO ()
+assertJSONResponse rsp = do
+  contentType <- mmGetHeader rsp HTTP.HdrContentType
+
+  let allowedTypes = [B.pack "application/json"]
+  assertE (isJust $ HTTPM.matchContent allowedTypes $ B.pack contentType)
+          (ContentTypeException
+            ("Expected content type 'application/json';" ++
+             " found " ++ contentType))
 
 -- | Parse the JSON body out of a request, failing if it isn't an
 --   'application/json' response, or if the parsing failed
 jsonResponse :: A.FromJSON t => HTTP.Response_String -> IO t
 jsonResponse rsp = do
-  contentType <- mmGetHeader rsp HTTP.HdrContentType
-  assertE (contentType ~= "application/json")
-          (ContentTypeException
-            ("Expected content type 'application/json'" ++
-             " found " ++ contentType))
+  assertJSONResponse rsp
 
   hoistE $ left (\s -> JSONDecodeException s (HTTP.rspBody rsp))
                 (A.eitherDecode (BL.pack (HTTP.rspBody rsp)))
@@ -65,12 +72,7 @@ mmGetHeader rsp hdr =
 --   'application/json' response, or if the parsing failed
 mmGetJSONBody :: A.FromJSON t => String -> HTTP.Response_String -> IO (t)
 mmGetJSONBody label rsp = do
-  contentType <- mmGetHeader rsp HTTP.HdrContentType
-  assertE (contentType ~= "application/json")
-          (ContentTypeException
-            ("mmGetJSONBody: " ++ label ++ ": " ++
-             "Expected content type 'application/json'" ++
-             " found " ++ contentType))
+  assertJSONResponse rsp
 
   let value = left (\s -> JSONDecodeException ("mmGetJSONBody: " ++ label ++ ": " ++ s)
                                               (HTTP.rspBody rsp))

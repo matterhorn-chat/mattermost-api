@@ -7,7 +7,7 @@ module Network.Mattermost.Endpoints where
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Char8 as B
 import qualified Data.HashMap.Strict as HM
-import           Data.Sequence (Seq)
+import           Data.Sequence (Seq, fromList)
 import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Network.HTTP.Base as HTTP
@@ -1346,7 +1346,8 @@ mmSearchUsers :: UserSearch -> Session -> IO (Seq User)
 mmSearchUsers body =
   inPost "/users/search" (jsonBody body) jsonResponse
 
--- | Get a list of users based on a provided list of usernames.
+-- | Get a list of users based on a provided list of usernames. The
+-- input usernames must be usernames without sigils (@).
 --
 --   /Permissions/: Requires an active session but no other permissions.
 mmGetUsersByUsernames :: (Seq Text) -> Session -> IO (Seq User)
@@ -3269,14 +3270,14 @@ instance A.ToJSON UserAutocomplete where
 -- --
 
 data UploadResponse = UploadResponse
-  { uploadResponseClientIds :: (Seq Text)
+  { uploadResponseClientIds :: (Seq Text) -- might be null
   , uploadResponseFileInfos :: (Seq FileInfo)
     -- ^ A list of file metadata that has been stored in the database
   } deriving (Read, Show, Eq)
 
 instance A.FromJSON UploadResponse where
   parseJSON = A.withObject "UploadResponse" $ \v -> do
-    uploadResponseClientIds <- v A..: "client_ids"
+    uploadResponseClientIds <- v A..:? "client_ids" A..!= fromList []
     uploadResponseFileInfos <- v A..: "file_infos"
     return UploadResponse { .. }
 

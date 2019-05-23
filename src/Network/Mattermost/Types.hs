@@ -175,10 +175,10 @@ data Type = Ordinary
 
 instance A.FromJSON Type where
   parseJSON = A.withText "Type" $ \t ->
-      return $ if | t == "O"  -> Ordinary
-                  | t == "D"  -> Direct
-                  | t == "P"  -> Private
-                  | t == "G"  -> Group
+      return $ if | t == "O"  -> Ordinary   -- public chat channels
+                  | t == "D"  -> Direct     -- between two users only
+                  | t == "P"  -> Private    -- like Ordinary but not visible to non-members
+                  | t == "G"  -> Group      -- between a selected set of users
                   | otherwise -> Unknown t
 
 instance A.ToJSON Type where
@@ -574,11 +574,11 @@ instance HasId User UserId where
 data User
   = User
   { userId                 :: UserId
-  , userCreateAt           :: ServerTime
-  , userUpdateAt           :: ServerTime
+  , userCreateAt           :: Maybe ServerTime
+  , userUpdateAt           :: Maybe ServerTime
   , userDeleteAt           :: ServerTime
   , userUsername           :: Text
-  , userAuthData           :: Text
+  , userAuthData           :: Maybe Text
   , userAuthService        :: Text
   , userEmail              :: UserText
   , userEmailVerified      :: Bool
@@ -595,11 +595,11 @@ data User
 instance A.FromJSON User where
   parseJSON = A.withObject "User" $ \o -> do
     userId                 <- o .: "id"
-    userCreateAt           <- timeFromServer <$> o .: "create_at"
-    userUpdateAt           <- timeFromServer <$> o .: "update_at"
+    userCreateAt           <- (timeFromServer <$>) <$> o .:? "create_at"
+    userUpdateAt           <- (timeFromServer <$>) <$> o .:? "update_at"
     userDeleteAt           <- timeFromServer <$> o .: "delete_at"
     userUsername           <- o .:  "username"
-    userAuthData           <- o .:  "auth_data"
+    userAuthData           <- o .:?  "auth_data"
     userAuthService        <- o .:  "auth_service"
     userEmail              <- o .:  "email"
     userEmailVerified      <- o .:? "email_verified" .!= False
@@ -681,6 +681,7 @@ data PostProps
   = PostProps
   { postPropsOverrideIconUrl  :: Maybe Text
   , postPropsOverrideUsername :: Maybe Text
+  , postPropsFromWebhook      :: Maybe Bool
   , postPropsAttachments      :: Maybe (Seq PostPropAttachment) -- A.Value
   , postPropsNewHeader        :: Maybe Text
   , postPropsOldHeader        :: Maybe Text
@@ -691,6 +692,7 @@ emptyPostProps
   = PostProps
   { postPropsOverrideIconUrl  = Nothing
   , postPropsOverrideUsername = Nothing
+  , postPropsFromWebhook      = Nothing
   , postPropsAttachments      = Nothing
   , postPropsNewHeader        = Nothing
   , postPropsOldHeader        = Nothing
@@ -700,6 +702,10 @@ instance A.FromJSON PostProps where
   parseJSON = A.withObject "Props" $ \v -> do
     postPropsOverrideIconUrl  <- v .:? "override_icon_url"
     postPropsOverrideUsername <- v .:? "override_username"
+    postPropsFromWebhookStr   <- v .:? "from_webhook"
+    let postPropsFromWebhook = do
+            s <- postPropsFromWebhookStr
+            return $ s == ("true"::Text)
     postPropsAttachments      <- v .:? "attachments"
     postPropsNewHeader        <- v .:? "new_header"
     postPropsOldHeader        <- v .:? "old_header"
@@ -709,6 +715,7 @@ instance A.ToJSON PostProps where
   toJSON PostProps { .. } = A.object $
     [ "override_icon_url" .= v | Just v <- [postPropsOverrideIconUrl ] ] ++
     [ "override_username" .= v | Just v <- [postPropsOverrideUsername] ] ++
+    [ "from_webhook"      .= v | Just v <- [postPropsFromWebhook     ] ] ++
     [ "attachments"       .= v | Just v <- [postPropsAttachments     ] ] ++
     [ "new_header"        .= v | Just v <- [postPropsNewHeader       ] ] ++
     [ "old_header"        .= v | Just v <- [postPropsOldHeader       ] ]

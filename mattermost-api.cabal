@@ -1,7 +1,14 @@
 name:                mattermost-api
-version:             50200.1.0
+version:             50200.1.4
 synopsis:            Client API for Mattermost chat system
-description:         Client API for Mattermost chat system
+
+description:         Client API for Mattermost chat system.  Mattermost is a
+                     flexible, open source messaging platform that
+                     meets even the most demanding privacy and
+                     security standards.  This library provides
+                     network API interaction with the Mattermost
+                     server.
+
 license:             BSD3
 license-file:        LICENSE
 author:              Jason Dagit
@@ -11,7 +18,7 @@ category:            Web
 build-type:          Simple
 extra-doc-files:     README.md,
                      CHANGELOG.md
-cabal-version:       >=1.18
+cabal-version:       1.18
 tested-with:         GHC == 7.10.3, GHC == 8.0.1
 source-repository    head
   type: git
@@ -54,6 +61,7 @@ library
                      , bytestring
                      , process
                      , HTTP
+                     , http-media
                      , network-uri
                      , text
                      , time
@@ -69,7 +77,7 @@ library
                      , split
   hs-source-dirs:      src
   default-language:    Haskell2010
-  ghc-options:       -Wall
+  ghc-options:       -Wall -Wcompat
 
 executable mm-get-teams
   if !flag(build-examples)
