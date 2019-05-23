@@ -76,7 +76,7 @@ withConnection cd action = do
 -- * No proxy authentication is supported.
 mkConnection :: ConnectionContext -> Hostname -> Port -> Bool -> IO Connection
 mkConnection ctx host port secure = do
-  proxy' <- proxyForScheme (if secure then HTTPS else HTTP)
+  proxy' <- if secure then proxyForScheme HTTPS else return Nothing
   canUseProxy <- proxyHostPermitted (T.unpack host)
   let proxy = if canUseProxy then proxy' else Nothing
   connectTo ctx $ ConnectionParams
@@ -89,7 +89,6 @@ mkConnection ctx host port secure = do
         (ty, cHost, cPort) <- proxy
         case ty of
             Socks -> return $ SockSettingsSimple cHost (toEnum cPort)
-            Other -> return $ OtherProxy cHost (toEnum cPort)
     }
 
 -- | Get exact count of bytes from a connection.

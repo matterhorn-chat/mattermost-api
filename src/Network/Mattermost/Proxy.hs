@@ -14,10 +14,10 @@ import Network.URI (parseURI, uriRegName, uriPort, uriAuthority, uriScheme)
 import System.Environment (getEnvironment, lookupEnv)
 import Text.Read (readMaybe)
 
-data Scheme = HTTP | HTTPS
+data Scheme = HTTPS
             deriving (Eq, Show)
 
-data ProxyType = Socks | Other
+data ProxyType = Socks
                deriving (Eq, Show)
 
 newtype NormalizedEnv = NormalizedEnv [(String, String)]
@@ -28,22 +28,29 @@ proxyHostPermitted hostname = do
     case result of
         Nothing -> return True
         Just blacklist -> do
-            let blacklistedHosts = splitOn "," blacklist
-                allHostsBlocked = "*" `elem` blacklistedHosts
-            return $ not $ (hostname `elem` blacklistedHosts) ||
-                           allHostsBlocked
+            let patterns = splitOn "," blacklist
+                hostnameParts = reverse $ splitOn "." hostname
+                isBlacklisted = any matches patterns
+                matches pat =
+                    let patParts = reverse $ splitOn "." pat
+                        go [] [] = True
+                        go [] _ = False
+                        go _ [] = False
+                        go (p:pParts) hParts =
+                            if p == "*"
+                            then True
+                            else case hParts of
+                                [] -> False
+                                (h:hTail) -> p == h && go pParts hTail
+                    in go patParts hostnameParts
+            return $ not isBlacklisted
 
 proxyForScheme :: Scheme -> IO (Maybe (ProxyType, String, Int))
 proxyForScheme s = do
     env <- getEnvironment
     let proxy = case s of
-          HTTP -> httpProxy
           HTTPS -> httpsProxy
     return $ proxy $ normalizeEnv env
-
-httpProxy :: NormalizedEnv -> Maybe (ProxyType, String, Int)
-httpProxy env = proxyFor "HTTP_PROXY" env <|>
-                proxyFor "ALL_PROXY" env
 
 httpsProxy :: NormalizedEnv -> Maybe (ProxyType, String, Int)
 httpsProxy env = proxyFor "HTTPS_PROXY" env <|>
@@ -55,14 +62,10 @@ proxyFor name env = do
     uri <- parseURI val
 
     let scheme = uriScheme uri
-        getProxyType = isSocks <|> isHttp
+        getProxyType = isSocks
         isSocks = if "socks" `isPrefixOf` scheme
                      then return Socks
                      else Nothing
-        isHttp = if "https" `isPrefixOf` scheme ||
-                    "http" `isPrefixOf` scheme
-                    then return Other
-                    else Nothing
 
     ty <- getProxyType
     auth <- uriAuthority uri
