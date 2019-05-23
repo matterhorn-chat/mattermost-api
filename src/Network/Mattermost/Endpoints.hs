@@ -415,12 +415,25 @@ mmExecuteCommand body =
 -- mmCreateCustomEmoji =
 --   inPost "/emoji" noBody jsonResponse
 
--- -- | Get a page of metadata for custom emoji on the system.
--- --
--- --   /Permissions/: Must be authenticated.
--- mmGetListOfCustomEmoji :: Maybe Integer -> Maybe Integer -> Session -> IO Emoji
--- mmGetListOfCustomEmoji page perPage =
---   inGet (printf "/emoji?%s" (mkQueryString [ sequence ("page", fmap show page) , sequence ("per_page", fmap show perPage) ])) noBody jsonResponse
+-- | Search custom emoji using an infix match. (Does not support the
+-- prefix_only option).
+--
+--   /Permissions/: Must be authenticated.
+mmSearchCustomEmoji :: T.Text -> Session -> IO [Emoji]
+mmSearchCustomEmoji searchString =
+  let body = A.object [ "term" A..= searchString
+                      ]
+  in inPost (printf "/emoji/search") (jsonBody body) jsonResponse
+
+-- | Get a page of metadata for custom emoji on the system.
+--
+--   /Permissions/: Must be authenticated.
+mmGetListOfCustomEmoji :: Maybe Integer -> Maybe Integer -> Session -> IO [Emoji]
+mmGetListOfCustomEmoji page perPage =
+    let qs = mkQueryString [ sequence ("page", fmap show page)
+                           , sequence ("per_page", fmap show perPage)
+                           ]
+    in inGet (printf "/emoji?%s" qs) noBody jsonResponse
 
 -- -- | Get some metadata for a custom emoji.
 -- --
@@ -844,11 +857,17 @@ mmGetReactionsForPost :: PostId -> Session -> IO (Seq Reaction)
 mmGetReactionsForPost postId =
   inGet (printf "/posts/%s/reactions" postId) noBody jsonResponse
 
--- mmPostReaction :: Session -> IO ()
--- mmPostReaction =
---   inPost (printf "/reactions") (jsonBody ()) noResponse
+mmPostReaction :: PostId -> UserId -> T.Text -> Session -> IO ()
+mmPostReaction postId userId reac =
+    let body = A.object [ "user_id" A..= userId
+                        , "post_id" A..= postId
+                        , "emoji_name" A..= reac
+                        ]
+    in inPost (printf "/reactions") (jsonBody body) noResponse
 
-
+mmDeleteReaction :: PostId -> UserId -> T.Text -> Session -> IO ()
+mmDeleteReaction postId userId reac =
+    inDelete (printf "/users/%s/posts/%s/reactions/%s" userId postId reac) noBody noResponse
 
 -- * SAML
 
@@ -2061,47 +2080,39 @@ getUserStatusesByIds body =
 --     , "desc" A..= complianceDesc
 --     ]
 
--- --
+data Emoji = Emoji
+  { emojiCreatorId :: Text
+  , emojiName :: Text
+    -- ^ The name of the emoji
+  , emojiDeleteAt :: Integer
+    -- ^ The time at which the emoji was deleted.
+  , emojiUpdateAt :: Integer
+    -- ^ The time at which the emoji was updated.
+  , emojiCreateAt :: Integer
+    -- ^ The time at which the emoji was made
+  , emojiId :: Text
+    -- ^ The ID of the emoji
+  } deriving (Read, Show, Eq)
 
--- --
+instance A.FromJSON Emoji where
+  parseJSON = A.withObject "emoji" $ \v -> do
+    emojiCreatorId <- v A..: "creator_id"
+    emojiName <- v A..: "name"
+    emojiDeleteAt <- v A..: "delete_at"
+    emojiUpdateAt <- v A..: "update_at"
+    emojiCreateAt <- v A..: "create_at"
+    emojiId <- v A..: "id"
+    return Emoji { .. }
 
--- --
-
--- data Emoji = Emoji
---   { emojiCreatorId :: Text
---   , emojiName :: Text
---     -- ^ The name of the emoji
---   , emojiDeleteAt :: UnknownType
---     -- ^ The time at which the emoji was deleted.
---   , emojiUpdateAt :: UnknownType
---     -- ^ The time at which the emoji was updated.
---   , emojiCreateAt :: UnknownType
---     -- ^ The time at which the emoji was made
---   , emojiId :: Text
---     -- ^ The ID of the emoji
---   } deriving (Read, Show, Eq)
-
--- instance A.FromJSON Emoji where
---   parseJSON = A.withObject "emoji" $ \v -> do
---     emojiCreatorId <- v A..: "creator_id"
---     emojiName <- v A..: "name"
---     emojiDeleteAt <- v A..: "delete_at"
---     emojiUpdateAt <- v A..: "update_at"
---     emojiCreateAt <- v A..: "create_at"
---     emojiId <- v A..: "id"
---     return Emoji { .. }
-
--- instance A.ToJSON Emoji where
---   toJSON Emoji { .. } = A.object
---     [ "creator_id" A..= emojiCreatorId
---     , "name" A..= emojiName
---     , "delete_at" A..= emojiDeleteAt
---     , "update_at" A..= emojiUpdateAt
---     , "create_at" A..= emojiCreateAt
---     , "id" A..= emojiId
---     ]
-
--- --
+instance A.ToJSON Emoji where
+  toJSON Emoji { .. } = A.object
+    [ "creator_id" A..= emojiCreatorId
+    , "name" A..= emojiName
+    , "delete_at" A..= emojiDeleteAt
+    , "update_at" A..= emojiUpdateAt
+    , "create_at" A..= emojiCreateAt
+    , "id" A..= emojiId
+    ]
 
 -- data FileSettings = FileSettings
 --   { fileSettingsInitialfont :: Text
