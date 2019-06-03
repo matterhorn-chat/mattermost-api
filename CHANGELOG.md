@@ -1,3 +1,20 @@
+
+50200.2.0
+=========
+
+API changes:
+ * Added `Network.Mattermost.Endpoints.mmDeleteReaction` to delete
+   reactions.
+ * Added `Network.Mattermost.Endpoints.mmPostReaction` to add reactions.
+ * Added an `Emoji` data type and functions for custom emoji search and listing:
+   * `Network.Mattermost.Endpoints.mmSearchCustomEmoji`
+   * `Network.Mattermost.Endpoints.mmGetListOfCustomEmoji`
+
+New features:
+ * Add support for SOCKS proxies via standard environment variables
+   `HTTPS_PROXY` and `ALL_PROXY`.
+ * Support `NO_PROXY` to blacklist proxied hosts.
+
 50200.1.4
 =========
 
