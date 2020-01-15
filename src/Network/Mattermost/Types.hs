@@ -242,7 +242,7 @@ data Team
   , teamType            :: Type
   , teamCompanyName     :: UserText
   , teamAllowedDomains  :: UserText
-  , teamInviteId        :: Id
+  , teamInviteId        :: Maybe Id
   , teamAllowOpenInvite :: Bool
   }
   deriving (Read, Show, Eq, Ord)
@@ -262,7 +262,7 @@ instance A.FromJSON Team where
     teamType            <- v .: "type"
     teamCompanyName     <- v .: "company_name"
     teamAllowedDomains  <- v .: "allowed_domains"
-    teamInviteId        <- v .: "invite_id"
+    teamInviteId        <- maybeFail (v .: "invite_id")
     teamAllowOpenInvite <- v .: "allow_open_invite"
     return Team { .. }
 
