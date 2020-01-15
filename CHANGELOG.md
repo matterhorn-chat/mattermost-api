@@ -1,4 +1,12 @@
 
+50200.3.0
+=========
+
+Bug fixes:
+ * Fixed a bug in the Team JSON decoder where the `invite_id`
+   field was required despite it truly being optional (see also
+   https://github.com/matterhorn-chat/matterhorn/issues/550)
+
 50200.2.0
 =========
 
