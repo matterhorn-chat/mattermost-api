@@ -8,6 +8,8 @@ module Network.Mattermost.WebSocket.Types
 , WEData(..)
 , WEBroadcast(..)
 , WebsocketAction(..)
+, WebsocketActionResponse(..)
+, WebsocketActionStatus(..)
 ) where
 
 import           Control.Applicative
@@ -293,4 +295,43 @@ instance ToJSON WebsocketAction where
 instance WebSocketsData WebsocketAction where
   fromDataMessage _ = error "Not implemented"
   fromLazyByteString _ = error "Not implemented"
+  toLazyByteString = A.encode
+
+data WebsocketActionStatus =
+    WebsocketActionStatusOK
+    deriving (Read, Show, Eq, Ord)
+
+instance FromJSON WebsocketActionStatus where
+    parseJSON = A.withText "WebsocketActionStatus" $ \t ->
+        case t of
+            "OK" -> return WebsocketActionStatusOK
+            _ -> fail $ "Invalid WebsocketActionStatus: " <> show t
+
+instance ToJSON WebsocketActionStatus where
+    toJSON WebsocketActionStatusOK = "OK"
+
+data WebsocketActionResponse =
+    WebsocketActionResponse { warStatus :: WebsocketActionStatus
+                            , warSeqReply :: Int64
+                            }
+    deriving (Read, Show, Eq, Ord)
+
+instance FromJSON WebsocketActionResponse where
+  parseJSON =
+      A.withObject "WebsocketActionResponse" $ \o ->
+          WebsocketActionResponse <$> o A..: "status"
+                                  <*> o A..: "seq_reply"
+
+instance ToJSON WebsocketActionResponse where
+    toJSON (WebsocketActionResponse status s) =
+        A.object [ "status" A..= A.toJSON status
+                 , "seq" A..= A.toJSON s
+                 ]
+
+instance WebSocketsData WebsocketActionResponse where
+  fromDataMessage (WS.Text bs _) = fromLazyByteString bs
+  fromDataMessage (WS.Binary bs) = fromLazyByteString bs
+  fromLazyByteString s = case A.eitherDecode s of
+    Left err -> throw (JSONDecodeException err (BC.unpack s))
+    Right v  -> v
   toLazyByteString = A.encode

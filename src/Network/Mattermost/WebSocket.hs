@@ -14,7 +14,7 @@ module Network.Mattermost.WebSocket
 
 import           Control.Concurrent (ThreadId, forkIO, myThreadId, threadDelay)
 import qualified Control.Concurrent.STM.TQueue as Queue
-import           Control.Exception (Exception, SomeException, catch, throwIO, throwTo, try)
+import           Control.Exception (Exception, SomeException, catch, throwIO, throwTo, try, evaluate)
 import           Control.Monad (forever)
 import           Control.Monad.STM (atomically)
 import           Data.Aeson (toJSON)
@@ -106,7 +106,7 @@ pingThread onPingAction conn = loop 0
           loop (n+1)
 
 mmWithWebSocket :: Session
-                -> (Either String WebsocketEvent -> IO ())
+                -> (Either String (Either WebsocketActionResponse WebsocketEvent) -> IO ())
                 -> (MMWebSocket -> IO ())
                 -> IO ()
 mmWithWebSocket (Session cd (Token tk)) recv body = do
@@ -119,16 +119,47 @@ mmWithWebSocket (Session cd (Token tk)) recv body = do
   let action c = do
         pId <- forkIO (pingThread onPing c `catch` cleanup)
         mId <- forkIO $ flip catch cleanup $ forever $ do
-          result <- try $ do
-              v <- WS.receiveData c
-              v `seq` return v
+          result :: Either SomeException WS.DataMessage
+                 <- try $ do
+              msg <- WS.receiveDataMessage c
+              msg `seq` return msg
+
           val <- case result of
-                Left (WS.ParseException e) -> return $ Left e
-                Left e -> throwIO e
-                Right ws -> return $ Right ws
+                Left e -> do
+                    doLog $ WebSocketResponse $ Right $ toJSON $
+                        "Got exception on receiveDataMessage: " <> show e
+                    throwIO e
+                Right dataMsg -> do
+                    -- The message could be either a websocket event or
+                    -- an action response. Those have different Haskell
+                    -- types, so we need to attempt to parse each.
+                    evResult <- try $ evaluate $ WS.fromDataMessage dataMsg
+                    case evResult of
+                        Right wev -> return $ Right $ Right wev
+                        Left (e1::SomeException) -> do
+                            respResult <- try $ evaluate $ WS.fromDataMessage dataMsg
+                            case respResult of
+                                Right actionResp -> return $ Right $ Left actionResp
+                                Left (e2::SomeException) -> do
+                                    doLog $ WebSocketResponse $ Left $
+                                        "Failed to parse (exceptions following): " <> show dataMsg
+                                    doLog $ WebSocketResponse $ Left $
+                                        "Failed to parse as a websocket event: " <> show e1
+                                    doLog $ WebSocketResponse $ Left $
+                                        "Failed to parse as a websocket action response: " <> show e2
+                                    -- Log both exceptions, but throw
+                                    -- the second. This isn't great
+                                    -- because we don't know which
+                                    -- exception is the *right* one. The
+                                    -- best we can do is throw one of
+                                    -- them and log both.
+                                    throwIO e2
+
           doLog (WebSocketResponse $ case val of
                 Left s -> Left s
-                Right v -> Right $ toJSON v)
+                Right (Left v) -> Right $ toJSON v
+                Right (Right v) -> Right $ toJSON v
+                )
           recv val
         body (MMWS c health) `catch` propagate [mId, pId]
   WS.runClientWithStream stream
