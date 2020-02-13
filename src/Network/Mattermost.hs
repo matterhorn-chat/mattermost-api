@@ -26,6 +26,7 @@ module Network.Mattermost
 , ChannelData(..)
 , ChannelId(..)
 , Channels
+, ConnectionType(..)
 , MinChannel(..)
 , UsersCreate(..)
 , Post(..)
@@ -59,7 +60,6 @@ module Network.Mattermost
 , defaultConnectionPoolConfig
 , mkConnectionData
 , initConnectionData
-, initConnectionDataInsecure
 , mmCloseSession
 , mmLogin
 , mmCreateDirect

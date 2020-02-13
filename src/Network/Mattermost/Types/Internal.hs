@@ -72,6 +72,13 @@ instance HTTP.Stream MMConn where
   close      con       = C.connectionClose (fromMMConn con)
   closeOnEnd _   _     = return ()
 
+data ConnectionType =
+    ConnectHTTPS Bool
+    -- ^ Boolean is whether to require trusted certificate
+    | ConnectHTTP
+    -- ^ Make an insecure connection over HTTP
+    deriving (Eq, Show, Read)
+
 data ConnectionData
   = ConnectionData
   { cdHostname       :: Hostname
@@ -81,5 +88,5 @@ data ConnectionData
   , cdConnectionCtx  :: C.ConnectionContext
   , cdToken          :: Maybe Token
   , cdLogger         :: Maybe Logger
-  , cdUseTLS         :: Bool
+  , cdConnectionType :: ConnectionType
   }

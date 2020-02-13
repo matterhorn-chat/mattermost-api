@@ -2,7 +2,8 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Network.Mattermost.Util
-( assertE
+( ConnectionType(..)
+, assertE
 , noteE
 , hoistE
 , (~=)
@@ -74,17 +75,24 @@ withConnection cd action = do
 -- * Only SOCKS version 4 and 5 proxies are supported using socks4://
 --   and socks5:// URIs, and
 -- * No proxy authentication is supported.
-mkConnection :: ConnectionContext -> Hostname -> Port -> Bool -> IO Connection
-mkConnection ctx host port secure = do
-  proxy' <- if secure then proxyForScheme HTTPS else return Nothing
+mkConnection :: ConnectionContext -> Hostname -> Port -> ConnectionType -> IO Connection
+mkConnection ctx host port connTy = do
+  proxy' <- case connTy of
+     ConnectHTTPS _ -> proxyForScheme HTTPS
+     ConnectHTTP -> return Nothing
+
   canUseProxy <- proxyHostPermitted (T.unpack host)
   let proxy = if canUseProxy then proxy' else Nothing
   connectTo ctx $ ConnectionParams
     { connectionHostname  = T.unpack host
     , connectionPort      = fromIntegral port
-    , connectionUseSecure = if secure
-                               then Just (TLSSettingsSimple False False False)
-                               else Nothing
+    , connectionUseSecure = case connTy of
+        ConnectHTTP -> Nothing
+        ConnectHTTPS requireTrustedCert ->
+            -- The first argument to TLSSettingsSimple is whether to
+            -- *disable* cert validation. If requireTrustedCert is True,
+            -- we want that argument to be False to force validation.
+            Just (TLSSettingsSimple (not requireTrustedCert) False False)
     , connectionUseSocks  = do
         (ty, cHost, cPort) <- proxy
         case ty of

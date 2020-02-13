@@ -8,6 +8,7 @@
 module Network.Mattermost.Types
     ( module Network.Mattermost.Types
     , module Network.Mattermost.Types.Base
+    , ConnectionType(..)
     )
     where
 
@@ -41,7 +42,7 @@ import           Network.Connection ( ConnectionContext
                                     )
 import           Network.Mattermost.Types.Base
 import           Network.Mattermost.Types.Internal
-import           Network.Mattermost.Util (mkConnection)
+import           Network.Mattermost.Util (mkConnection, ConnectionType(..))
 
 newtype UserText = UserText Text
                  deriving (Eq, Show, Ord, Read)
@@ -66,9 +67,9 @@ runLoggerS (Session cd _) = runLogger cd
 maybeFail :: Parser a -> Parser (Maybe a)
 maybeFail p = (Just <$> p) <|> (return Nothing)
 
--- | Creates a structure representing a TLS connection to the server.
-mkConnectionData :: Hostname -> Port -> Pool.Pool MMConn -> ConnectionContext -> ConnectionData
-mkConnectionData host port pool ctx = ConnectionData
+-- | Creates a structure representing a connection to the server.
+mkConnectionData :: Hostname -> Port -> Pool.Pool MMConn -> ConnectionType -> ConnectionContext -> ConnectionData
+mkConnectionData host port pool connTy ctx = ConnectionData
   { cdHostname       = host
   , cdPort           = port
   , cdConnectionCtx  = ctx
@@ -76,38 +77,19 @@ mkConnectionData host port pool ctx = ConnectionData
   , cdConnectionPool = pool
   , cdToken          = Nothing
   , cdLogger         = Nothing
-  , cdUseTLS         = True
+  , cdConnectionType = connTy
   }
 
--- | Plaintext HTTP instead of a TLS connection.
-mkConnectionDataInsecure :: Hostname -> Port -> ConnectionContext -> Pool.Pool MMConn -> ConnectionData
-mkConnectionDataInsecure host port ctx pool = ConnectionData
-  { cdHostname       = host
-  , cdPort           = port
-  , cdConnectionCtx  = ctx
-  , cdAutoClose      = No
-  , cdConnectionPool = pool
-  , cdToken          = Nothing
-  , cdLogger         = Nothing
-  , cdUseTLS         = False
-  }
-
-createPool :: Hostname -> Port -> ConnectionContext -> ConnectionPoolConfig -> Bool -> IO (Pool.Pool MMConn)
-createPool host port ctx cpc secure =
-  Pool.createPool (mkConnection ctx host port secure >>= newMMConn) closeMMConn
+createPool :: Hostname -> Port -> ConnectionContext -> ConnectionPoolConfig -> ConnectionType -> IO (Pool.Pool MMConn)
+createPool host port ctx cpc connTy =
+  Pool.createPool (mkConnection ctx host port connTy >>= newMMConn) closeMMConn
                   (cpStripesCount cpc) (cpIdleConnTimeout cpc) (cpMaxConnCount cpc)
 
-initConnectionData :: Hostname -> Port -> ConnectionPoolConfig -> IO ConnectionData
-initConnectionData host port cpc = do
+initConnectionData :: Hostname -> Port -> ConnectionType -> ConnectionPoolConfig -> IO ConnectionData
+initConnectionData host port connTy cpc = do
   ctx  <- initConnectionContext
-  pool <- createPool host port ctx cpc True
-  return (mkConnectionData host port pool ctx)
-
-initConnectionDataInsecure :: Hostname -> Port -> ConnectionPoolConfig -> IO ConnectionData
-initConnectionDataInsecure host port cpc = do
-  ctx  <- initConnectionContext
-  pool <- createPool host port ctx cpc False
-  return (mkConnectionDataInsecure host port ctx pool)
+  pool <- createPool host port ctx cpc connTy
+  return (mkConnectionData host port pool connTy ctx)
 
 destroyConnectionData :: ConnectionData -> IO ()
 destroyConnectionData = Pool.destroyAllResources . cdConnectionPool
