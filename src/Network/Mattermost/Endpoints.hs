@@ -154,10 +154,10 @@ mmCreateDirectMessageChannel :: (UserId, UserId) -> Session -> IO Channel
 mmCreateDirectMessageChannel body =
   inPost "/channels/direct" (jsonBody body) jsonResponse
 
--- -- | Get a list of pinned posts for channel.
--- mmGetChannelsPinnedPosts :: ChannelId -> Session -> IO PostList
--- mmGetChannelsPinnedPosts channelId =
---   inGet (printf "/channels/%s/pinned" channelId) noBody jsonResponse
+-- | Get a list of pinned posts for channel.
+mmGetChannelPinnedPosts :: ChannelId -> Session -> IO Posts
+mmGetChannelPinnedPosts channelId =
+  inGet (printf "/channels/%s/pinned" channelId) noBody jsonResponse
 
 -- | Get statistics for a channel.
 --
@@ -666,14 +666,14 @@ mmSearchForTeamPosts :: TeamId -> SearchPosts -> Session -> IO Posts
 mmSearchForTeamPosts teamId body =
   inPost (printf "/teams/%s/posts/search" teamId) (jsonBody body) jsonResponse
 
--- -- | Pin a post to a channel it is in based from the provided post id
--- --   string.
--- --
--- --   /Permissions/: Must be authenticated and have the @read_channel@
--- --   permission to the channel the post is in.
--- mmPinPostToChannel :: PostId -> Session -> IO ()
--- mmPinPostToChannel postId =
---   inPost (printf "/posts/%s/pin" postId) noBody jsonResponse
+-- | Pin a post to a channel it is in based from the provided post id
+--   string.
+--
+--   /Permissions/: Must be authenticated and have the @read_channel@
+--   permission to the channel the post is in.
+mmPinPostToChannel :: PostId -> Session -> IO StatusOK
+mmPinPostToChannel postId =
+  inPost (printf "/posts/%s/pin" postId) noBody jsonResponse
 
 -- | Get a post and the rest of the posts in the same thread.
 --
@@ -741,14 +741,14 @@ mmGetListOfFlaggedPosts userId FlaggedPostsQuery { .. } =
             , sequence ("per_page", fmap show flaggedPostsQueryPerPage)
             ]
 
--- -- | Unpin a post to a channel it is in based from the provided post id
--- --   string.
--- --
--- --   /Permissions/: Must be authenticated and have the @read_channel@
--- --   permission to the channel the post is in.
--- mmUnpinPostToChannel :: PostId -> Session -> IO ()
--- mmUnpinPostToChannel postId =
---   inPost (printf "/posts/%s/unpin" postId) noBody jsonResponse
+-- | Unpin a post to a channel it is in based from the provided post id
+--   string.
+--
+--   /Permissions/: Must be authenticated and have the @read_channel@
+--   permission to the channel the post is in.
+mmUnpinPostToChannel :: PostId -> Session -> IO StatusOK
+mmUnpinPostToChannel postId =
+  inPost (printf "/posts/%s/unpin" postId) noBody jsonResponse
 
 -- | Partially update a post by providing only the fields you want to
 --   update. Omitted fields will not be updated. The fields that can be
@@ -2957,19 +2957,19 @@ instance A.ToJSON Emoji where
 
 -- --
 
--- newtype StatusOK = StatusOK
---   { statusOKStatus :: Text
---   } deriving (Read, Show, Eq)
+newtype StatusOK = StatusOK
+  { statusOKStatus :: Text
+  } deriving (Read, Show, Eq)
 
--- instance A.FromJSON StatusOK where
---   parseJSON = A.withObject "statusOK" $ \v -> do
---     statusOKStatus <- v A..: "status"
---     return StatusOK { .. }
+instance A.FromJSON StatusOK where
+  parseJSON = A.withObject "statusOK" $ \v -> do
+    statusOKStatus <- v A..: "status"
+    return StatusOK { .. }
 
--- instance A.ToJSON StatusOK where
---   toJSON StatusOK { .. } = A.object
---     [ "status" A..= statusOKStatus
---     ]
+instance A.ToJSON StatusOK where
+  toJSON StatusOK { .. } = A.object
+    [ "status" A..= statusOKStatus
+    ]
 
 -- --
 

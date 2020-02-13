@@ -783,6 +783,7 @@ data Post
   , postCreateAt      :: ServerTime
   , postChannelId     :: ChannelId
   , postHasReactions  :: Bool
+  , postPinned        :: Maybe Bool
   } deriving (Read, Show, Eq)
 
 instance HasId Post PostId where
@@ -806,6 +807,7 @@ instance A.FromJSON Post where
     postCreateAt      <- timeFromServer <$> v .: "create_at"
     postChannelId     <- v .: "channel_id"
     postHasReactions  <- v .:? "has_reactions" .!= False
+    postPinned        <- v .:? "is_pinned"
     return Post { .. }
 
 instance A.ToJSON Post where
@@ -825,6 +827,7 @@ instance A.ToJSON Post where
     , "create_at"       .= timeToServer postCreateAt
     , "channel_id"      .= postChannelId
     , "has_reactions"   .= postHasReactions
+    , "is_pinned"       .= postPinned
     ]
 
 data PendingPost
