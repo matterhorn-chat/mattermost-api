@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -22,7 +23,9 @@ import           Data.Aeson ( FromJSON(..)
                             )
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Types as A
+#if !MIN_VERSION_base(4,11,0)
 import           Data.Monoid ( (<>) )
+#endif
 import           Data.ByteString.Lazy (fromStrict, toStrict)
 import qualified Data.ByteString.Lazy.Char8 as BC
 import qualified Data.HashMap.Strict as HM
