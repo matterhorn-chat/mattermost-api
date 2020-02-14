@@ -22,6 +22,7 @@ import           Data.Aeson ( FromJSON(..)
                             )
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Types as A
+import           Data.Monoid ( (<>) )
 import           Data.ByteString.Lazy (fromStrict, toStrict)
 import qualified Data.ByteString.Lazy.Char8 as BC
 import qualified Data.HashMap.Strict as HM
