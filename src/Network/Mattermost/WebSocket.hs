@@ -164,7 +164,7 @@ mmWithWebSocket (Session cd (Token tk)) recv body = do
         body (MMWS c health) `catch` propagate [mId, pId]
   WS.runClientWithStream stream
                       (T.unpack $ cdHostname cd)
-                      "/api/v4/websocket"
+                      (cdDirectory cd ++ "/api/v4/websocket")
                       WS.defaultConnectionOptions { WS.connectionOnPong = onPong }
                       [ ("Authorization", "Bearer " <> B.pack tk) ]
                       action
