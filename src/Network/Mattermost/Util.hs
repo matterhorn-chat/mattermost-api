@@ -10,6 +10,7 @@ module Network.Mattermost.Util
 , withConnection
 , mkConnection
 , connectionGetExact
+, buildPath
 ) where
 
 import           Control.Exception (finally, onException)
@@ -115,3 +116,7 @@ connectionGetExact con n = loop B.empty 0
           | otherwise = do
             next <- connectionGet con (n - y)
             loop (B.append bs next) (y + (B.length next))
+
+-- | Build a full URL path from the path of an API endpoint
+buildPath :: ConnectionData -> String -> String
+buildPath cd endpoint = cdUrlPath cd ++ "/api/v4" ++ endpoint
