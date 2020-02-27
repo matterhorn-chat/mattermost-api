@@ -102,7 +102,7 @@ submitRequest :: ConnectionData
               -> B.ByteString
               -> IO HTTP.Response_String
 submitRequest cd mToken method uri payload = do
-  path <- mmPath (cdDirectory cd ++ "/api/v4" ++ uri)
+  path <- mmPath (cdUrlPath cd ++ "/api/v4" ++ uri)
   let contentLength = B.length payload
       authHeader =
           case mToken of

@@ -69,10 +69,10 @@ maybeFail p = (Just <$> p) <|> (return Nothing)
 
 -- | Creates a structure representing a connection to the server.
 mkConnectionData :: Hostname -> Port -> String -> Pool.Pool MMConn -> ConnectionType -> ConnectionContext -> ConnectionData
-mkConnectionData host port dir pool connTy ctx = ConnectionData
+mkConnectionData host port path pool connTy ctx = ConnectionData
   { cdHostname       = host
   , cdPort           = port
-  , cdDirectory      = dir
+  , cdUrlPath        = path
   , cdConnectionCtx  = ctx
   , cdAutoClose      = No
   , cdConnectionPool = pool
@@ -87,10 +87,10 @@ createPool host port ctx cpc connTy =
                   (cpStripesCount cpc) (cpIdleConnTimeout cpc) (cpMaxConnCount cpc)
 
 initConnectionData :: Hostname -> Port -> String -> ConnectionType -> ConnectionPoolConfig -> IO ConnectionData
-initConnectionData host port dir connTy cpc = do
+initConnectionData host port path connTy cpc = do
   ctx  <- initConnectionContext
   pool <- createPool host port ctx cpc connTy
-  return (mkConnectionData host port dir pool connTy ctx)
+  return (mkConnectionData host port path pool connTy ctx)
 
 destroyConnectionData :: ConnectionData -> IO ()
 destroyConnectionData = Pool.destroyAllResources . cdConnectionPool

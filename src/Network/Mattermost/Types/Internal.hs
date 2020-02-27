@@ -83,7 +83,7 @@ data ConnectionData
   = ConnectionData
   { cdHostname       :: Hostname
   , cdPort           :: Port
-  , cdDirectory      :: String
+  , cdUrlPath        :: String
   , cdAutoClose      :: AutoClose
   , cdConnectionPool :: Pool MMConn
   , cdConnectionCtx  :: C.ConnectionContext
