@@ -1,3 +1,43 @@
+50200.4.0
+=========
+
+ * The post pinning API is now supported.
+   * Adds a new postPinned field to the Post type to allow parsing
+     "is_pinned" values in post editing websocket events. Typically
+     "is_pinned" is not present in post structures, in which case this
+     will take the value Nothing.
+   * Exposes the new StatusOK type that is returned by new API functions.
+   * Adds new API functions:
+     * mmPinPostToChannel
+     * mmUnpinPostToChannel
+     * mmGetChannelPinnedPosts
+
+ * The library now supports connecting to HTTPS endpoints without valid
+   certificates.
+
+   This change gets rid of the initConnectionDataInsecure function
+   and instead makes initConnectionData take a new argument of type
+   'ConnectionType' that describes how the connection should be made.
+
+   The ConnectionType type indicates that a connection should be HTTP,
+   HTTPS with cert validation, or HTTPS without cert validation.
+
+   This change also modified ConnectionData to carry the connecion type
+   rather than just a Bool indicating HTTP/HTTPS.
+
+ * Websocket action responses are now parsed properly.
+
+   Websocket actions, such as "user typing" notifications, generate
+   server responses that we previously could not parse. We weren't
+   parsing them because the parser for websocket events wasn't aware
+   of an alternative response message structure. This patch adds a new
+   type for action responses. It adds a new type rather than adding a
+   new constructor to the event type because I think that's a less ugly
+   API (the API in this patch is not ideal). This patch also adds logic
+   to the websocket response parser to first attempt to parse incoming
+   messages as websocket events (the most common case) and then fall
+   back to attempting a parse as a websocket action response. If both
+   fail, the message and the parse exceptions are all logged.
 
 50200.3.0
 =========
@@ -403,8 +443,3 @@ Other:
 =========
 
 Initial release for server version 3.6.0.
-
-0.1.0.0
-=======
-
-First version.
