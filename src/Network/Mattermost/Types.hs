@@ -68,7 +68,7 @@ maybeFail :: Parser a -> Parser (Maybe a)
 maybeFail p = (Just <$> p) <|> (return Nothing)
 
 -- | Creates a structure representing a connection to the server.
-mkConnectionData :: Hostname -> Port -> String -> Pool.Pool MMConn -> ConnectionType -> ConnectionContext -> ConnectionData
+mkConnectionData :: Hostname -> Port -> T.Text -> Pool.Pool MMConn -> ConnectionType -> ConnectionContext -> ConnectionData
 mkConnectionData host port path pool connTy ctx = ConnectionData
   { cdHostname       = host
   , cdPort           = port
@@ -86,7 +86,7 @@ createPool host port ctx cpc connTy =
   Pool.createPool (mkConnection ctx host port connTy >>= newMMConn) closeMMConn
                   (cpStripesCount cpc) (cpIdleConnTimeout cpc) (cpMaxConnCount cpc)
 
-initConnectionData :: Hostname -> Port -> String -> ConnectionType -> ConnectionPoolConfig -> IO ConnectionData
+initConnectionData :: Hostname -> Port -> T.Text -> ConnectionType -> ConnectionPoolConfig -> IO ConnectionData
 initConnectionData host port path connTy cpc = do
   ctx  <- initConnectionContext
   pool <- createPool host port ctx cpc connTy

@@ -162,9 +162,10 @@ mmWithWebSocket (Session cd (Token tk)) recv body = do
                 )
           recv val
         body (MMWS c health) `catch` propagate [mId, pId]
+  path <- buildPath cd "/websocket"
   WS.runClientWithStream stream
                       (T.unpack $ cdHostname cd)
-                      (buildPath cd "/websocket")
+                      (T.unpack path)
                       WS.defaultConnectionOptions { WS.connectionOnPong = onPong }
                       [ ("Authorization", "Bearer " <> B.pack tk) ]
                       action
