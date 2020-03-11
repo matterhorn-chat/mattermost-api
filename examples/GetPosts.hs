@@ -99,7 +99,7 @@ main = do
 
   config <- getConfig -- see LocalConfig import
   cd'    <- initConnectionData (configHostname config) (fromIntegral (configPort config))
-                               defaultConnectionPoolConfig
+                               (ConnectHTTPS True) defaultConnectionPoolConfig
   let login = Login { username = configUsername config
                     , password = configPassword config
                     }

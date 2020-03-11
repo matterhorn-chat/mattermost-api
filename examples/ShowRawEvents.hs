@@ -64,7 +64,7 @@ main = do
 
   config <- getConfig -- see LocalConfig import
   cd     <- initConnectionData (configHostname config) (fromIntegral (configPort config))
-                               defaultConnectionPoolConfig
+                               (ConnectHTTPS True) defaultConnectionPoolConfig
 
   let login = Login { username = configUsername config
                     , password = configPassword config
@@ -78,7 +78,7 @@ main = do
 
   mmWithWebSocket session printEvent checkForExit
 
-printEvent :: Either String WebsocketEvent -> IO ()
+printEvent :: Either String (Either WebsocketActionResponse WebsocketEvent) -> IO ()
 printEvent e = pPrint e
 
 checkForExit :: MMWebSocket -> IO ()
