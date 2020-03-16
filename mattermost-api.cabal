@@ -63,6 +63,7 @@ library
                      , HTTP
                      , http-media
                      , network-uri
+                     , modern-uri
                      , text
                      , time
                      , unordered-containers

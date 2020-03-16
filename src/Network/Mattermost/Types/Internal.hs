@@ -18,6 +18,7 @@ import Network.HTTP.Headers (Header, HeaderName(..), mkHeader)
 import qualified Network.HTTP.Stream as HTTP
 import qualified Data.ByteString.Char8 as B
 import Network.Mattermost.Types.Base
+import qualified Data.Text as T
 
 data Token = Token String
   deriving (Read, Show, Eq, Ord)
@@ -83,6 +84,7 @@ data ConnectionData
   = ConnectionData
   { cdHostname       :: Hostname
   , cdPort           :: Port
+  , cdUrlPath        :: T.Text
   , cdAutoClose      :: AutoClose
   , cdConnectionPool :: Pool MMConn
   , cdConnectionCtx  :: C.ConnectionContext

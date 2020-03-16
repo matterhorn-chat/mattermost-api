@@ -102,7 +102,8 @@ submitRequest :: ConnectionData
               -> B.ByteString
               -> IO HTTP.Response_String
 submitRequest cd mToken method uri payload = do
-  path <- mmPath ("/api/v4" ++ uri)
+  path <- buildPath cd (T.pack uri)
+  parsedPath <- mmPath $ T.unpack path
   let contentLength = B.length payload
       authHeader =
           case mToken of
@@ -110,7 +111,7 @@ submitRequest cd mToken method uri payload = do
               Just token -> [HTTP.mkHeader HTTP.HdrAuthorization ("Bearer " ++ getTokenString token)]
 
       request = HTTP.Request
-        { HTTP.rqURI = path
+        { HTTP.rqURI = parsedPath
         , HTTP.rqMethod = method
         , HTTP.rqHeaders =
           authHeader <>
