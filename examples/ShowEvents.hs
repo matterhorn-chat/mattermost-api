@@ -82,7 +82,7 @@ main = do
 
   config <- getConfig -- see LocalConfig import
   let repl = do
-        cd <- initConnectionData (configHostname config) (fromIntegral (configPort config))
+        cd <- initConnectionData (configHostname config) (fromIntegral (configPort config)) (configPath config)
                                  defaultConnectionPoolConfig
 
         let login = Login { username = configUsername config

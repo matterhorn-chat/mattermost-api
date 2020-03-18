@@ -10,4 +10,5 @@ data Config
   , configTeam     :: UserText
   , configPort     :: Int
   , configPassword :: Text
+  , configPath     :: Text
   }

@@ -18,7 +18,7 @@ import           LocalConfig -- You will need to define a function:
 main :: IO ()
 main = do
   config <- getConfig -- see LocalConfig import
-  cd <- initConnectionData (configHostname config) (fromIntegral (configPort config))
+  cd <- initConnectionData (configHostname config) (fromIntegral (configPort config)) (configPath config)
                            (ConnectHTTPS True) defaultConnectionPoolConfig
 
   let login = Login { username = configUsername config

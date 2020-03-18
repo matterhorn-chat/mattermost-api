@@ -22,7 +22,8 @@ main :: IO ()
 main = do
   config <- getConfig -- see LocalConfig import
   cd <- initConnectionData (configHostname config)
-                           (fromIntegral (configPort config)) (ConnectHTTPS True) defaultConnectionPoolConfig
+                           (fromIntegral (configPort config)) (configPath config)
+                           (ConnectHTTPS True) defaultConnectionPoolConfig
 
   let login = Login { username = configUsername config
                     , password = configPassword config
