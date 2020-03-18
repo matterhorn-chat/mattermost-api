@@ -92,7 +92,7 @@ mkConnection ctx host port connTy = do
         ConnectHTTP -> Nothing
         ConnectHTTPS requireTrustedCert ->
             -- The first argument to TLSSettingsSimple is whether to
-            -- *disable* cert validation. If requireTrustedCert is True,
+            -- /disable/ cert validation. If requireTrustedCert is True,
             -- we want that argument to be False to force validation.
             Just (TLSSettingsSimple (not requireTrustedCert) False False)
     , connectionUseSocks  = do

@@ -16,4 +16,5 @@ getConfig = do
          , configTeam     = UserText "TEAMNAME"
          , configPort     = 443 -- currently we only support HTTPS
          , configPassword = T.pack pass
+         , configPath     = T.empty
          }
