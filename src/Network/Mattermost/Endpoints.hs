@@ -1003,6 +1003,13 @@ mmGetClientConfiguration :: Maybe Text -> Session -> IO ClientConfig
 mmGetClientConfiguration format =
   inGet (printf "/config/client?%s" (mkQueryString [ sequence ("format", fmap T.unpack format) ])) noBody jsonResponse
 
+-- | Limited version of 'mmGetClientConfiguration' that doesn't need a session ID.
+mmGetLimitedClientConfiguration :: ConnectionData -> IO LimitedClientConfig
+mmGetLimitedClientConfiguration cd =
+  doUnauthRequest cd HTTP.GET url noBody >>= jsonResponse
+  where
+    url = printf "/config/client?%s" (mkQueryString [sequence ("format", Just "old")])
+
 -- -- | Reload the configuration file to pick up on any changes made to it.
 -- --
 -- --   /Permissions/: Must have @manage_system@ permission.
