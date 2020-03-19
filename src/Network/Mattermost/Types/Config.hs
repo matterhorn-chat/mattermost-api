@@ -282,6 +282,24 @@ data ClientConfig = ClientConfig
   , clientConfigDiagnosticsEnabled :: T.Text
   } deriving (Read, Show, Eq)
 
+data LimitedClientConfig = LimitedClientConfig
+  { limitedClientConfigVersion :: T.Text
+  , limitedClientConfigBuildNumber :: T.Text
+  , limitedClientConfigBuildDate :: T.Text
+  , limitedClientConfigBuildHash :: T.Text
+  , limitedClientConfigBuildHashEnterprise :: T.Text
+  , limitedClientConfigBuildEnterpriseReady :: T.Text
+  } deriving (Read, Show, Eq)
+
+instance A.FromJSON LimitedClientConfig where
+  parseJSON = A.withObject "LimitedClientConfig" $ \o -> do
+    limitedClientConfigVersion              <- o A..: "Version"
+    limitedClientConfigBuildNumber          <- o A..: "BuildNumber"
+    limitedClientConfigBuildDate            <- o A..: "BuildDate"
+    limitedClientConfigBuildHash            <- o A..: "BuildHash"
+    limitedClientConfigBuildHashEnterprise  <- o A..: "BuildHashEnterprise"
+    limitedClientConfigBuildEnterpriseReady <- o A..: "BuildEnterpriseReady"
+    return LimitedClientConfig { .. }
 
 instance A.FromJSON ClientConfig where
   parseJSON = A.withObject "ClientConfig" $ \o -> do
