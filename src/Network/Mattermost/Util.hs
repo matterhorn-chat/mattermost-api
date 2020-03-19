@@ -18,6 +18,7 @@ import           Data.Char ( toUpper )
 import qualified Data.ByteString.Char8 as B
 import qualified Data.Text as T
 import qualified Text.URI as URI
+import           Data.Monoid ((<>))
 
 import           Control.Exception ( Exception
                                    , throwIO )

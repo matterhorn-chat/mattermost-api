@@ -133,7 +133,7 @@ loginAccount login = do
   doneMVar <- gets tsDone
   printFunc <- gets tsPrinter
   void $ liftIO $ forkIO $ mmWithWebSocket session
-                           (either printFunc (STM.atomically . STM.writeTChan chan))
+                           (either printFunc (either (\_ -> pure()) (STM.atomically . STM.writeTChan chan)))
                            (const $ takeMVar doneMVar)
   modify $ \ts -> ts { tsSession = Just session }
 
@@ -330,8 +330,8 @@ findChannel chans name =
 
 connectFromConfig :: TestConfig -> IO ConnectionData
 connectFromConfig cfg =
-  initConnectionDataInsecure (configHostname cfg) (fromIntegral (configPort cfg))
-                             defaultConnectionPoolConfig
+  initConnectionData (configHostname cfg) (fromIntegral (configPort cfg)) T.empty (ConnectHTTPS False)
+                     defaultConnectionPoolConfig
 
 getConnection :: TestM ConnectionData
 getConnection = gets tsConnectionData
