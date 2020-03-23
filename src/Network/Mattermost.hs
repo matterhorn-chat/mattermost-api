@@ -560,9 +560,9 @@ mmGetProfilesForDMList sess teamid =
     printf "/api/v3/users/profiles_for_dm_list/%s" (idString teamid)
 
 -- |
--- route: @\/api\/v3\/users\/me@
+-- route: @\/api\/v4\/users\/me@
 mmGetMe :: Session -> IO User
-mmGetMe sess = mmDoRequest sess "mmGetMe" "/api/v3/users/me"
+mmGetMe sess = mmDoRequest sess "mmGetMe" "/api/v4/users/me"
 
 -- |
 -- route: @\/api\/v3\/teams\/{team_id}\/users\/{offset}\/{limit}@
