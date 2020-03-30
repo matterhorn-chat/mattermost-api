@@ -10,12 +10,15 @@ module Network.Mattermost.Util
 , withConnection
 , mkConnection
 , connectionGetExact
+, buildPath
 ) where
 
 import           Control.Exception (finally, onException)
 import           Data.Char ( toUpper )
 import qualified Data.ByteString.Char8 as B
 import qualified Data.Text as T
+import qualified Text.URI as URI
+import           Data.Monoid ((<>))
 
 import           Control.Exception ( Exception
                                    , throwIO )
@@ -115,3 +118,10 @@ connectionGetExact con n = loop B.empty 0
           | otherwise = do
             next <- connectionGet con (n - y)
             loop (B.append bs next) (y + (B.length next))
+
+-- | Build a full URI path from the path of an API endpoint
+buildPath :: ConnectionData -> T.Text -> IO T.Text
+buildPath cd endpoint = do
+  let rawPath = "/" <> (T.dropWhile (=='/') $ cdUrlPath cd <> "/api/v4/" <> endpoint)
+  uri <- URI.mkURI rawPath
+  return $ URI.render uri

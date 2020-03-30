@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -e
+set -x
 
 HERE=$(cd `dirname $0`; pwd)
 TEST_PROGRAM=test-mm-api
@@ -53,15 +54,14 @@ function cleanup_last_container {
     # script on a fresh system).
     if container_present
     then
-        logged docker stop $CONTAINER
-        logged docker rm   $CONTAINER
+        docker stop $CONTAINER
+        docker rm   $CONTAINER
     fi
 }
 
 if [ -d "$HERE/../dist-newstyle" ]
 then
-    PACKAGE_VERSION=$(awk '$1 == "version:" { print $2 }' < $HERE/../mattermost-api.cabal)
-    TEST_RUNNER=$HERE/../dist-newstyle/build/mattermost-api-$PACKAGE_VERSION/build/test-mm-api/test-mm-api
+    TEST_RUNNER=$(find $HERE/../dist-newstyle -type f -name test-mm-api)
 elif [ -d "$HERE/../dist" ]
 then
     TEST_RUNNER=$(find $HERE/../dist -type f -name test-mm-api)
@@ -72,6 +72,7 @@ fi
 
 if [ ! -e "$TEST_RUNNER" ]
 then
+    error "Tried $TEST_RUNNER"
     error "Error: program missing: $TEST_PROGRAM"
 fi
 

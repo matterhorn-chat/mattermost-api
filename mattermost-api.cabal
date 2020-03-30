@@ -1,5 +1,5 @@
 name:                mattermost-api
-version:             50200.4.0
+version:             50200.5.0
 synopsis:            Client API for Mattermost chat system
 
 description:         Client API for Mattermost chat system.  Mattermost is a
@@ -63,6 +63,7 @@ library
                      , HTTP
                      , http-media
                      , network-uri
+                     , modern-uri
                      , text
                      , time
                      , unordered-containers
