@@ -1,3 +1,16 @@
+
+50200.5.0
+=========
+
+API changes:
+ * Added support for making connections to Mattermost servers that use
+   non-root URL paths for their API endpoints. This change adds a new
+   field, `cdUrlPath`, to the `ConnectionData` type. It also added a URL
+   path argument of type `Text` to `mkConnectionData`. (Thanks Isaiah
+   Mindich)
+ * Added `Network.Mattermost.Endpoints.mmGetLimitedClientConfiguration`
+   (thanks Eric Mertens)
+
 50200.4.0
 =========
 
