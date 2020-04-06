@@ -70,6 +70,7 @@ data WebsocketEventType
   | WMReactionRemoved
   | WMChannelViewed
   | WMChannelUpdated
+  | WMChannelMemberUpdated
   | WMEmojiAdded
   | WMUserRoleUpdated
   | WMPluginStatusesChanged
@@ -106,6 +107,7 @@ instance FromJSON WebsocketEventType where
     "preferences_deleted" -> return WMPreferenceDeleted
     "channel_viewed"     -> return WMChannelViewed
     "channel_updated"    -> return WMChannelUpdated
+    "channel_member_updated" -> return WMChannelMemberUpdated
     "emoji_added"        -> return WMEmojiAdded
     "user_role_updated"  -> return WMUserRoleUpdated
     "plugin_statuses_changed" -> return WMPluginStatusesChanged
@@ -141,6 +143,7 @@ instance ToJSON WebsocketEventType where
   toJSON WMAuthenticationChallenge = "authentication_challenge"
   toJSON WMChannelViewed           = "channel_viewed"
   toJSON WMChannelUpdated          = "channel_updated"
+  toJSON WMChannelMemberUpdated    = "channel_member_updated"
   toJSON WMEmojiAdded              = "emoji_added"
   toJSON WMUserRoleUpdated         = "user_role_updated"
   toJSON WMPluginStatusesChanged   = "plugin_statuses_changed"
