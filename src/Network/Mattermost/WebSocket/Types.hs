@@ -208,6 +208,7 @@ data WEData = WEData
   , wepReaction           :: Maybe Reaction
   , wepMentions           :: Maybe (Set UserId)
   , wepPreferences        :: Maybe (Seq Preference)
+  , wepChannelMember      :: Maybe ChannelMember
   } deriving (Read, Show, Eq)
 
 instance FromJSON WEData where
@@ -235,6 +236,10 @@ instance FromJSON WEData where
     wepPreferences <- case wepPreferencesRaw of
       Just str -> fromValueString str
       Nothing  -> return Nothing
+    wepChannelMemberRaw <- o .:? "channelMember"
+    wepChannelMember <- case wepChannelMemberRaw of
+      Just str -> fromValueString str
+      Nothing  -> return Nothing
     return WEData { .. }
 
 instance ToJSON WEData where
@@ -248,6 +253,7 @@ instance ToJSON WEData where
     , "reaction"     .= wepReaction
     , "mentions"     .= toValueString wepMentions
     , "preferences"  .= toValueString wepPreferences
+    , "channelMember" .= toValueString wepChannelMember
     ]
 
 --
