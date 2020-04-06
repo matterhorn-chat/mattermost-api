@@ -315,10 +315,11 @@ data UserNotifyProps = UserNotifyProps
   } deriving (Eq, Show, Read, Ord)
 
 data ChannelNotifyProps = ChannelNotifyProps
-  { channelNotifyPropsEmail      :: WithDefault Bool
-  , channelNotifyPropsDesktop    :: WithDefault NotifyOption
-  , channelNotifyPropsPush       :: WithDefault NotifyOption
-  , channelNotifyPropsMarkUnread :: WithDefault NotifyOption
+  { channelNotifyPropsEmail                 :: WithDefault Bool
+  , channelNotifyPropsDesktop               :: WithDefault NotifyOption
+  , channelNotifyPropsPush                  :: WithDefault NotifyOption
+  , channelNotifyPropsMarkUnread            :: WithDefault NotifyOption
+  , channelNotifyPropsIgnoreChannelMentions :: WithDefault Bool
   } deriving (Eq, Show, Read, Ord)
 
 emptyUserNotifyProps :: UserNotifyProps
@@ -334,10 +335,11 @@ emptyUserNotifyProps = UserNotifyProps
 
 emptyChannelNotifyProps :: ChannelNotifyProps
 emptyChannelNotifyProps = ChannelNotifyProps
-  { channelNotifyPropsEmail      = Default
-  , channelNotifyPropsPush       = Default
-  , channelNotifyPropsDesktop    = Default
-  , channelNotifyPropsMarkUnread = Default
+  { channelNotifyPropsEmail                 = Default
+  , channelNotifyPropsPush                  = Default
+  , channelNotifyPropsDesktop               = Default
+  , channelNotifyPropsMarkUnread            = Default
+  , channelNotifyPropsIgnoreChannelMentions = Default
   }
 
 newtype BoolString = BoolString { fromBoolString :: Bool }
@@ -352,6 +354,19 @@ instance A.FromJSON BoolString where
 instance A.ToJSON BoolString where
   toJSON (BoolString True) = A.String "true"
   toJSON (BoolString False) = A.String "false"
+
+newtype OnOffString = OnOffString{ fromOnOffString :: Bool }
+
+instance A.FromJSON OnOffString where
+  parseJSON = A.withText "on/off setting" $ \v ->
+    case v of
+      "on"  -> return (OnOffString True)
+      "off" -> return (OnOffString False)
+      _       -> fail "Expected \"on\" or \"off\""
+
+instance A.ToJSON OnOffString where
+  toJSON (OnOffString True) = A.String "on"
+  toJSON (OnOffString False) = A.String "off"
 
 instance A.FromJSON UserNotifyProps where
   parseJSON = A.withObject "UserNotifyProps" $ \v -> do
@@ -383,14 +398,17 @@ instance A.FromJSON ChannelNotifyProps where
     channelNotifyPropsPush       <- v .:? "push" .!= IsValue NotifyOptionMention
     channelNotifyPropsDesktop    <- v .:? "desktop" .!= IsValue NotifyOptionAll
     channelNotifyPropsMarkUnread <- v .:? "mark_unread" .!= IsValue NotifyOptionAll
+    channelNotifyPropsIgnoreChannelMentions <- fmap fromOnOffString <$>
+                                               (v .:? "ignore_channel_mentions" .!= Default)
     return ChannelNotifyProps { .. }
 
 instance A.ToJSON ChannelNotifyProps where
   toJSON ChannelNotifyProps { .. } = A.object
-    [ "email"       .= fmap BoolString channelNotifyPropsEmail
-    , "push"        .= channelNotifyPropsPush
-    , "desktop"     .= channelNotifyPropsDesktop
-    , "mark_unread" .= channelNotifyPropsMarkUnread
+    [ "email"                   .= fmap BoolString channelNotifyPropsEmail
+    , "push"                    .= channelNotifyPropsPush
+    , "desktop"                 .= channelNotifyPropsDesktop
+    , "mark_unread"             .= channelNotifyPropsMarkUnread
+    , "ignore_channel_mentions" .= channelNotifyPropsIgnoreChannelMentions
     ]
 
 --
