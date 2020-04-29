@@ -219,27 +219,12 @@ instance FromJSON WEData where
     wepUserId             <- o .:? "user_id"
     wepUser               <- o .:? "user"
     wepChannelDisplayName <- o .:? "channel_name"
-    wepPostRaw            <- o .:? "post"
-    wepPost <- case wepPostRaw of
-      Just str -> fromValueString str
-      Nothing  -> return Nothing
-    wepStatus <- o .:? "status"
-    wepReactionRaw <- o .:? "reaction"
-    wepReaction <- case wepReactionRaw of
-      Just str -> fromValueString str
-      Nothing  -> return Nothing
-    wepMentionsRaw <- o .:? "mentions"
-    wepMentions <- case wepMentionsRaw of
-      Just str -> fromValueString str
-      Nothing  -> return Nothing
-    wepPreferencesRaw <- o .:? "preferences"
-    wepPreferences <- case wepPreferencesRaw of
-      Just str -> fromValueString str
-      Nothing  -> return Nothing
-    wepChannelMemberRaw <- o .:? "channelMember"
-    wepChannelMember <- case wepChannelMemberRaw of
-      Just str -> fromValueString str
-      Nothing  -> return Nothing
+    wepPost               <- mapM fromValueString =<< o .:? "post"
+    wepStatus             <- o .:? "status"
+    wepReaction           <- mapM fromValueString =<< o .:? "reaction"
+    wepMentions           <- mapM fromValueString =<< o .:? "mentions"
+    wepPreferences        <- mapM fromValueString =<< o .:? "preferences"
+    wepChannelMember      <- mapM fromValueString =<< o .:? "channelMember"
     return WEData { .. }
 
 instance ToJSON WEData where
