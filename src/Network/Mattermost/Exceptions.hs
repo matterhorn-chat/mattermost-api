@@ -12,6 +12,7 @@ module Network.Mattermost.Exceptions
 , MattermostError(..)
 , ConnectionException(..)
 , MattermostServerError(..)
+, RateLimitException(..)
 ) where
 
 import qualified Data.Aeson as A
@@ -84,6 +85,15 @@ data MattermostServerError = MattermostServerError T.Text
   deriving (Show, Typeable)
 
 instance Exception MattermostServerError
+
+data RateLimitException =
+    RateLimitException { rateLimitExceptionLimit :: Maybe Int
+                       , rateLimitExceptionRemaining :: Maybe Int
+                       , rateLimitExceptionReset :: Maybe Int
+                       }
+                       deriving (Show, Typeable)
+
+instance Exception RateLimitException
 
 --
 

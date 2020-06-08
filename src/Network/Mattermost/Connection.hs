@@ -5,7 +5,7 @@ module Network.Mattermost.Connection where
 import           Control.Arrow (left)
 import           Control.Exception (throwIO, IOException, try, throwIO)
 import           Control.Monad (when)
-import           Data.Maybe (isJust)
+import           Data.Maybe (isJust, listToMaybe)
 import           Data.Monoid ((<>))
 import           Data.Pool (destroyAllResources)
 import qualified Data.Aeson as A
@@ -20,6 +20,7 @@ import qualified Network.HTTP.Stream as HTTP
 import qualified Network.HTTP.Media as HTTPM
 import qualified Network.URI as URI
 import           System.IO.Error (isEOFError)
+import           Text.Read ( readMaybe )
 
 import Network.Mattermost.Exceptions
 import Network.Mattermost.Types
@@ -151,6 +152,14 @@ submitRequest cd mToken method uri payload = do
 
   rsp <- hoistE (left ConnectionException rawResponse)
   case HTTP.rspCode rsp of
+    (4, 2, 9) -> do
+        -- Extract rate limit information if possible
+        let headers = HTTP.getHeaders rsp
+            mLimit = readMaybe =<< findHeader rateLimitLimitHeader headers
+            mRemaining = readMaybe =<< findHeader rateLimitRemainingHeader headers
+            mReset = readMaybe =<< findHeader rateLimitResetHeader headers
+
+        throwIO $ RateLimitException mLimit mRemaining mReset
     (2, _, _) -> return rsp
     code -> do
       case A.eitherDecode (BL.pack (HTTP.rspBody rsp)) of
@@ -158,6 +167,27 @@ submitRequest cd mToken method uri payload = do
           throwIO (err :: MattermostError)
         Left _ ->
           throwIO (HTTPResponseException ("Server returned unexpected " ++ show code ++ " response"))
+
+-- NOTE: At least as of HTTP-4000.3.14, custom header names are matched
+-- case-sensitively when looking them up in responses. This is a bug
+-- (reported at https://github.com/haskell/HTTP/issues/128) and in
+-- the mean time we use our own header-matching implementation.
+findHeader :: HTTP.HeaderName -> [HTTP.Header] -> Maybe String
+findHeader n hs = HTTP.hdrValue <$> listToMaybe (filter (matchHeader n) hs)
+
+matchHeader :: HTTP.HeaderName -> HTTP.Header -> Bool
+matchHeader (HTTP.HdrCustom a) (HTTP.Header (HTTP.HdrCustom b) _) =
+    (toLower <$> a) == (toLower <$> b)
+matchHeader a (HTTP.Header b _) = a == b
+
+rateLimitLimitHeader :: HTTP.HeaderName
+rateLimitLimitHeader = HTTP.HdrCustom "X-RateLimit-Limit"
+
+rateLimitRemainingHeader :: HTTP.HeaderName
+rateLimitRemainingHeader = HTTP.HdrCustom "X-RateLimit-Remaining"
+
+rateLimitResetHeader :: HTTP.HeaderName
+rateLimitResetHeader = HTTP.HdrCustom "X-RateLimit-Reset"
 
 isConnectionError :: IOException -> Bool
 isConnectionError e =
