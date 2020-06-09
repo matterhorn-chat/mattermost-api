@@ -86,10 +86,18 @@ data MattermostServerError = MattermostServerError T.Text
 
 instance Exception MattermostServerError
 
+-- | An exception raised when a request could not be completed due to a
+-- request rate limit violation.
 data RateLimitException =
     RateLimitException { rateLimitExceptionLimit :: Maybe Int
+                       -- ^ The total number of requests allowed in the
+                       -- current rate limit window.
                        , rateLimitExceptionRemaining :: Maybe Int
+                       -- ^ The number of requests remaining in the
+                       -- current rate limit window.
                        , rateLimitExceptionReset :: Maybe Int
+                       -- ^ The number of seconds until the rate limit
+                       -- window resets.
                        }
                        deriving (Show, Typeable)
 
