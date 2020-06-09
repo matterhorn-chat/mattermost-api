@@ -96,6 +96,18 @@ doUnauthRequest :: ConnectionData
                 -> IO HTTP.Response_String
 doUnauthRequest cd = submitRequest cd Nothing
 
+-- | Submit an HTTP request.
+--
+-- If the request fails due to a 429 (rate-limited) response, this
+-- raises 'RateLimitException' with the fields populated from the
+-- response headers where possible.
+--
+-- If the response status is 2XX, the response is returned.
+--
+-- If the response status is anything else, its body is assumed to be
+-- a JSON encoding of a Mattermost server error. If it can be decoded
+-- as such, a 'MattermostError' exception is raised. Otherwise an
+-- 'HTTPResponseException' is raised.
 submitRequest :: ConnectionData
               -> Maybe Token
               -> HTTP.RequestMethod
