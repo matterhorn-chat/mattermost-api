@@ -57,7 +57,7 @@ options =
       (ReqArg
         (\arg opt -> return opt { optMessage = T.pack arg })
         "MESSAGE")
-      "message to send"
+      "message to send (reads stdin if not specified)"
   , Option "h" ["help"]
       (NoArg
         (\_ -> do
@@ -102,15 +102,17 @@ main = do
         when (optVerbose opts) $ do
           pPrint chan
         when (channelName chan == optChannel opts) $ do
-          when (not (T.null (optMessage opts))) $ do
-            let pendingPost = RawPost
+          theMsg <- if T.null (optMessage opts)
+                    then T.pack <$> getContents
+                    else return $ optMessage opts
+          let pendingPost = RawPost
                   { rawPostChannelId = getId chan
-                  , rawPostMessage   = optMessage opts
+                  , rawPostMessage   = theMsg
                   , rawPostFileIds   = mempty
                   , rawPostRootId    = Nothing
                   }
-            -- pendingPost <- mkPendingPost (optMessage opts)
-            --                              (getId mmUser)
-            --                              (getId chan)
-            post <- mmCreatePost pendingPost session
-            when (optVerbose opts) (pPrint post)
+          -- pendingPost <- mkPendingPost (optMessage opts)
+          --                              (getId mmUser)
+          --                              (getId chan)
+          post <- mmCreatePost pendingPost session
+          when (optVerbose opts) (pPrint post)
