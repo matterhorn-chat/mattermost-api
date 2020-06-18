@@ -1,4 +1,22 @@
 
+50200.6.0
+=========
+
+API changes:
+ * Version 4 API functions now all have the potential to raise a new
+   exception type, `RateLimitExceptions`, when HTTP 429 (rate limiting)
+   responses are received. The new exception type provides rate limit
+   metadata received from the server so the caller can determine whether
+   to attempt a request again, and how long to wait before attempting
+   it.
+ * The `ChannelNotifyProps` type got a new
+   `channelNotifyPropsIgnoreChannelMentions` field.
+ * The `WEData` type got a `wepChannelMember` field.
+
+Other changes:
+ * `channel_member_updated` websocket events are now parsed.
+ * Some haddock syntax errors were fixed (thanks Eric Mertens)
+
 50200.5.0
 =========
 
