@@ -9,6 +9,7 @@ module Network.Mattermost.Types
     ( module Network.Mattermost.Types
     , module Network.Mattermost.Types.Base
     , ConnectionType(..)
+    , connectionDataURL
     )
     where
 
