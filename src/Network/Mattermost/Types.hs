@@ -408,7 +408,7 @@ instance A.ToJSON ChannelNotifyProps where
     , "push"                    .= channelNotifyPropsPush
     , "desktop"                 .= channelNotifyPropsDesktop
     , "mark_unread"             .= channelNotifyPropsMarkUnread
-    , "ignore_channel_mentions" .= channelNotifyPropsIgnoreChannelMentions
+    , "ignore_channel_mentions" .= fmap OnOffString channelNotifyPropsIgnoreChannelMentions
     ]
 
 --
