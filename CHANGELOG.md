@@ -1,4 +1,10 @@
 
+50200.7.0
+=========
+
+ * Added `mmUpdateChannelNotifications` and fixed the JSON encoding of
+   the `ChannelNotifyProps` type.
+
 50200.6.0
 =========
 
