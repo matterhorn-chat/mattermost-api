@@ -333,11 +333,12 @@ mmExecuteCommand body =
 -- -- | List commands for a team.
 -- --
 -- --   /Permissions/: @manage_slash_commands@ if need list custom commands.
--- mmListCommandsForTeam :: TeamId -> Maybe Text -> Session -> IO (Seq Command)
--- mmListCommandsForTeam teamId customOnly =
---   inGet (printf "/commands?%s" (mkQueryString [ Just ("team_id", T.unpack (idString teamId)) , sequence ("custom_only", fmap T.unpack customOnly) ])) noBody jsonResponse
-
-
+mmListCommandsForTeam :: TeamId -> Bool -> Session -> IO (Seq Command)
+mmListCommandsForTeam teamId customOnly =
+    let pairs = [ Just ("team_id", T.unpack (idString teamId))
+                , Just ("custom_only", if customOnly then "true" else "false")
+                ]
+    in inGet (printf "/commands?%s" (mkQueryString pairs)) noBody jsonResponse
 
 -- * Compliance
 
