@@ -59,7 +59,9 @@ library
                      , binary >= 0.8.1
                      , bytestring
                      , process
-                     , HTTP
+                     -- We depend on this lower bound to get a fix for
+                     -- https://github.com/haskell/HTTP/issues/128
+                     , HTTP >= 4000.3.15
                      , http-media
                      , network-uri
                      , modern-uri
