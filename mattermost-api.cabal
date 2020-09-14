@@ -11,9 +11,8 @@ description:         Client API for Mattermost chat system.  Mattermost is a
 
 license:             BSD3
 license-file:        LICENSE
-author:              Jason Dagit
-maintainer:          dagitj@gmail.com
-copyright:           2016-2017 Jason Dagit, Getty Ritter, Jonathan Daugherty
+maintainer:          matterhorn@galois.com
+copyright:           2016-2020 Jason Dagit, Getty Ritter, Jonathan Daugherty
 category:            Web
 build-type:          Simple
 extra-doc-files:     README.md,
