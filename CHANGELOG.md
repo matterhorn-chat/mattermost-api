@@ -2,6 +2,20 @@
 50200.7.0
 =========
 
+API changes:
+ * Added a `WMUnknownEvent` constructor to the `WebsocketEventType` data
+   type to hold unknown event types to avoid parse failures for new
+   event types.
+ * Added `mmListCommandsForTeam` to get commands for a team and
+   implemented a JSON parser for the `Command` type.
+
+Package changes:
+ * Upgraded to HTTP 4000.3.15 to get an `Eq` instance fix for HTTP
+   header name comparisons.
+
+50200.7.0
+=========
+
  * Added `mmUpdateChannelNotifications` and fixed the JSON encoding of
    the `ChannelNotifyProps` type.
 
