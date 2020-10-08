@@ -180,17 +180,8 @@ submitRequest cd mToken method uri payload = do
         Left _ ->
           throwIO (HTTPResponseException ("Server returned unexpected " ++ show code ++ " response"))
 
--- NOTE: At least as of HTTP-4000.3.14, custom header names are matched
--- case-sensitively when looking them up in responses. This is a bug
--- (reported at https://github.com/haskell/HTTP/issues/128) and in
--- the mean time we use our own header-matching implementation.
 findHeader :: HTTP.HeaderName -> [HTTP.Header] -> Maybe String
-findHeader n hs = HTTP.hdrValue <$> listToMaybe (filter (matchHeader n) hs)
-
-matchHeader :: HTTP.HeaderName -> HTTP.Header -> Bool
-matchHeader (HTTP.HdrCustom a) (HTTP.Header (HTTP.HdrCustom b) _) =
-    (toLower <$> a) == (toLower <$> b)
-matchHeader a (HTTP.Header b _) = a == b
+findHeader n hs = HTTP.hdrValue <$> listToMaybe (filter ((== n) . HTTP.hdrName) hs)
 
 rateLimitLimitHeader :: HTTP.HeaderName
 rateLimitLimitHeader = HTTP.HdrCustom "X-RateLimit-Limit"

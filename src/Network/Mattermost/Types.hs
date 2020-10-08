@@ -409,7 +409,7 @@ instance A.ToJSON ChannelNotifyProps where
     , "push"                    .= channelNotifyPropsPush
     , "desktop"                 .= channelNotifyPropsDesktop
     , "mark_unread"             .= channelNotifyPropsMarkUnread
-    , "ignore_channel_mentions" .= channelNotifyPropsIgnoreChannelMentions
+    , "ignore_channel_mentions" .= fmap OnOffString channelNotifyPropsIgnoreChannelMentions
     ]
 
 --
@@ -986,13 +986,13 @@ instance A.ToJSON MinCommand where
 
 data Command
   = Command
-  { commandId               :: CommandId
-  , commandToken            :: Token
+  { commandId               :: Maybe CommandId
+  , commandToken            :: Text
   , commandCreateAt         :: ServerTime
   , commandUpdateAt         :: ServerTime
   , commandDeleteAt         :: ServerTime
-  , commandCreatorId        :: UserId
-  , commandTeamId           :: TeamId
+  , commandCreatorId        :: Maybe UserId
+  , commandTeamId           :: Maybe TeamId
   , commandTrigger          :: Text
   , commandMethod           :: Text
   , commandUsername         :: Text
@@ -1005,15 +1005,34 @@ data Command
   , commandURL              :: Text
   } deriving (Read, Show, Eq)
 
+instance A.FromJSON Command where
+    parseJSON = A.withObject "command" $ \o ->
+        Command <$> (maybeFail $ o A..: "id")
+                <*> o A..: "token"
+                <*> (timeFromServer <$> (o A..: "create_at"))
+                <*> (timeFromServer <$> (o A..: "update_at"))
+                <*> (timeFromServer <$> (o A..: "delete_at"))
+                <*> (maybeFail $ o A..: "creator_id")
+                <*> (maybeFail $ o A..: "team_id")
+                <*> o A..: "trigger"
+                <*> o A..: "method"
+                <*> o A..: "username"
+                <*> o A..: "icon_url"
+                <*> o A..: "auto_complete"
+                <*> o A..: "auto_complete_desc"
+                <*> o A..: "auto_complete_hint"
+                <*> o A..: "display_name"
+                <*> o A..: "description"
+                <*> o A..: "url"
+
+instance A.ToJSON Command where toJSON = error "to command"
+
 newtype CommandId = CmdI { unCmdI :: Id }
   deriving (Read, Show, Eq, Ord, Hashable, ToJSON, ToJSONKey, FromJSONKey, FromJSON)
 
 instance IsId CommandId where
   toId   = unCmdI
   fromId = CmdI
-
-instance HasId Command CommandId where
-  getId = commandId
 
 instance PrintfArg CommandId where
   formatArg = formatArg . idString
@@ -1352,8 +1371,6 @@ instance PrintfArg ReportId where
 
 instance A.ToJSON User where toJSON = error "to user"
 instance A.ToJSON Team where toJSON = error "to team"
-instance A.FromJSON Command where parseJSON = error "from command"
-instance A.ToJSON Command where toJSON = error "to command"
 
 
 -- --

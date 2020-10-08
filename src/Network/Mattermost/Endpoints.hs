@@ -166,14 +166,13 @@ mmGetChannelStatistics :: ChannelId -> Session -> IO ChannelStats
 mmGetChannelStatistics channelId =
   inGet (printf "/channels/%s/stats" channelId) noBody jsonResponse
 
--- -- | Update a user's notification properties for a channel. Only the
--- --   provided fields are updated.
--- --
--- --   /Permissions/: Must be logged in as the user or have
--- --   @edit_other_users@ permission.
--- mmUpdateChannelNotifications :: ChannelId -> UserId -> XX17 -> Session -> IO ()
--- mmUpdateChannelNotifications channelId userId body =
---   inPut (printf "/channels/%s/members/%s/notify_props" channelId userId) (jsonBody body) jsonResponse
+-- | Update a user's notification properties for a channel.
+--
+--   /Permissions/: Must be logged in as the user or have
+--   @edit_other_users@ permission.
+mmUpdateChannelNotifications :: ChannelId -> UserId -> ChannelNotifyProps -> Session -> IO ()
+mmUpdateChannelNotifications channelId userId body =
+  inPut (printf "/channels/%s/members/%s/notify_props" channelId userId) (jsonBody body) noResponse
 
 -- | Add a user to the channel.
 mmAddUser :: ChannelId -> MinChannelMember -> Session -> IO ChannelMember
@@ -334,11 +333,12 @@ mmExecuteCommand body =
 -- -- | List commands for a team.
 -- --
 -- --   /Permissions/: @manage_slash_commands@ if need list custom commands.
--- mmListCommandsForTeam :: TeamId -> Maybe Text -> Session -> IO (Seq Command)
--- mmListCommandsForTeam teamId customOnly =
---   inGet (printf "/commands?%s" (mkQueryString [ Just ("team_id", T.unpack (idString teamId)) , sequence ("custom_only", fmap T.unpack customOnly) ])) noBody jsonResponse
-
-
+mmListCommandsForTeam :: TeamId -> Bool -> Session -> IO (Seq Command)
+mmListCommandsForTeam teamId customOnly =
+    let pairs = [ Just ("team_id", T.unpack (idString teamId))
+                , Just ("custom_only", if customOnly then "true" else "false")
+                ]
+    in inGet (printf "/commands?%s" (mkQueryString pairs)) noBody jsonResponse
 
 -- * Compliance
 
@@ -3304,28 +3304,6 @@ instance A.ToJSON UploadResponse where
     [ "client_ids" A..= uploadResponseClientIds
     , "file_infos" A..= uploadResponseFileInfos
     ]
-
--- --
-
--- --
-
--- data XX17 = XX17
---   { xx17MarkUnread :: Text
---   , xx17Desktop :: Text
---     -- ^ Controls when to send desktop notifications. The possible options are `default`, `all`, `mention`, `none`
---   } deriving (Read, Show, Eq)
-
--- instance A.FromJSON XX17 where
---   parseJSON = A.withObject "xx17" $ \v -> do
---     xx17MarkUnread <- v A..: "mark_unread"
---     xx17Desktop <- v A..: "desktop"
---     return XX17 { .. }
-
--- instance A.ToJSON XX17 where
---   toJSON XX17 { .. } = A.object
---     [ "mark_unread" A..= xx17MarkUnread
---     , "desktop" A..= xx17Desktop
---     ]
 
 -- --
 

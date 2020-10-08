@@ -76,6 +76,7 @@ data WebsocketEventType
   | WMPluginStatusesChanged
   | WMPluginEnabled
   | WMPluginDisabled
+  | WMUnknownEvent T.Text
   deriving (Read, Show, Eq, Ord)
 
 instance FromJSON WebsocketEventType where
@@ -113,7 +114,7 @@ instance FromJSON WebsocketEventType where
     "plugin_statuses_changed" -> return WMPluginStatusesChanged
     "plugin_enabled"     -> return WMPluginEnabled
     "plugin_disabled"    -> return WMPluginDisabled
-    _                    -> fail ("Unknown websocket message: " ++ show s)
+    _                    -> return $ WMUnknownEvent s
 
 instance ToJSON WebsocketEventType where
   toJSON WMTyping                  = "typing"
@@ -149,6 +150,7 @@ instance ToJSON WebsocketEventType where
   toJSON WMPluginStatusesChanged   = "plugin_statuses_changed"
   toJSON WMPluginEnabled           = "plugin_enabled"
   toJSON WMPluginDisabled          = "plugin_disabled"
+  toJSON (WMUnknownEvent s)        = toJSON s
 
 --
 
