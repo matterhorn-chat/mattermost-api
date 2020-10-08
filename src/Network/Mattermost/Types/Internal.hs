@@ -93,7 +93,10 @@ data ConnectionData
   , cdConnectionType :: ConnectionType
   }
 
-connectionDataURL :: ConnectionData -> T.Text
+newtype ServerBaseURL = ServerBaseURL T.Text
+                      deriving (Eq, Show)
+
+connectionDataURL :: ConnectionData -> ServerBaseURL
 connectionDataURL cd =
     let scheme = case cdConnectionType cd of
             ConnectHTTPS {} -> "https"
@@ -106,4 +109,4 @@ connectionDataURL cd =
         path1 = cdUrlPath cd
         path2 = if "/" `T.isPrefixOf` path1
                 then path1 else "/" <> path1
-    in scheme <> "://" <> host <> port <> path2
+    in ServerBaseURL $ scheme <> "://" <> host <> port <> path2
