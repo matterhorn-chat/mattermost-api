@@ -104,8 +104,8 @@ connectionDataURL cd =
         host = cdHostname cd
         port = T.pack $
                if cdConnectionType cd == ConnectHTTP
-               then if cdPort cd == 80 then "" else show (cdPort cd)
-               else if cdPort cd == 443 then "" else show (cdPort cd)
+               then if cdPort cd == 80 then "" else ":" <> show (cdPort cd)
+               else if cdPort cd == 443 then "" else ":" <> show (cdPort cd)
         path1 = cdUrlPath cd
         path2 = if "/" `T.isPrefixOf` path1
                 then path1 else "/" <> path1
