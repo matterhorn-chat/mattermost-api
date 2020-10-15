@@ -10,6 +10,7 @@
 module Network.Mattermost.Types.Internal where
 
 import Control.Monad (when)
+import Data.Monoid ((<>))
 import Data.Pool (Pool)
 import qualified Network.Connection as C
 import Control.Exception (finally)
