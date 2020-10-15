@@ -1,4 +1,12 @@
 
+50200.9.0
+=========
+
+API changes:
+ * Added `Network.Mattermost.Types.Internal.connectionDataURL` and its
+   return type, `ServerBaseURL`, to obtain base URLs corresponding to a
+   connection handle.
+
 50200.8.0
 =========
 
