@@ -58,6 +58,7 @@ library
                      -- https://github.com/matterhorn-chat/mattermost-api/issues/36):
                      , binary >= 0.8.1
                      , bytestring
+                     , base64 >= 0.2.0.0
                      , process
                      -- We depend on this lower bound to get a fix for
                      -- https://github.com/haskell/HTTP/issues/128

@@ -81,6 +81,15 @@ data ConnectionType =
     -- ^ Make an insecure connection over HTTP
     deriving (Eq, Show, Read)
 
+data BasicAuth = BasicAuth
+  { baUsername :: T.Text
+  , baPassword :: T.Text
+  , baCsrfToken :: Maybe T.Text
+  }
+
+instance Show BasicAuth where
+  show BasicAuth {baUsername=u} = "Basic " ++ T.unpack u ++ ":" ++ "<redacted>"
+
 data ConnectionData
   = ConnectionData
   { cdHostname       :: Hostname
@@ -90,6 +99,7 @@ data ConnectionData
   , cdConnectionPool :: Pool MMConn
   , cdConnectionCtx  :: C.ConnectionContext
   , cdToken          :: Maybe Token
+  , cdBasicAuth      :: Maybe BasicAuth
   , cdLogger         :: Maybe Logger
   , cdConnectionType :: ConnectionType
   }

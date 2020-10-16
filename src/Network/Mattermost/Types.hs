@@ -70,8 +70,8 @@ maybeFail :: Parser a -> Parser (Maybe a)
 maybeFail p = (Just <$> p) <|> (return Nothing)
 
 -- | Creates a structure representing a connection to the server.
-mkConnectionData :: Hostname -> Port -> T.Text -> Pool.Pool MMConn -> ConnectionType -> ConnectionContext -> ConnectionData
-mkConnectionData host port path pool connTy ctx = ConnectionData
+mkConnectionData :: Hostname -> Port -> T.Text -> Pool.Pool MMConn -> ConnectionType -> ConnectionContext -> Maybe BasicAuth -> ConnectionData
+mkConnectionData host port path pool connTy ctx ba = ConnectionData
   { cdHostname       = host
   , cdPort           = port
   , cdUrlPath        = path
@@ -80,6 +80,7 @@ mkConnectionData host port path pool connTy ctx = ConnectionData
   , cdConnectionPool = pool
   , cdToken          = Nothing
   , cdLogger         = Nothing
+  , cdBasicAuth      = ba
   , cdConnectionType = connTy
   }
 
@@ -88,11 +89,11 @@ createPool host port ctx cpc connTy =
   Pool.createPool (mkConnection ctx host port connTy >>= newMMConn) closeMMConn
                   (cpStripesCount cpc) (cpIdleConnTimeout cpc) (cpMaxConnCount cpc)
 
-initConnectionData :: Hostname -> Port -> T.Text -> ConnectionType -> ConnectionPoolConfig -> IO ConnectionData
-initConnectionData host port path connTy cpc = do
+initConnectionData :: Hostname -> Port -> T.Text -> Maybe BasicAuth -> ConnectionType -> ConnectionPoolConfig -> IO ConnectionData
+initConnectionData host port path ba connTy cpc = do
   ctx  <- initConnectionContext
   pool <- createPool host port ctx cpc connTy
-  return (mkConnectionData host port path pool connTy ctx)
+  return (mkConnectionData host port path pool connTy ctx ba)
 
 destroyConnectionData :: ConnectionData -> IO ()
 destroyConnectionData = Pool.destroyAllResources . cdConnectionPool

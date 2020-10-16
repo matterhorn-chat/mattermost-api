@@ -197,16 +197,16 @@ mmUnauthenticatedHTTPPost cd path json = do
   rsp <- withConnection cd $ \con -> do
     let content       = BL.toStrict (encode json)
         contentLength = B.length content
-        request       = Request
-          { rqURI     = path
-          , rqMethod  = POST
-          , rqHeaders = [ mkHeader HdrHost          (T.unpack $ cdHostname cd)
-                        , mkHeader HdrUserAgent     defaultUserAgent
-                        , mkHeader HdrContentType   "application/json"
-                        , mkHeader HdrContentLength (show contentLength)
-                        ] ++ autoCloseToHeader (cdAutoClose cd)
-          , rqBody    = B.unpack content
-          }
+        request       = populateAuth cd Nothing $ Request
+                        { rqURI     = path
+                        , rqMethod  = POST
+                        , rqHeaders = [ mkHeader HdrHost          (T.unpack $ cdHostname cd)
+                                      , mkHeader HdrUserAgent     defaultUserAgent
+                                      , mkHeader HdrContentType   "application/json"
+                                      , mkHeader HdrContentLength (show contentLength)
+                                      ] ++ autoCloseToHeader (cdAutoClose cd)
+                        , rqBody    = B.unpack content
+                        }
     simpleHTTP_ con request
   hoistE $ left ConnectionException rsp
 
@@ -938,15 +938,14 @@ mmCreateGroupChannel sess@(Session cd _) uIds = do
 mmDeleteRequest :: Session -> URI -> IO ()
 mmDeleteRequest (Session cd token) path = do
   rawRsp <- withConnection cd $ \con -> do
-    let request = Request
-          { rqURI     = path
-          , rqMethod  = DELETE
-          , rqHeaders = [ mkHeader HdrAuthorization ("Bearer " ++ getTokenString token)
-                        , mkHeader HdrHost          (T.unpack $ cdHostname cd)
-                        , mkHeader HdrUserAgent     defaultUserAgent
-                        ] ++ autoCloseToHeader (cdAutoClose cd)
-          , rqBody    = ""
-          }
+    let request    = populateAuth cd (Just token) $ Request
+                     { rqURI     = path
+                     , rqMethod  = DELETE
+                     , rqHeaders = [ mkHeader HdrHost          (T.unpack $ cdHostname cd)
+                                   , mkHeader HdrUserAgent     defaultUserAgent
+                                   ] ++ autoCloseToHeader (cdAutoClose cd)
+                     , rqBody    = ""
+                     }
     simpleHTTP_ con request
   rsp <- hoistE $ left ConnectionException rawRsp
   assert200Response path rsp
@@ -955,15 +954,14 @@ mmDeleteRequest (Session cd token) path = do
 mmRequest :: Session -> URI -> IO Response_String
 mmRequest (Session cd token) path = do
   rawRsp <- withConnection cd $ \con -> do
-    let request = Request
-          { rqURI     = path
-          , rqMethod  = GET
-          , rqHeaders = [ mkHeader HdrAuthorization ("Bearer " ++ getTokenString token)
-                        , mkHeader HdrHost          (T.unpack $ cdHostname cd)
-                        , mkHeader HdrUserAgent     defaultUserAgent
-                        ] ++ autoCloseToHeader (cdAutoClose cd)
-          , rqBody    = ""
-          }
+    let request = populateAuth cd (Just token) $ Request
+                  { rqURI     = path
+                  , rqMethod  = GET
+                  , rqHeaders = [ mkHeader HdrHost          (T.unpack $ cdHostname cd)
+                                , mkHeader HdrUserAgent     defaultUserAgent
+                                ] ++ autoCloseToHeader (cdAutoClose cd)
+                  , rqBody    = ""
+                  }
     simpleHTTP_ con request
   rsp <- hoistE $ left ConnectionException rawRsp
   assert200Response path rsp
@@ -1020,16 +1018,15 @@ mmRawPOST :: Session -> URI -> B.ByteString -> IO Response_String
 mmRawPOST (Session cd token) path content = do
   rawRsp <- withConnection cd $ \con -> do
     let contentLength = B.length content
-        request       = Request
-          { rqURI     = path
-          , rqMethod  = POST
-          , rqHeaders = [ mkHeader HdrAuthorization ("Bearer " ++ getTokenString token)
-                        , mkHeader HdrHost          (T.unpack $ cdHostname cd)
-                        , mkHeader HdrUserAgent     defaultUserAgent
-                        , mkHeader HdrContentType   "application/json"
-                        , mkHeader HdrContentLength (show contentLength)
-                        ] ++ autoCloseToHeader (cdAutoClose cd)
-          , rqBody    = B.unpack content
+        request = populateAuth cd (Just token) $ Request
+                  { rqURI     = path
+                  , rqMethod  = POST
+                  , rqHeaders = [ mkHeader HdrHost          (T.unpack $ cdHostname cd)
+                                , mkHeader HdrUserAgent     defaultUserAgent
+                                , mkHeader HdrContentType   "application/json"
+                                , mkHeader HdrContentLength (show contentLength)
+                                ] ++ autoCloseToHeader (cdAutoClose cd)
+                  , rqBody    = B.unpack content
           }
     simpleHTTP_ con request
   rsp <- hoistE $ left ConnectionException rawRsp
@@ -1040,17 +1037,17 @@ mmRawPUT :: Session -> URI -> B.ByteString -> IO Response_String
 mmRawPUT (Session cd token) path content = do
   rawRsp <- withConnection cd $ \con -> do
     let contentLength = B.length content
-        request       = Request
-          { rqURI     = path
-          , rqMethod  = PUT
-          , rqHeaders = [ mkHeader HdrAuthorization ("Bearer " ++ getTokenString token)
-                        , mkHeader HdrHost          (T.unpack $ cdHostname cd)
-                        , mkHeader HdrUserAgent     defaultUserAgent
-                        , mkHeader HdrContentType   "application/json"
-                        , mkHeader HdrContentLength (show contentLength)
-                        ] ++ autoCloseToHeader (cdAutoClose cd)
-          , rqBody    = B.unpack content
-          }
+
+        request = populateAuth cd (Just token) $ Request
+                  { rqURI     = path
+                  , rqMethod  = PUT
+                  , rqHeaders = [ mkHeader HdrHost          (T.unpack $ cdHostname cd)
+                                , mkHeader HdrUserAgent     defaultUserAgent
+                                , mkHeader HdrContentType   "application/json"
+                                , mkHeader HdrContentLength (show contentLength)
+                                ] ++ autoCloseToHeader (cdAutoClose cd)
+                  , rqBody    = B.unpack content
+                  }
     simpleHTTP_ con request
   rsp <- hoistE $ left ConnectionException rawRsp
   assert200Response path rsp

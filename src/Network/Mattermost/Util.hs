@@ -9,11 +9,13 @@ module Network.Mattermost.Util
 , (~=)
 , withConnection
 , mkConnection
+, populateAuth
 , connectionGetExact
 , buildPath
 ) where
 
 import           Control.Exception (finally, onException)
+import           Data.Text.Encoding.Base64
 import           Data.Char ( toUpper )
 import qualified Data.ByteString.Char8 as B
 import qualified Data.Text as T
@@ -30,6 +32,9 @@ import           Network.Connection ( Connection
                                     , TLSSettings(..)
                                     , connectionGet
                                     , connectTo )
+import qualified Network.HTTP.Base as HTTP
+import qualified Network.HTTP.Headers as HTTP
+import qualified Network.HTTP.Cookie as HTTP
 
 import           Network.Mattermost.Types.Base
 import           Network.Mattermost.Types.Internal
@@ -125,3 +130,50 @@ buildPath cd endpoint = do
   let rawPath = "/" <> (T.dropWhile (=='/') $ cdUrlPath cd <> "/api/v4/" <> endpoint)
   uri <- URI.mkURI rawPath
   return $ URI.render uri
+
+
+populateAuth :: ConnectionData -> Maybe Token -> HTTP.Request a -> HTTP.Request a
+populateAuth cd token req =
+  let authHeader = mkAuthHeaders cd token
+  in req { HTTP.rqHeaders = HTTP.rqHeaders req <> authHeader
+         }
+
+
+csrfHeader :: BasicAuth -> [HTTP.Header]
+csrfHeader ba =
+  case baCsrfToken ba of
+    Just t ->
+      [ HTTP.mkHeader (HTTP.HdrCustom "X-CSRF-Token") $ T.unpack t
+      ]
+    Nothing -> []
+
+mkAuthHeaders :: ConnectionData -> Maybe Token -> [HTTP.Header]
+mkAuthHeaders (cd@ConnectionData {cdBasicAuth=Just ba}) (Just t) =
+   mkAuthHeaders cd Nothing <> csrfHeader ba <> [
+     HTTP.cookiesToHeader $ [
+                            HTTP.MkCookie
+                            { HTTP.ckDomain = (T.unpack $ cdHostname cd),
+                              HTTP.ckName = "MMAUTHTOKEN",
+                              HTTP.ckValue = (getTokenString t),
+                              HTTP.ckPath = Nothing,
+                              HTTP.ckComment = Nothing,
+                              HTTP.ckVersion = Nothing
+                            }
+                            ]
+     ]
+
+
+
+mkAuthHeaders _ (Just token) =
+  [HTTP.mkHeader HTTP.HdrAuthorization $ "Bearer " ++ getTokenString token]
+
+
+mkAuthHeaders (ConnectionData {cdBasicAuth=(Just ba)}) Nothing =
+  [HTTP.mkHeader HTTP.HdrAuthorization $ "Basic " ++ (T.unpack $ encodeBasicAuth ba)]
+
+mkAuthHeaders _ _ =
+  []
+
+
+encodeBasicAuth :: BasicAuth -> T.Text
+encodeBasicAuth BasicAuth {baUsername = u, baPassword = p} = encodeBase64 $ T.intercalate (T.pack ":") [u, p]

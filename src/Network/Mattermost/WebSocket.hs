@@ -18,6 +18,7 @@ import           Control.Exception (Exception, SomeException, catch, throwIO, th
 import           Control.Monad (forever)
 import           Control.Monad.STM (atomically)
 import           Data.Aeson (toJSON)
+import           Data.Text.Encoding.Base64
 import qualified Data.ByteString.Char8 as B
 import           Data.ByteString.Lazy (toStrict)
 import           Data.IORef
@@ -109,7 +110,7 @@ mmWithWebSocket :: Session
                 -> (Either String (Either WebsocketActionResponse WebsocketEvent) -> IO ())
                 -> (MMWebSocket -> IO ())
                 -> IO ()
-mmWithWebSocket (Session cd (Token tk)) recv body = do
+mmWithWebSocket (Session cd tk) recv body = do
   con <- mkConnection (cdConnectionCtx cd) (cdHostname cd) (cdPort cd) (cdConnectionType cd)
   stream <- connectionToStream con
   health <- newIORef 0
@@ -167,7 +168,7 @@ mmWithWebSocket (Session cd (Token tk)) recv body = do
                       (T.unpack $ cdHostname cd)
                       (T.unpack path)
                       WS.defaultConnectionOptions { WS.connectionOnPong = onPong }
-                      [ ("Authorization", "Bearer " <> B.pack tk) ]
+                      (authHeaders cd tk)
                       action
   where cleanup :: SomeException -> IO ()
         cleanup _ = return ()
@@ -175,6 +176,22 @@ mmWithWebSocket (Session cd (Token tk)) recv body = do
         propagate ts e = do
           sequence_ [ throwTo t e | t <- ts ]
           throwIO e
+
+authHeaders :: ConnectionData -> Token -> WS.Headers
+authHeaders (ConnectionData {cdBasicAuth = (Just ba)}) (Token tk) =
+  [ ("Cookie", B.pack $ "MMAUTHTOKEN=" ++ tk ++ ";")
+  , ("Authorization", B.pack $ "Basic " ++ (T.unpack $
+                                             encodeBase64 $ T.intercalate
+                                                       (T.pack ":") [ baUsername ba
+                                                                    , baPassword ba
+                                                                    ]
+                                           )
+    )
+  ]
+
+authHeaders _ (Token tk) =
+  [("Authorization", "Bearer " <> B.pack tk)]
+
 
 mmSendWSAction :: ConnectionData -> MMWebSocket -> WebsocketAction -> IO ()
 mmSendWSAction cd (MMWS ws _) a = do
