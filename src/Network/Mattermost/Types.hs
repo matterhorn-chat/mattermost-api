@@ -42,6 +42,8 @@ import           Data.Time.Clock.POSIX ( posixSecondsToUTCTime
 import           Network.Connection ( ConnectionContext
                                     , initConnectionContext
                                     )
+import qualified Network.HTTP.Base as HTTP
+import qualified Network.WebSockets as WS
 import           Network.Mattermost.Types.Base
 import           Network.Mattermost.Types.Internal
 import           Network.Mattermost.Util (mkConnection, ConnectionType(..))
@@ -70,8 +72,8 @@ maybeFail :: Parser a -> Parser (Maybe a)
 maybeFail p = (Just <$> p) <|> (return Nothing)
 
 -- | Creates a structure representing a connection to the server.
-mkConnectionData :: Hostname -> Port -> T.Text -> Pool.Pool MMConn -> ConnectionType -> ConnectionContext -> Maybe BasicAuth -> ConnectionData
-mkConnectionData host port path pool connTy ctx ba = ConnectionData
+mkConnectionData :: Hostname -> Port -> T.Text -> Pool.Pool MMConn -> ConnectionType -> ConnectionContext -> ConnectionData
+mkConnectionData host port path pool connTy ctx = ConnectionData
   { cdHostname       = host
   , cdPort           = port
   , cdUrlPath        = path
@@ -80,7 +82,8 @@ mkConnectionData host port path pool connTy ctx ba = ConnectionData
   , cdConnectionPool = pool
   , cdToken          = Nothing
   , cdLogger         = Nothing
-  , cdBasicAuth      = ba
+  , cdConnReqTrans   = id
+  , cdWsReqTrans     = id
   , cdConnectionType = connTy
   }
 
@@ -89,11 +92,23 @@ createPool host port ctx cpc connTy =
   Pool.createPool (mkConnection ctx host port connTy >>= newMMConn) closeMMConn
                   (cpStripesCount cpc) (cpIdleConnTimeout cpc) (cpMaxConnCount cpc)
 
-initConnectionData :: Hostname -> Port -> T.Text -> Maybe BasicAuth -> ConnectionType -> ConnectionPoolConfig -> IO ConnectionData
-initConnectionData host port path ba connTy cpc = do
+initConnectionData :: Hostname -> Port -> T.Text -> ConnectionType -> ConnectionPoolConfig -> IO ConnectionData
+initConnectionData host port path connTy cpc = do
   ctx  <- initConnectionContext
   pool <- createPool host port ctx cpc connTy
-  return (mkConnectionData host port path pool connTy ctx ba)
+  return (mkConnectionData host port path pool connTy ctx)
+
+setConnectionRequestTransformation :: (HTTP.Request_String -> HTTP.Request_String) -> ConnectionData -> ConnectionData
+setConnectionRequestTransformation trans cd =
+  cd
+    { cdConnReqTrans = trans
+    }
+
+setWsRequestTransformation :: (WS.Headers -> WS.Headers) -> ConnectionData -> ConnectionData
+setWsRequestTransformation trans cd =
+  cd
+    { cdWsReqTrans = trans
+    }
 
 destroyConnectionData :: ConnectionData -> IO ()
 destroyConnectionData = Pool.destroyAllResources . cdConnectionPool

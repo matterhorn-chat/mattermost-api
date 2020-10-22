@@ -330,7 +330,7 @@ findChannel chans name =
 
 connectFromConfig :: TestConfig -> IO ConnectionData
 connectFromConfig cfg =
-  initConnectionData (configHostname cfg) (fromIntegral (configPort cfg)) T.empty Nothing ConnectHTTP
+  initConnectionData (configHostname cfg) (fromIntegral (configPort cfg)) T.empty ConnectHTTP
                      defaultConnectionPoolConfig
 
 getConnection :: TestM ConnectionData

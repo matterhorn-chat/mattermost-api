@@ -16,7 +16,9 @@ import qualified Network.Connection as C
 import Control.Exception (finally)
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import Network.HTTP.Headers (Header, HeaderName(..), mkHeader)
+import qualified Network.HTTP.Base as HTTP
 import qualified Network.HTTP.Stream as HTTP
+import qualified Network.WebSockets as WS
 import qualified Data.ByteString.Char8 as B
 import Network.Mattermost.Types.Base
 import qualified Data.Text as T
@@ -81,15 +83,6 @@ data ConnectionType =
     -- ^ Make an insecure connection over HTTP
     deriving (Eq, Show, Read)
 
-data BasicAuth = BasicAuth
-  { baUsername :: T.Text
-  , baPassword :: T.Text
-  , baCsrfToken :: Maybe T.Text
-  }
-
-instance Show BasicAuth where
-  show BasicAuth {baUsername=u} = "Basic " ++ T.unpack u ++ ":" ++ "<redacted>"
-
 data ConnectionData
   = ConnectionData
   { cdHostname       :: Hostname
@@ -99,10 +92,12 @@ data ConnectionData
   , cdConnectionPool :: Pool MMConn
   , cdConnectionCtx  :: C.ConnectionContext
   , cdToken          :: Maybe Token
-  , cdBasicAuth      :: Maybe BasicAuth
+  , cdConnReqTrans   :: HTTP.Request_String -> HTTP.Request_String
+  , cdWsReqTrans     :: WS.Headers -> WS.Headers
   , cdLogger         :: Maybe Logger
   , cdConnectionType :: ConnectionType
   }
+
 
 newtype ServerBaseURL = ServerBaseURL T.Text
                       deriving (Eq, Show)

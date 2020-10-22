@@ -60,6 +60,8 @@ module Network.Mattermost
 , defaultConnectionPoolConfig
 , mkConnectionData
 , initConnectionData
+, setConnectionRequestTransformation
+, setWsRequestTransformation
 , mmCloseSession
 , mmLogin
 , mmCreateDirect
