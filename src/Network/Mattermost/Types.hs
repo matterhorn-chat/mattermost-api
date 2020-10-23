@@ -100,9 +100,8 @@ initConnectionData host port path connTy cpc = do
 
 setConnectionRequestTransformation :: (HTTP.Request_String -> HTTP.Request_String) -> ConnectionData -> ConnectionData
 setConnectionRequestTransformation trans cd =
-  cd
-    { cdConnReqTrans = trans
-    }
+  cd { cdConnReqTrans = trans
+     }
 
 setWsRequestTransformation :: (WS.Headers -> WS.Headers) -> ConnectionData -> ConnectionData
 setWsRequestTransformation trans cd =
