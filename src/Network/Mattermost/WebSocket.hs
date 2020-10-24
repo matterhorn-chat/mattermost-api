@@ -167,7 +167,7 @@ mmWithWebSocket (Session cd (Token tk)) recv body = do
                       (T.unpack $ cdHostname cd)
                       (T.unpack path)
                       WS.defaultConnectionOptions { WS.connectionOnPong = onPong }
-                      (cdWsReqTrans cd [("Authorization", "Bearer " <> B.pack tk)])
+                      (rtWsTransformer (cdReqTransformer cd) [("Authorization", "Bearer " <> B.pack tk)])
                       action
   where cleanup :: SomeException -> IO ()
         cleanup _ = return ()

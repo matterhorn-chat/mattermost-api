@@ -131,7 +131,7 @@ buildPath cd endpoint = do
 
 
 populateAuth :: ConnectionData -> Maybe Token -> HTTP.Request_String -> HTTP.Request_String
-populateAuth (ConnectionData {cdConnReqTrans = trans}) token req =
+populateAuth (ConnectionData { cdReqTransformer = (RequestTransformer { rtHttpTransformer = trans})}) token req =
   trans $ case token of
             Just tk -> req { HTTP.rqHeaders = (HTTP.rqHeaders req) <> [ HTTP.mkHeader HTTP.HdrAuthorization ("Bearer " ++ getTokenString tk) ]
                            }

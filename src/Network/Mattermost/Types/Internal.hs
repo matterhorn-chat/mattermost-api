@@ -83,6 +83,12 @@ data ConnectionType =
     -- ^ Make an insecure connection over HTTP
     deriving (Eq, Show, Read)
 
+data RequestTransformer
+  = RequestTransformer
+  { rtHttpTransformer :: HTTP.Request_String -> HTTP.Request_String
+  , rtWsTransformer :: WS.Headers -> WS.Headers
+  }
+
 data ConnectionData
   = ConnectionData
   { cdHostname       :: Hostname
@@ -92,8 +98,7 @@ data ConnectionData
   , cdConnectionPool :: Pool MMConn
   , cdConnectionCtx  :: C.ConnectionContext
   , cdToken          :: Maybe Token
-  , cdConnReqTrans   :: HTTP.Request_String -> HTTP.Request_String
-  , cdWsReqTrans     :: WS.Headers -> WS.Headers
+  , cdReqTransformer :: RequestTransformer
   , cdLogger         :: Maybe Logger
   , cdConnectionType :: ConnectionType
   }

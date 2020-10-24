@@ -42,8 +42,6 @@ import           Data.Time.Clock.POSIX ( posixSecondsToUTCTime
 import           Network.Connection ( ConnectionContext
                                     , initConnectionContext
                                     )
-import qualified Network.HTTP.Base as HTTP
-import qualified Network.WebSockets as WS
 import           Network.Mattermost.Types.Base
 import           Network.Mattermost.Types.Internal
 import           Network.Mattermost.Util (mkConnection, ConnectionType(..))
@@ -82,8 +80,10 @@ mkConnectionData host port path pool connTy ctx = ConnectionData
   , cdConnectionPool = pool
   , cdToken          = Nothing
   , cdLogger         = Nothing
-  , cdConnReqTrans   = id
-  , cdWsReqTrans     = id
+  , cdReqTransformer = RequestTransformer
+                       { rtHttpTransformer = id
+                       , rtWsTransformer = id
+                       }
   , cdConnectionType = connTy
   }
 
@@ -98,16 +98,12 @@ initConnectionData host port path connTy cpc = do
   pool <- createPool host port ctx cpc connTy
   return (mkConnectionData host port path pool connTy ctx)
 
-setConnectionRequestTransformation :: (HTTP.Request_String -> HTTP.Request_String) -> ConnectionData -> ConnectionData
+setConnectionRequestTransformation :: RequestTransformer -> ConnectionData -> ConnectionData
 setConnectionRequestTransformation trans cd =
-  cd { cdConnReqTrans = trans
+  cd { cdReqTransformer = trans
      }
 
-setWsRequestTransformation :: (WS.Headers -> WS.Headers) -> ConnectionData -> ConnectionData
-setWsRequestTransformation trans cd =
-  cd
-    { cdWsReqTrans = trans
-    }
+
 
 destroyConnectionData :: ConnectionData -> IO ()
 destroyConnectionData = Pool.destroyAllResources . cdConnectionPool

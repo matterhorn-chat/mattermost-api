@@ -61,7 +61,6 @@ module Network.Mattermost
 , mkConnectionData
 , initConnectionData
 , setConnectionRequestTransformation
-, setWsRequestTransformation
 , mmCloseSession
 , mmLogin
 , mmCreateDirect
