@@ -85,8 +85,8 @@ data ConnectionType =
 
 data RequestTransformer
   = RequestTransformer
-  { rtHttpTransformer :: HTTP.Request_String -> HTTP.Request_String
-  , rtWsTransformer :: WS.Headers -> WS.Headers
+  { rtHttpTransformer :: ConnectionData -> HTTP.Request_String -> HTTP.Request_String
+  , rtWsTransformer :: ConnectionData -> WS.Headers -> WS.Headers
   }
 
 data ConnectionData

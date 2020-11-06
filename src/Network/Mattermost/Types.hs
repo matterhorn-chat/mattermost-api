@@ -44,7 +44,7 @@ import           Network.Connection ( ConnectionContext
                                     )
 import           Network.Mattermost.Types.Base
 import           Network.Mattermost.Types.Internal
-import           Network.Mattermost.Util (mkConnection, ConnectionType(..))
+import           Network.Mattermost.Util (mkConnection, ConnectionType(..), httpTokenAuth, wsTokenAuth)
 
 newtype UserText = UserText Text
                  deriving (Eq, Show, Ord, Read)
@@ -81,8 +81,8 @@ mkConnectionData host port path pool connTy ctx = ConnectionData
   , cdToken          = Nothing
   , cdLogger         = Nothing
   , cdReqTransformer = RequestTransformer
-                       { rtHttpTransformer = id
-                       , rtWsTransformer = id
+                       { rtHttpTransformer = httpTokenAuth
+                       , rtWsTransformer = wsTokenAuth
                        }
   , cdConnectionType = connTy
   }
