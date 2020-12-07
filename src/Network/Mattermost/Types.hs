@@ -1141,6 +1141,7 @@ data PreferenceCategory
   | PreferenceCategoryAuthorizedOAuthApp
   | PreferenceCategoryNotifications
   | PreferenceCategoryLast
+  | PreferenceCategoryTeamsOrder
   | PreferenceCategoryOther Text
     deriving (Read, Show, Eq)
 
@@ -1156,6 +1157,7 @@ instance A.FromJSON PreferenceCategory where
     "oauth_app"           -> PreferenceCategoryAuthorizedOAuthApp
     "notifications"       -> PreferenceCategoryNotifications
     "last"                -> PreferenceCategoryLast
+    "teams_order"         -> PreferenceCategoryTeamsOrder
     _                     -> PreferenceCategoryOther t
 
 instance A.ToJSON PreferenceCategory where
@@ -1170,6 +1172,7 @@ instance A.ToJSON PreferenceCategory where
     PreferenceCategoryAuthorizedOAuthApp -> "oauth_app"
     PreferenceCategoryNotifications      -> "notifications"
     PreferenceCategoryLast               -> "last"
+    PreferenceCategoryTeamsOrder         -> "teams_order"
     PreferenceCategoryOther t            -> t
 
 data PreferenceName
