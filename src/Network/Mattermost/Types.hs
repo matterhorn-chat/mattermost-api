@@ -1177,7 +1177,7 @@ data PreferenceName
     deriving (Read, Show, Eq)
 
 instance A.FromJSON PreferenceName where
-  parseJSON = A.withText "PreferenceValue" (return . PreferenceName)
+  parseJSON = A.withText "PreferenceName" (return . PreferenceName)
 
 instance A.ToJSON PreferenceName where
   toJSON = A.toJSON . fromRawPreferenceName
