@@ -1248,6 +1248,15 @@ data DirectChannelShowStatus =
                             , directChannelShowValue :: Bool
                             }
 
+preferenceToTeamOrder :: Preference -> Maybe [TeamId]
+preferenceToTeamOrder
+  Preference
+    { preferenceCategory = PreferenceCategoryTeamsOrder
+    , preferenceName     = PreferenceName ""
+    , preferenceValue    = PreferenceValue value
+    } = Just $ (TI . Id) <$> T.splitOn "," value
+preferenceToTeamOrder _ = Nothing
+
 preferenceToDirectChannelShowStatus :: Preference -> Maybe DirectChannelShowStatus
 preferenceToDirectChannelShowStatus
   Preference
