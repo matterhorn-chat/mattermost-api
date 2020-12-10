@@ -1257,6 +1257,15 @@ preferenceToTeamOrder
     } = Just $ (TI . Id) <$> T.splitOn "," value
 preferenceToTeamOrder _ = Nothing
 
+teamOrderPref :: UserId -> [TeamId] -> Preference
+teamOrderPref myId tIds =
+    Preference { preferenceCategory = PreferenceCategoryTeamsOrder
+               , preferenceValue = PreferenceValue $ T.intercalate "," $ (unId <$> unTI <$> tIds)
+               , preferenceName = PreferenceName ""
+               , preferenceUserId = myId
+               }
+
+
 preferenceToDirectChannelShowStatus :: Preference -> Maybe DirectChannelShowStatus
 preferenceToDirectChannelShowStatus
   Preference
