@@ -9,6 +9,9 @@ module Network.Mattermost.Util
 , (~=)
 , withConnection
 , mkConnection
+, populateAuth
+, httpTokenAuth
+, wsTokenAuth
 , connectionGetExact
 , buildPath
 ) where
@@ -30,10 +33,12 @@ import           Network.Connection ( Connection
                                     , TLSSettings(..)
                                     , connectionGet
                                     , connectTo )
-
+import qualified Network.HTTP.Base as HTTP
+import qualified Network.HTTP.Headers as HTTP
 import           Network.Mattermost.Types.Base
 import           Network.Mattermost.Types.Internal
 import           Network.Mattermost.Proxy
+import qualified Network.WebSockets as WS
 
 -- | This unwraps a 'Maybe' value, throwing a provided exception
 --   if the value is 'Nothing'.
@@ -125,3 +130,21 @@ buildPath cd endpoint = do
   let rawPath = "/" <> (T.dropWhile (=='/') $ cdUrlPath cd <> "/api/v4/" <> endpoint)
   uri <- URI.mkURI rawPath
   return $ URI.render uri
+
+
+populateAuth :: ConnectionData -> Maybe Token -> HTTP.Request_String -> HTTP.Request_String
+populateAuth (cd@ConnectionData { cdReqTransformer = (RequestTransformer { rtHttpTransformer = trans})}) token req =
+  trans (cd {cdToken = token}) req
+
+httpTokenAuth :: ConnectionData -> HTTP.Request_String -> HTTP.Request_String
+httpTokenAuth (ConnectionData { cdToken = token }) req =
+  case token of
+    Just tk -> req { HTTP.rqHeaders = (HTTP.rqHeaders req) <> [ HTTP.mkHeader HTTP.HdrAuthorization ("Bearer " ++ getTokenString tk) ]
+                   }
+    Nothing -> req
+
+wsTokenAuth :: ConnectionData -> WS.Headers -> WS.Headers
+wsTokenAuth (ConnectionData {cdToken = token}) headers =
+  case token of
+    Just (Token tk) -> headers <> [("Authorization", "Bearer " <> B.pack tk)]
+    Nothing -> headers

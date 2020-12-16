@@ -16,7 +16,9 @@ import qualified Network.Connection as C
 import Control.Exception (finally)
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import Network.HTTP.Headers (Header, HeaderName(..), mkHeader)
+import qualified Network.HTTP.Base as HTTP
 import qualified Network.HTTP.Stream as HTTP
+import qualified Network.WebSockets as WS
 import qualified Data.ByteString.Char8 as B
 import Network.Mattermost.Types.Base
 import qualified Data.Text as T
@@ -81,6 +83,12 @@ data ConnectionType =
     -- ^ Make an insecure connection over HTTP
     deriving (Eq, Show, Read)
 
+data RequestTransformer
+  = RequestTransformer
+  { rtHttpTransformer :: ConnectionData -> HTTP.Request_String -> HTTP.Request_String
+  , rtWsTransformer :: ConnectionData -> WS.Headers -> WS.Headers
+  }
+
 data ConnectionData
   = ConnectionData
   { cdHostname       :: Hostname
@@ -90,9 +98,11 @@ data ConnectionData
   , cdConnectionPool :: Pool MMConn
   , cdConnectionCtx  :: C.ConnectionContext
   , cdToken          :: Maybe Token
+  , cdReqTransformer :: RequestTransformer
   , cdLogger         :: Maybe Logger
   , cdConnectionType :: ConnectionType
   }
+
 
 newtype ServerBaseURL = ServerBaseURL T.Text
                       deriving (Eq, Show)

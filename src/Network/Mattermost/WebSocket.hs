@@ -109,7 +109,7 @@ mmWithWebSocket :: Session
                 -> (Either String (Either WebsocketActionResponse WebsocketEvent) -> IO ())
                 -> (MMWebSocket -> IO ())
                 -> IO ()
-mmWithWebSocket (Session cd (Token tk)) recv body = do
+mmWithWebSocket (Session cd tk) recv body = do
   con <- mkConnection (cdConnectionCtx cd) (cdHostname cd) (cdPort cd) (cdConnectionType cd)
   stream <- connectionToStream con
   health <- newIORef 0
@@ -167,7 +167,7 @@ mmWithWebSocket (Session cd (Token tk)) recv body = do
                       (T.unpack $ cdHostname cd)
                       (T.unpack path)
                       WS.defaultConnectionOptions { WS.connectionOnPong = onPong }
-                      [ ("Authorization", "Bearer " <> B.pack tk) ]
+                      (rtWsTransformer (cdReqTransformer cd) (cd { cdToken = Just tk}) [])
                       action
   where cleanup :: SomeException -> IO ()
         cleanup _ = return ()

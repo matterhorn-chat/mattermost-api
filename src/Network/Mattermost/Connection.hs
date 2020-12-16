@@ -117,17 +117,12 @@ submitRequest :: ConnectionData
 submitRequest cd mToken method uri payload = do
   path <- buildPath cd (T.pack uri)
   parsedPath <- mmPath $ T.unpack path
-  let contentLength = B.length payload
-      authHeader =
-          case mToken of
-              Nothing -> []
-              Just token -> [HTTP.mkHeader HTTP.HdrAuthorization ("Bearer " ++ getTokenString token)]
 
-      request = HTTP.Request
+  let contentLength = B.length payload
+      request = populateAuth cd mToken HTTP.Request
         { HTTP.rqURI = parsedPath
         , HTTP.rqMethod = method
         , HTTP.rqHeaders =
-          authHeader <>
           [ HTTP.mkHeader HTTP.HdrHost          (T.unpack $ cdHostname cd)
           , HTTP.mkHeader HTTP.HdrUserAgent     HTTP.defaultUserAgent
           , HTTP.mkHeader HTTP.HdrContentType   "application/json"

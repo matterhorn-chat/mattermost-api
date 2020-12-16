@@ -44,7 +44,7 @@ import           Network.Connection ( ConnectionContext
                                     )
 import           Network.Mattermost.Types.Base
 import           Network.Mattermost.Types.Internal
-import           Network.Mattermost.Util (mkConnection, ConnectionType(..))
+import           Network.Mattermost.Util (mkConnection, ConnectionType(..), httpTokenAuth, wsTokenAuth)
 
 newtype UserText = UserText Text
                  deriving (Eq, Show, Ord, Read)
@@ -80,6 +80,10 @@ mkConnectionData host port path pool connTy ctx = ConnectionData
   , cdConnectionPool = pool
   , cdToken          = Nothing
   , cdLogger         = Nothing
+  , cdReqTransformer = RequestTransformer
+                       { rtHttpTransformer = httpTokenAuth
+                       , rtWsTransformer = wsTokenAuth
+                       }
   , cdConnectionType = connTy
   }
 
@@ -93,6 +97,13 @@ initConnectionData host port path connTy cpc = do
   ctx  <- initConnectionContext
   pool <- createPool host port ctx cpc connTy
   return (mkConnectionData host port path pool connTy ctx)
+
+setConnectionRequestTransformation :: RequestTransformer -> ConnectionData -> ConnectionData
+setConnectionRequestTransformation trans cd =
+  cd { cdReqTransformer = trans
+     }
+
+
 
 destroyConnectionData :: ConnectionData -> IO ()
 destroyConnectionData = Pool.destroyAllResources . cdConnectionPool
