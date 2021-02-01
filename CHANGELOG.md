@@ -1,4 +1,12 @@
 
+50200.10.0
+==========
+
+API changes:
+ * `Types` got constructors for `Preference` values
+ * `Types` got a new `PreferenceCategoryTeamsOrder` constructor for
+   `PreferenceCategory`
+
 50200.9.0
 =========
 
