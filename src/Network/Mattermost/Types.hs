@@ -1133,6 +1133,7 @@ instance A.ToJSON Reaction where
 data PreferenceCategory
   = PreferenceCategoryDirectChannelShow
   | PreferenceCategoryGroupChannelShow
+  | PreferenceCategoryFavoriteChannelShow
   | PreferenceCategoryTutorialStep
   | PreferenceCategoryAdvancedSettings
   | PreferenceCategoryFlaggedPost
@@ -1147,33 +1148,35 @@ data PreferenceCategory
 
 instance A.FromJSON PreferenceCategory where
   parseJSON = A.withText "PreferenceCategory" $ \t -> return $ case t of
-    "direct_channel_show" -> PreferenceCategoryDirectChannelShow
-    "group_channel_show"  -> PreferenceCategoryGroupChannelShow
-    "tutorial_step"       -> PreferenceCategoryTutorialStep
-    "advanced_settings"   -> PreferenceCategoryAdvancedSettings
-    "flagged_post"        -> PreferenceCategoryFlaggedPost
-    "display_settings"    -> PreferenceCategoryDisplaySettings
-    "theme"               -> PreferenceCategoryTheme
-    "oauth_app"           -> PreferenceCategoryAuthorizedOAuthApp
-    "notifications"       -> PreferenceCategoryNotifications
-    "last"                -> PreferenceCategoryLast
-    "teams_order"         -> PreferenceCategoryTeamsOrder
-    _                     -> PreferenceCategoryOther t
+    "direct_channel_show"   -> PreferenceCategoryDirectChannelShow
+    "group_channel_show"    -> PreferenceCategoryGroupChannelShow
+    "favorite_channel_show" -> PreferenceCategoryFavoriteChannelShow
+    "tutorial_step"         -> PreferenceCategoryTutorialStep
+    "advanced_settings"     -> PreferenceCategoryAdvancedSettings
+    "flagged_post"          -> PreferenceCategoryFlaggedPost
+    "display_settings"      -> PreferenceCategoryDisplaySettings
+    "theme"                 -> PreferenceCategoryTheme
+    "oauth_app"             -> PreferenceCategoryAuthorizedOAuthApp
+    "notifications"         -> PreferenceCategoryNotifications
+    "last"                  -> PreferenceCategoryLast
+    "teams_order"           -> PreferenceCategoryTeamsOrder
+    _                       -> PreferenceCategoryOther t
 
 instance A.ToJSON PreferenceCategory where
   toJSON cat = A.String $ case cat of
-    PreferenceCategoryDirectChannelShow  -> "direct_channel_show"
-    PreferenceCategoryGroupChannelShow   -> "group_channel_show"
-    PreferenceCategoryTutorialStep       -> "tutorial_step"
-    PreferenceCategoryAdvancedSettings   -> "advanced_settings"
-    PreferenceCategoryFlaggedPost        -> "flagged_post"
-    PreferenceCategoryDisplaySettings    -> "display_settings"
-    PreferenceCategoryTheme              -> "theme"
-    PreferenceCategoryAuthorizedOAuthApp -> "oauth_app"
-    PreferenceCategoryNotifications      -> "notifications"
-    PreferenceCategoryLast               -> "last"
-    PreferenceCategoryTeamsOrder         -> "teams_order"
-    PreferenceCategoryOther t            -> t
+    PreferenceCategoryDirectChannelShow   -> "direct_channel_show"
+    PreferenceCategoryGroupChannelShow    -> "group_channel_show"
+    PreferenceCategoryFavoriteChannelShow -> "favorite_channel_show"
+    PreferenceCategoryTutorialStep        -> "tutorial_step"
+    PreferenceCategoryAdvancedSettings    -> "advanced_settings"
+    PreferenceCategoryFlaggedPost         -> "flagged_post"
+    PreferenceCategoryDisplaySettings     -> "display_settings"
+    PreferenceCategoryTheme               -> "theme"
+    PreferenceCategoryAuthorizedOAuthApp  -> "oauth_app"
+    PreferenceCategoryNotifications       -> "notifications"
+    PreferenceCategoryLast                -> "last"
+    PreferenceCategoryTeamsOrder          -> "teams_order"
+    PreferenceCategoryOther t             -> t
 
 data PreferenceName
   = PreferenceName { fromRawPreferenceName :: Text }
