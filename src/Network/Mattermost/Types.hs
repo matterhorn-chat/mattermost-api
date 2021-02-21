@@ -1222,6 +1222,24 @@ instance A.ToJSON Preference where
     , "value"    .= preferenceValue
     ]
 
+data FavoriteChannelPreference =
+    FavoriteChannelPreference { favoriteChannelId :: ChannelId
+                           , favoriteChannelShow :: Bool
+                           } deriving (Read, Show, Eq)
+
+-- | Attempt to expose a 'Preference' as a 'FlaggedPost'
+preferenceToFavoriteChannelPreference :: Preference -> Maybe FavoriteChannelPreference
+preferenceToFavoriteChannelPreference
+  Preference
+    { preferenceCategory = PreferenceCategoryFavoriteChannelShow
+    , preferenceName     = PreferenceName name
+    , preferenceValue    = PreferenceValue value
+    } = Just FavoriteChannelPreference
+          { favoriteChannelId = CI (Id name)
+          , favoriteChannelShow = value == "true"
+          }
+preferenceToFavoriteChannelPreference _ = Nothing
+
 data GroupChannelPreference =
     GroupChannelPreference { groupChannelId :: ChannelId
                            , groupChannelShow :: Bool
