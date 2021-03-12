@@ -219,7 +219,7 @@ mmLogin cd login = do
   let rawPath = "/api/v3/users/login"
   path <- mmPath rawPath
   runLogger cd "mmLogin" $
-    HttpRequest GET rawPath (Just (toJSON $ login { password = "<elided>" }))
+    HttpRequest GET rawPath (Just (show $ login { password = "<elided>" }))
   rsp  <- mmUnauthenticatedHTTPPost cd path login
   if (rspCode rsp /= (2,0,0))
     then do
@@ -229,7 +229,7 @@ mmLogin cd login = do
       token <- mmGetHeader   rsp (HdrCustom "Token")
       (raw, value) <- mmGetJSONBody "User" rsp
       runLogger cd "mmLogin" $
-        HttpResponse 200 rawPath (Just raw)
+        HttpResponse 200 rawPath (Just $ show raw)
       return (Right (Session cd (Token token), value))
 
 showRespCode :: (Int, Int, Int) -> String
@@ -257,11 +257,11 @@ mmCreateTeam sess payload = do
   let path = "/api/v3/teams/create"
   uri <- mmPath path
   runLoggerS sess "mmCreateTeam" $
-    HttpRequest POST path (Just (toJSON payload))
+    HttpRequest POST path (Just $ show payload)
   rsp <- mmPOST sess uri payload
   (val, r) <- mmGetJSONBody "Team" rsp
   runLoggerS sess "mmCreateTeam" $
-    HttpResponse 200 path (Just val)
+    HttpResponse 200 path (Just $ show val)
   return r
 
 -- | Requires an authenticated user. Returns the full list of channels
@@ -346,7 +346,7 @@ mmViewChannel sess teamid chanid previd = do
       payload = HM.fromList $ [("channel_id" :: T.Text, chanid)] ++ prev
   uri <- mmPath path
   runLoggerS sess "mmViewChannel" $
-    HttpRequest POST path (Just (toJSON payload))
+    HttpRequest POST path (Just $ show payload)
   _ <- mmPOST sess uri payload
   runLoggerS sess "mmViewChannel" $
     HttpResponse 200 path Nothing
@@ -368,7 +368,7 @@ mmJoinChannel sess teamid chanid = do
   rsp <- mmPOST sess uri (""::T.Text)
   (val, (_::Channel)) <- mmGetJSONBody "Channel" rsp
   runLoggerS sess "mmJoinChannel" $
-    HttpResponse 200 path (Just val)
+    HttpResponse 200 path (Just $ show val)
   return ()
 
 -- |
@@ -384,11 +384,11 @@ mmLeaveChannel sess teamid chanid = do
       payload = HM.fromList [("id" :: T.Text, chanid)]
   uri <- mmPath path
   runLoggerS sess "mmLeaveChannel" $
-    HttpRequest POST path (Just (toJSON payload))
+    HttpRequest POST path (Just $ show payload)
   rsp <- mmPOST sess uri payload
   (val, (_::HM.HashMap T.Text ChannelId)) <- mmGetJSONBody "Channel name/ID map" rsp
   runLoggerS sess "mmCreateDirect" $
-    HttpResponse 200 path (Just val)
+    HttpResponse 200 path (Just $ show val)
   return ()
 
 -- |
@@ -437,7 +437,7 @@ mmGetPost sess teamid chanid postid = do
   rsp <- mmRequest sess uri
   (raw, json) <- mmGetJSONBody "Posts" rsp
   runLoggerS sess "mmGetPost" $
-    HttpResponse 200 path (Just raw)
+    HttpResponse 200 path (Just $ show raw)
   return json
 
 -- |
@@ -488,11 +488,11 @@ mmSearchPosts sess teamid terms isOrSearch = do
   uri <- mmPath path
   let req = SearchPosts terms isOrSearch
   runLoggerS sess "mmSearchPosts" $
-    HttpRequest POST path (Just (toJSON req))
+    HttpRequest POST path (Just $ show req)
   rsp <- mmPOST sess uri req
   (raw, value) <- mmGetJSONBody "SearchPostsResult" rsp
   runLoggerS sess "mmSearchPosts" $
-    HttpResponse 200 path (Just raw)
+    HttpResponse 200 path (Just $ show raw)
   return value
 
 -- |
@@ -591,11 +591,11 @@ mmCreateDirect sess teamid userid = do
       payload = HM.fromList [("user_id" :: T.Text, userid)]
   uri <- mmPath path
   runLoggerS sess "mmCreateDirect" $
-    HttpRequest POST path (Just (toJSON payload))
+    HttpRequest POST path (Just $ show payload)
   rsp <- mmPOST sess uri payload
   (val, r) <- mmGetJSONBody "Channel" rsp
   runLoggerS sess "mmCreateDirect" $
-    HttpResponse 200 path (Just val)
+    HttpResponse 200 path (Just $ show val)
   return r
 
 -- { name, display_name, purpose, header }
@@ -606,11 +606,11 @@ mmCreateChannel sess teamid payload = do
   let path = printf "/api/v3/teams/%s/channels/create" (idString teamid)
   uri <- mmPath path
   runLoggerS sess "mmCreateChannel" $
-    HttpRequest POST path (Just (toJSON payload))
+    HttpRequest POST path (Just $ show payload)
   rsp <- mmPOST sess uri payload
   (val, r) <- mmGetJSONBody "Channel" rsp
   runLoggerS sess "mmCreateChannel" $
-    HttpResponse 200 path (Just val)
+    HttpResponse 200 path (Just $ show val)
   return r
 
 -- |
@@ -661,11 +661,11 @@ mmUpdatePost sess teamid post = do
                       (idString chanid)
   uri <- mmPath path
   runLoggerS sess "mmUpdatePost" $
-    HttpRequest POST path (Just (toJSON post))
+    HttpRequest POST path (Just (show post))
   rsp <- mmPOST sess uri post
   (val, r) <- mmGetJSONBody "Post" rsp
   runLoggerS sess "mmUpdatePost" $
-    HttpResponse 200 path (Just (val))
+    HttpResponse 200 path (Just $ show val)
   return r
 
 -- |
@@ -681,11 +681,11 @@ mmPost sess teamid post = do
                       (idString chanid)
   uri <- mmPath path
   runLoggerS sess "mmPost" $
-    HttpRequest POST path (Just (toJSON post))
+    HttpRequest POST path (Just $ show post)
   rsp <- mmPOST sess uri post
   (val, r) <- mmGetJSONBody "Post" rsp
   runLoggerS sess "mmPost" $
-    HttpResponse 200 path (Just (val))
+    HttpResponse 200 path (Just $ show val)
   return r
 
 -- | Get the system configuration. Requires administrative permission.
@@ -713,7 +713,7 @@ mmSaveConfig sess config = do
   let path = "/api/v3/admin/save_config"
   uri <- mmPath path
   runLoggerS sess "mmSaveConfig" $
-    HttpRequest POST path (Just config)
+    HttpRequest POST path (Just $ show config)
   _ <- mmPOST sess uri config
   runLoggerS sess "mmSaveConfig" $
     HttpResponse 200 path Nothing
@@ -733,11 +733,11 @@ mmChannelAddUser sess teamid chanId uId = do
       req = object ["user_id" .= uId]
   uri <- mmPath path
   runLoggerS sess "mmChannelAddUser" $
-    HttpRequest POST path (Just req)
+    HttpRequest POST path (Just $ show req)
   rsp <- mmPOST sess uri req
   (val, r) <- mmGetJSONBody "ChannelData" rsp
   runLoggerS sess "mmChannelAddUser" $
-    HttpResponse 200 path (Just val)
+    HttpResponse 200 path (Just $ show val)
   return r
 
 -- |
@@ -752,7 +752,7 @@ mmTeamAddUser sess teamid uId = do
       req  = object ["user_id" .= uId]
   uri <- mmPath path
   runLoggerS sess "mmTeamAddUser" $
-    HttpRequest POST path (Just req)
+    HttpRequest POST path (Just $ show req)
   _ <- mmPOST sess uri req
   runLoggerS sess "mmTeamAddUSer" $
     HttpResponse 200 path Nothing
@@ -769,11 +769,11 @@ mmExecute sess teamid command = do
                       (idString teamid)
   uri <- mmPath path
   runLoggerS sess "mmExecute" $
-    HttpRequest POST path (Just (toJSON command))
+    HttpRequest POST path (Just $ show command)
   rsp <- mmPOST sess uri command
   (val, r) <- mmGetJSONBody "Value" rsp
   runLoggerS sess "mmExecute" $
-    HttpResponse 200 path (Just (val))
+    HttpResponse 200 path (Just $ show val)
   return r
 
 -- |
@@ -785,11 +785,11 @@ mmUsersCreate cd usersCreate = do
   let path = "/api/v3/users/create"
   uri <- mmPath path
   runLogger cd "mmUsersCreate" $
-    HttpRequest POST path (Just (toJSON usersCreate))
+    HttpRequest POST path (Just $ show usersCreate)
   rsp <- mmUnauthenticatedHTTPPost cd uri usersCreate
   (val, r) <- mmGetJSONBody "User" rsp
   runLogger cd "mmUsersCreate" $
-    HttpResponse 200 path (Just (val))
+    HttpResponse 200 path (Just $ show val)
   return r
 
 -- |
@@ -801,11 +801,11 @@ mmUsersCreateWithSession sess usersCreate = do
   let path = "/api/v3/users/create"
   uri <- mmPath path
   runLoggerS sess "mmUsersCreateWithToken" $
-    HttpRequest POST path (Just (toJSON usersCreate))
+    HttpRequest POST path (Just $ show usersCreate)
   rsp <- mmPOST sess uri usersCreate
   (val, r) <- mmGetJSONBody "User" rsp
   runLoggerS sess "mmUsersCreateWithToken" $
-    HttpResponse 200 path (Just (val))
+    HttpResponse 200 path (Just $ show val)
   return r
 
 -- |
@@ -869,7 +869,7 @@ mmFlagPost sess uId pId = do
           }
   let rawPath = "/api/v3/preferences/save"
   runLoggerS sess "mmFlagPost" $
-    HttpRequest POST rawPath (Just (toJSON [flaggedPost]))
+    HttpRequest POST rawPath (Just (show [flaggedPost]))
   uri <- mmPath rawPath
   _ <- mmPOST sess uri (Seq.singleton flaggedPost)
   return ()
@@ -892,7 +892,7 @@ mmUnflagPost sess uId pId = do
           }
   let rawPath = "/api/v3/preferences/delete"
   runLoggerS sess "mmUnflagPost" $
-    HttpRequest POST rawPath (Just (toJSON [flaggedPost]))
+    HttpRequest POST rawPath (Just (show [flaggedPost]))
   uri <- mmPath rawPath
   _ <- mmPOST sess uri (Seq.singleton flaggedPost)
   return ()
@@ -928,11 +928,11 @@ mmCreateGroupChannel sess@(Session cd _) uIds = do
       fnname = "mmCreateGroupChannel"
   uri <- mmPath path
   runLoggerS sess fnname $
-    HttpRequest POST path (Just (toJSON uIds))
+    HttpRequest POST path (Just $ show uIds)
   rsp <- mmPOST sess uri uIds
   (raw, json) <- mmGetJSONBody fnname rsp
   runLogger cd fnname $
-    HttpResponse 200 path (Just raw)
+    HttpResponse 200 path (Just $ show raw)
   return json
 
 mmDeleteRequest :: Session -> URI -> IO ()
@@ -991,7 +991,7 @@ mmWithRequest sess@(Session cd _) fnname path action = do
   rsp  <- mmRequest sess uri
   (raw,json) <- mmGetJSONBody fnname rsp
   runLogger cd fnname $
-    HttpResponse 200 path (Just raw)
+    HttpResponse 200 path (Just $ show raw)
   action json
 
 mmPOST :: ToJSON t => Session -> URI -> t -> IO Response_String
@@ -1011,7 +1011,7 @@ mmSetChannelHeader sess teamid chanid header = do
   uri <- mmPath path
   let req = SetChannelHeader chanid header
   runLoggerS sess "mmSetChannelHeader" $
-    HttpRequest POST path (Just (toJSON req))
+    HttpRequest POST path (Just (show req))
   rsp <- mmPOST sess uri req
   (_, r) <- mmGetJSONBody "Channel" rsp
   return r

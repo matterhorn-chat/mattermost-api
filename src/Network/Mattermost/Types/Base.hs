@@ -25,10 +25,10 @@ data LogEvent = LogEvent
 
 -- | A 'LogEventType' describes the particular event that happened
 data LogEventType
-  = HttpRequest RequestMethod String (Maybe A.Value)
-  | HttpResponse Int String (Maybe A.Value)
+  = HttpRequest RequestMethod String (Maybe String)
+  | HttpResponse Int String (Maybe String)
   | WebSocketRequest A.Value
-  | WebSocketResponse (Either String A.Value)
+  | WebSocketResponse (Either String String)
   -- ^ Left means we got an exception trying to parse the response;
   -- Right means we succeeded and here it is.
   | WebSocketPing

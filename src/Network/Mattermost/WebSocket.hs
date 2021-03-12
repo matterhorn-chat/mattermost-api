@@ -126,7 +126,7 @@ mmWithWebSocket (Session cd (Token tk)) recv body = do
 
           val <- case result of
                 Left e -> do
-                    doLog $ WebSocketResponse $ Right $ toJSON $
+                    doLog $ WebSocketResponse $ Right $ 
                         "Got exception on receiveDataMessage: " <> show e
                     throwIO e
                 Right dataMsg -> do
@@ -157,8 +157,8 @@ mmWithWebSocket (Session cd (Token tk)) recv body = do
 
           doLog (WebSocketResponse $ case val of
                 Left s -> Left s
-                Right (Left v) -> Right $ toJSON v
-                Right (Right v) -> Right $ toJSON v
+                Right (Left v) -> Right $ show v
+                Right (Right v) -> Right $ show v
                 )
           recv val
         body (MMWS c health) `catch` propagate [mId, pId]
