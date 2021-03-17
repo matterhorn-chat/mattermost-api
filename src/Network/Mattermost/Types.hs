@@ -306,10 +306,6 @@ instance A.FromJSON NotifyOption where
   parseJSON (A.String "none")    = return NotifyOptionNone
   parseJSON xs                   = fail ("Unknown NotifyOption value: " ++ show xs)
 
-data UserProps = UserProps
-  -- TODO: Figure out what this is
-  deriving (Eq, Show, Read, Ord)
-
 data UserNotifyProps = UserNotifyProps
   { userNotifyPropsMentionKeys  :: [UserText]
   , userNotifyPropsEmail        :: Bool
@@ -580,75 +576,45 @@ instance HasId User UserId where
 
 data User
   = User
-  { userId                     :: UserId
-  , userCreateAt               :: Maybe ServerTime
-  , userUpdateAt               :: Maybe ServerTime
-  , userDeleteAt               :: ServerTime
-  , userUsername               :: Text
-  , userPassword               :: Maybe Text
-  , userAuthData               :: Maybe Text
-  , userAuthService            :: Text
-  , userEmail                  :: UserText
-  , userEmailVerified          :: Bool
-  , userNickname               :: UserText
-  , userFirstName              :: UserText
-  , userLastName               :: UserText
-  , userPosition               :: Text
-  , userRoles                  :: Text
-  , userAllowMarketing         :: Bool
-  -- , userProps                  :: Maybe UserProps
-  , userNotifyProps            :: UserNotifyProps
-  , userLastPasswordUpdate     :: Maybe ServerTime
-  , userLastPictureUpdate      :: Maybe ServerTime
-  , userFailedAttempts         :: Maybe Text
-  , userLocale                 :: Text
-  --, userTimezone               :: Timezone
-  , userMfaActive              :: Bool
-  , userMfaSecret              :: Maybe Text
-  , userLastActivityAt         :: Maybe ServerTime
-  , userIsBot                  :: Bool
-  , userBotDescription         :: Maybe Text
-  , userBotLastIconUpdate      :: Maybe ServerTime
-  , userTermsOfServiceId       :: Maybe Text
-  , userTermsOfServiceCreateAt :: Maybe ServerTime
-
+  { userId                 :: UserId
+  , userCreateAt           :: Maybe ServerTime
+  , userUpdateAt           :: Maybe ServerTime
+  , userDeleteAt           :: ServerTime
+  , userUsername           :: Text
+  , userAuthData           :: Maybe Text
+  , userAuthService        :: Text
+  , userEmail              :: UserText
+  , userEmailVerified      :: Bool
+  , userNickname           :: UserText
+  , userFirstName          :: UserText
+  , userLastName           :: UserText
+  , userRoles              :: Text
+  , userNotifyProps        :: UserNotifyProps
+  , userLastPasswordUpdate :: Maybe ServerTime
+  , userLastPictureUpdate  :: Maybe ServerTime
+  , userLocale             :: Text
   } deriving (Read, Show, Eq)
 
 instance A.FromJSON User where
-  parseJSON = A.withObject "user" $ \o -> do
-    userId                     <- o .: "id"
-    userCreateAt               <- (timeFromServer <$>) <$> o .:? "create_at"
-    userUpdateAt               <- (timeFromServer <$>) <$> o .:? "update_at"
-    userDeleteAt               <- timeFromServer <$> o .: "delete_at"
-    userUsername               <- o .:  "username"
-    userPassword               <- o .:? "password"
-    userAuthData               <- o .:? "auth_data"
-    userAuthService            <- o .:  "auth_service"
-    userEmail                  <- o .:  "email"
-    userEmailVerified          <- o .:? "email_verified" .!= False
-    userNickname               <- o .:  "nickname"
-    userFirstName              <- o .:  "first_name"
-    userLastName               <- o .:  "last_name"
-    userPosition               <- o .:  "position"
-    userRoles                  <- o .:  "roles"
-    userAllowMarketing         <- o .:? "allow_marketing" .!= False
-    -- userProps                  <- o .:? "props"
-    userNotifyProps            <- o .:? "notify_props" .!= emptyUserNotifyProps
-    userLastPasswordUpdate     <- (timeFromServer <$>) <$>
-                                  (o .:? "last_password_update")
-    userLastPictureUpdate      <- (timeFromServer <$>) <$> (o .:? "last_picture_update")
-    userFailedAttempts         <- o .:? "failed_attempts"
-    userLocale                 <- o .:  "locale"
-    -- userTimezone               <- o .:  "timezone"
-    userMfaActive              <- o .:? "mfa_active" .!= False
-    userMfaSecret              <- o .:? "mfa_secret"
-    userLastActivityAt         <- (timeFromServer <$>) <$> (o .:? "last_activity_at")
-    userIsBot                  <- o .:? "is_bot" .!= False
-    userBotDescription         <- o .:? "bot_description"
-    userBotLastIconUpdate      <- (timeFromServer <$>) <$> (o .:? "bot_last_icon_update")
-    userTermsOfServiceId       <- o .:? "terms_of_service_id"
-    userTermsOfServiceCreateAt <- (timeFromServer <$>) <$> (o .:? "terms_of_service_create_at")
-
+  parseJSON = A.withObject "User" $ \o -> do
+    userId                 <- o .: "id"
+    userCreateAt           <- (timeFromServer <$>) <$> o .:? "create_at"
+    userUpdateAt           <- (timeFromServer <$>) <$> o .:? "update_at"
+    userDeleteAt           <- timeFromServer <$> o .: "delete_at"
+    userUsername           <- o .:  "username"
+    userAuthData           <- o .:?  "auth_data"
+    userAuthService        <- o .:  "auth_service"
+    userEmail              <- o .:  "email"
+    userEmailVerified      <- o .:? "email_verified" .!= False
+    userNickname           <- o .:  "nickname"
+    userFirstName          <- o .:  "first_name"
+    userLastName           <- o .:  "last_name"
+    userRoles              <- o .:  "roles"
+    userNotifyProps        <- o .:? "notify_props" .!= emptyUserNotifyProps
+    userLastPasswordUpdate <- (timeFromServer <$>) <$>
+                              (o .:? "last_password_update")
+    userLastPictureUpdate  <- (timeFromServer <$>) <$> (o .:? "last_picture_update")
+    userLocale             <- o .: "locale"
     return User { .. }
 
 
