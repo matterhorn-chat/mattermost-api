@@ -44,7 +44,7 @@ import           Network.Connection ( ConnectionContext
                                     )
 import           Network.Mattermost.Types.Base
 import           Network.Mattermost.Types.Internal
-import           Network.Mattermost.Util (mkConnection, ConnectionType(..))
+import           Network.Mattermost.Util ( mkConnection )
 
 newtype UserText = UserText Text
                  deriving (Eq, Show, Ord, Read)
@@ -121,7 +121,7 @@ data Login
   = Login
   { username :: Text
   , password :: Text
-  }
+  } deriving (Show)
 
 instance A.ToJSON Login where
   toJSON l = A.object ["login_id" A..= username l
@@ -132,7 +132,7 @@ instance A.ToJSON Login where
 data SetChannelHeader = SetChannelHeader
   { setChannelHeaderChanId :: ChannelId
   , setChannelHeaderString :: Text
-  }
+  } deriving (Show)
 
 instance A.ToJSON SetChannelHeader where
   toJSON (SetChannelHeader cId p) =
@@ -143,7 +143,7 @@ instance A.ToJSON SetChannelHeader where
 data SearchPosts = SearchPosts
  { searchPostsTerms      :: Text
  , searchPostsIsOrSearch :: Bool
- }
+ } deriving (Show)
 
 instance A.ToJSON SearchPosts where
  toJSON (SearchPosts t os) =
@@ -616,6 +616,7 @@ instance A.FromJSON User where
     userLastPictureUpdate  <- (timeFromServer <$>) <$> (o .:? "last_picture_update")
     userLocale             <- o .: "locale"
     return User { .. }
+
 
 -- The PostPropAttachment and PostPropAttachmentField types are
 -- actually defined by Slack, and simply used by Mattermost; the
@@ -1418,7 +1419,6 @@ instance PrintfArg ReportId where
 
 instance A.ToJSON User where toJSON = error "to user"
 instance A.ToJSON Team where toJSON = error "to team"
-
 
 -- --
 
