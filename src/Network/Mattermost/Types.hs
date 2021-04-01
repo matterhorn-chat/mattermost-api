@@ -1227,7 +1227,7 @@ data FavoriteChannelPreference =
                            , favoriteChannelShow :: Bool
                            } deriving (Read, Show, Eq)
 
--- | Attempt to expose a 'Preference' as a 'FlaggedPost'
+-- | Attempt to expose a 'Preference' as a 'FavoriteChannelPreference'
 preferenceToFavoriteChannelPreference :: Preference -> Maybe FavoriteChannelPreference
 preferenceToFavoriteChannelPreference
   Preference
@@ -1245,7 +1245,7 @@ data GroupChannelPreference =
                            , groupChannelShow :: Bool
                            } deriving (Read, Show, Eq)
 
--- | Attempt to expose a 'Preference' as a 'FlaggedPost'
+-- | Attempt to expose a 'Preference' as a 'GroupChannelPreference'
 preferenceToGroupChannelPreference :: Preference -> Maybe GroupChannelPreference
 preferenceToGroupChannelPreference
   Preference
