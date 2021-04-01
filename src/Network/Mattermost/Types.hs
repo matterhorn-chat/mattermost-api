@@ -1133,7 +1133,7 @@ instance A.ToJSON Reaction where
 data PreferenceCategory
   = PreferenceCategoryDirectChannelShow
   | PreferenceCategoryGroupChannelShow
-  | PreferenceCategoryFavoriteChannelShow
+  | PreferenceCategoryFavoriteChannel
   | PreferenceCategoryTutorialStep
   | PreferenceCategoryAdvancedSettings
   | PreferenceCategoryFlaggedPost
@@ -1150,7 +1150,7 @@ instance A.FromJSON PreferenceCategory where
   parseJSON = A.withText "PreferenceCategory" $ \t -> return $ case t of
     "direct_channel_show"   -> PreferenceCategoryDirectChannelShow
     "group_channel_show"    -> PreferenceCategoryGroupChannelShow
-    "favorite_channel_show" -> PreferenceCategoryFavoriteChannelShow
+    "favorite_channel"      -> PreferenceCategoryFavoriteChannel
     "tutorial_step"         -> PreferenceCategoryTutorialStep
     "advanced_settings"     -> PreferenceCategoryAdvancedSettings
     "flagged_post"          -> PreferenceCategoryFlaggedPost
@@ -1166,7 +1166,7 @@ instance A.ToJSON PreferenceCategory where
   toJSON cat = A.String $ case cat of
     PreferenceCategoryDirectChannelShow   -> "direct_channel_show"
     PreferenceCategoryGroupChannelShow    -> "group_channel_show"
-    PreferenceCategoryFavoriteChannelShow -> "favorite_channel_show"
+    PreferenceCategoryFavoriteChannel     -> "favorite_channel"
     PreferenceCategoryTutorialStep        -> "tutorial_step"
     PreferenceCategoryAdvancedSettings    -> "advanced_settings"
     PreferenceCategoryFlaggedPost         -> "flagged_post"
@@ -1231,7 +1231,7 @@ data FavoriteChannelPreference =
 preferenceToFavoriteChannelPreference :: Preference -> Maybe FavoriteChannelPreference
 preferenceToFavoriteChannelPreference
   Preference
-    { preferenceCategory = PreferenceCategoryFavoriteChannelShow
+    { preferenceCategory = PreferenceCategoryFavoriteChannel
     , preferenceName     = PreferenceName name
     , preferenceValue    = PreferenceValue value
     } = Just FavoriteChannelPreference
