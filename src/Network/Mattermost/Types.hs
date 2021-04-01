@@ -1224,8 +1224,8 @@ instance A.ToJSON Preference where
 
 data FavoriteChannelPreference =
     FavoriteChannelPreference { favoriteChannelId :: ChannelId
-                           , favoriteChannelShow :: Bool
-                           } deriving (Read, Show, Eq)
+                              , favoriteChannelShow :: Bool
+                              } deriving (Read, Show, Eq)
 
 -- | Attempt to expose a 'Preference' as a 'FavoriteChannelPreference'
 preferenceToFavoriteChannelPreference :: Preference -> Maybe FavoriteChannelPreference
