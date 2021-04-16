@@ -1134,6 +1134,7 @@ instance A.ToJSON Reaction where
 data PreferenceCategory
   = PreferenceCategoryDirectChannelShow
   | PreferenceCategoryGroupChannelShow
+  | PreferenceCategoryFavoriteChannel
   | PreferenceCategoryTutorialStep
   | PreferenceCategoryAdvancedSettings
   | PreferenceCategoryFlaggedPost
@@ -1148,33 +1149,35 @@ data PreferenceCategory
 
 instance A.FromJSON PreferenceCategory where
   parseJSON = A.withText "PreferenceCategory" $ \t -> return $ case t of
-    "direct_channel_show" -> PreferenceCategoryDirectChannelShow
-    "group_channel_show"  -> PreferenceCategoryGroupChannelShow
-    "tutorial_step"       -> PreferenceCategoryTutorialStep
-    "advanced_settings"   -> PreferenceCategoryAdvancedSettings
-    "flagged_post"        -> PreferenceCategoryFlaggedPost
-    "display_settings"    -> PreferenceCategoryDisplaySettings
-    "theme"               -> PreferenceCategoryTheme
-    "oauth_app"           -> PreferenceCategoryAuthorizedOAuthApp
-    "notifications"       -> PreferenceCategoryNotifications
-    "last"                -> PreferenceCategoryLast
-    "teams_order"         -> PreferenceCategoryTeamsOrder
-    _                     -> PreferenceCategoryOther t
+    "direct_channel_show"   -> PreferenceCategoryDirectChannelShow
+    "group_channel_show"    -> PreferenceCategoryGroupChannelShow
+    "favorite_channel"      -> PreferenceCategoryFavoriteChannel
+    "tutorial_step"         -> PreferenceCategoryTutorialStep
+    "advanced_settings"     -> PreferenceCategoryAdvancedSettings
+    "flagged_post"          -> PreferenceCategoryFlaggedPost
+    "display_settings"      -> PreferenceCategoryDisplaySettings
+    "theme"                 -> PreferenceCategoryTheme
+    "oauth_app"             -> PreferenceCategoryAuthorizedOAuthApp
+    "notifications"         -> PreferenceCategoryNotifications
+    "last"                  -> PreferenceCategoryLast
+    "teams_order"           -> PreferenceCategoryTeamsOrder
+    _                       -> PreferenceCategoryOther t
 
 instance A.ToJSON PreferenceCategory where
   toJSON cat = A.String $ case cat of
-    PreferenceCategoryDirectChannelShow  -> "direct_channel_show"
-    PreferenceCategoryGroupChannelShow   -> "group_channel_show"
-    PreferenceCategoryTutorialStep       -> "tutorial_step"
-    PreferenceCategoryAdvancedSettings   -> "advanced_settings"
-    PreferenceCategoryFlaggedPost        -> "flagged_post"
-    PreferenceCategoryDisplaySettings    -> "display_settings"
-    PreferenceCategoryTheme              -> "theme"
-    PreferenceCategoryAuthorizedOAuthApp -> "oauth_app"
-    PreferenceCategoryNotifications      -> "notifications"
-    PreferenceCategoryLast               -> "last"
-    PreferenceCategoryTeamsOrder         -> "teams_order"
-    PreferenceCategoryOther t            -> t
+    PreferenceCategoryDirectChannelShow   -> "direct_channel_show"
+    PreferenceCategoryGroupChannelShow    -> "group_channel_show"
+    PreferenceCategoryFavoriteChannel     -> "favorite_channel"
+    PreferenceCategoryTutorialStep        -> "tutorial_step"
+    PreferenceCategoryAdvancedSettings    -> "advanced_settings"
+    PreferenceCategoryFlaggedPost         -> "flagged_post"
+    PreferenceCategoryDisplaySettings     -> "display_settings"
+    PreferenceCategoryTheme               -> "theme"
+    PreferenceCategoryAuthorizedOAuthApp  -> "oauth_app"
+    PreferenceCategoryNotifications       -> "notifications"
+    PreferenceCategoryLast                -> "last"
+    PreferenceCategoryTeamsOrder          -> "teams_order"
+    PreferenceCategoryOther t             -> t
 
 data PreferenceName
   = PreferenceName { fromRawPreferenceName :: Text }
@@ -1220,12 +1223,30 @@ instance A.ToJSON Preference where
     , "value"    .= preferenceValue
     ]
 
+data FavoriteChannelPreference =
+    FavoriteChannelPreference { favoriteChannelId :: ChannelId
+                              , favoriteChannelShow :: Bool
+                              } deriving (Read, Show, Eq)
+
+-- | Attempt to expose a 'Preference' as a 'FavoriteChannelPreference'
+preferenceToFavoriteChannelPreference :: Preference -> Maybe FavoriteChannelPreference
+preferenceToFavoriteChannelPreference
+  Preference
+    { preferenceCategory = PreferenceCategoryFavoriteChannel
+    , preferenceName     = PreferenceName name
+    , preferenceValue    = PreferenceValue value
+    } = Just FavoriteChannelPreference
+          { favoriteChannelId = CI (Id name)
+          , favoriteChannelShow = value == "true"
+          }
+preferenceToFavoriteChannelPreference _ = Nothing
+
 data GroupChannelPreference =
     GroupChannelPreference { groupChannelId :: ChannelId
                            , groupChannelShow :: Bool
                            } deriving (Read, Show, Eq)
 
--- | Attempt to expose a 'Preference' as a 'FlaggedPost'
+-- | Attempt to expose a 'Preference' as a 'GroupChannelPreference'
 preferenceToGroupChannelPreference :: Preference -> Maybe GroupChannelPreference
 preferenceToGroupChannelPreference
   Preference
