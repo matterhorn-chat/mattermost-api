@@ -1,4 +1,23 @@
 
+50200.11.0
+==========
+
+API changes: (Thanks Ajay Eeralla)
+ * Added a new constructor `PreferenceCategoryFavoriteChannel` to the
+   `PreferenceCategory` type and updated its JSON parser to recognize
+   this category.
+ * Added a `FavoriteChannelPreference` type and
+   `preferenceToFavoriteChannelPreference` smart constructor.
+
+Other changes:
+ * Logging now uses `show`, not `toJSON`, for values to be logged.
+   This changes the logging functionality to use simple Show instances
+   instead of first converting internal data types back to AESON
+   structures. That wasn't really providing any additional value, and
+   the extra conversion was producing at least one inconsistency due
+   to an unfinished ToJSON implementation. (Thanks to Karl Smeltzer
+   (@karljs))
+
 50200.10.0
 ==========
 
