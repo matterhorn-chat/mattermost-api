@@ -1,5 +1,6 @@
 [![Hackage](https://img.shields.io/hackage/v/mattermost-api.svg)](https://hackage.haskell.org/package/mattermost-api) [![Build
 Status](https://travis-ci.org/matterhorn-chat/mattermost-api.svg?branch=master)](https://travis-ci.org/matterhorn-chat/mattermost-api)
+[![Build status](https://github.com/matterhorn-chat/mattermost-api/actions/workflows/ci.yml/badge.svg)](https://github.com/matterhorn-chat/mattermost-api/actions/workflows/ci.yml)
 # mattermost-api
 
 Client-side API for communicating with a Mattermost server, written in
