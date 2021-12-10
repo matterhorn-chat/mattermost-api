@@ -49,7 +49,7 @@ library
   build-depends:       base >=4.4 && <5
                      , websockets >= 0.11.0.0
                      , stm
-                     , aeson >= 2.0.1.0 && < 2.1.0.0
+                     , aeson >= 1.0.0.0
                      , connection
                      , memory
                      , resource-pool >= 0.2.3

@@ -140,7 +140,6 @@ import           Network.URI ( URI, parseRelativeReference )
 import           Network.HTTP.Stream ( simpleHTTP_ )
 import           Data.HashMap.Strict ( HashMap )
 import qualified Data.HashMap.Strict as HM
-import qualified Data.Aeson.KeyMap as KM
 import           Data.Aeson ( Value(..)
                             , ToJSON(..)
                             , FromJSON
@@ -1066,7 +1065,7 @@ assert200Response path rsp =
                                               (show $ rspCode rsp)
         in case eitherDecode $ BL.pack $ rspBody rsp of
             Right (Object o) ->
-                case KM.lookup "message" o of
+                case HM.lookup "message" o of
                     Just (String msg) ->
                         let newMsg = (T.pack $ "Error requesting " <> show path <> ": ") <> msg
                         in throwIO $ MattermostServerError newMsg
