@@ -120,11 +120,13 @@ data Session = Session
 data Login
   = Login
   { username :: Text
+  , otpToken :: Maybe Text
   , password :: Text
   } deriving (Show)
 
 instance A.ToJSON Login where
   toJSON l = A.object ["login_id" A..= username l
+                      ,"token" A..= (fromMaybe "" $ otpToken l)
                       ,"password" A..= password l
                       ]
 
