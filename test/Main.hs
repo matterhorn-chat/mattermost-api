@@ -45,6 +45,7 @@ testUserLogin :: Login
 testUserLogin = Login
   { username = "test-user"
   , password = "password"
+  , otpToken = Nothing
   }
 
 testMinChannel :: TeamId -> MinChannel

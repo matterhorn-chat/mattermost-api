@@ -297,6 +297,7 @@ loginAdminAccount = do
     cfg <- gets tsConfig
     let admin = Login { username = configUsername cfg
                       , password = configPassword cfg
+                      , otpToken = Nothing
                       }
     loginAccount admin
 
