@@ -36,11 +36,10 @@ proxyHostPermitted hostname = do
                         go [] [] = True
                         go [] _ = False
                         go _ [] = False
-                        go (p:pParts) hParts =
+                        go (p:pParts) (h:hTail) =
                             if p == "*"
                             then True
-                            else case hParts of
-                                (h:hTail) -> p == h && go pParts hTail
+                            else p == h && go pParts hTail
                     in go patParts hostnameParts
             return $ not isBlacklisted
 
