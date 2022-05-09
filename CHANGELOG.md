@@ -1,4 +1,13 @@
 
+50200.12.0
+==========
+
+Package changes:
+ * Changed Aeson dependency to 2.0 to support GHC 9.
+
+New features:
+ * 2FA support (thanks @msm-code)
+
 50200.11.0
 ==========
 
