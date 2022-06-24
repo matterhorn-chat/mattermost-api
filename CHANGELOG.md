@@ -1,4 +1,11 @@
 
+50200.13.0
+==========
+
+API changes:
+ * Added a `wepParentId` field to `WEData` and parsed `parent_id` in its
+   JSON representation.
+
 50200.12.0
 ==========
 
