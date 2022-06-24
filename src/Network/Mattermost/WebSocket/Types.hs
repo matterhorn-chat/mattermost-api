@@ -203,6 +203,7 @@ data WEData = WEData
   , wepTeamId             :: Maybe TeamId
   , wepSenderName         :: Maybe Text
   , wepUserId             :: Maybe UserId
+  , wepParentId           :: Maybe PostId
   , wepUser               :: Maybe User
   , wepChannelDisplayName :: Maybe Text
   , wepPost               :: Maybe Post
@@ -219,6 +220,7 @@ instance FromJSON WEData where
     wepTeamId             <- maybeFail (o .: "team_id")
     wepSenderName         <- o .:? "sender_name"
     wepUserId             <- o .:? "user_id"
+    wepParentId           <- nullable (o .: "parent_id")
     wepUser               <- o .:? "user"
     wepChannelDisplayName <- o .:? "channel_name"
     wepPost               <- mapM fromValueString =<< o .:? "post"
@@ -235,6 +237,7 @@ instance ToJSON WEData where
     , "team_id"      .= wepTeamId
     , "sender_name"  .= wepSenderName
     , "user_id"      .= wepUserId
+    , "parent_id"    .= wepParentId
     , "channel_name" .= wepChannelDisplayName
     , "post"         .= toValueString wepPost
     , "reaction"     .= wepReaction
