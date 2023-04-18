@@ -53,13 +53,16 @@ import qualified Control.Exception as E
 import qualified Control.Concurrent.STM as STM
 import Control.Concurrent (forkIO)
 import Control.Concurrent.MVar
+import Control.Monad (join, when)
+import Control.Monad.IO.Class (MonadIO(..))
 import qualified Data.Foldable as F
+import Data.Functor (void)
 import Data.Monoid ((<>))
 import qualified Data.Sequence as Seq
 import qualified Data.Text as T
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit (testCaseSteps)
-import Control.Monad.State.Lazy
+import Control.Monad.State.Lazy (evalStateT, gets, modify)
 import System.Timeout (timeout)
 
 import Network.Mattermost (ConnectionData)
