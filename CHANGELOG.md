@@ -1,4 +1,10 @@
 
+50200.14.0
+==========
+
+Package changes:
+* Updated to build with `mtl-2.3.*` (thanks Ryan Scott)
+
 50200.13.0
 ==========
 
