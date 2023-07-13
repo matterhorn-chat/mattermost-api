@@ -808,6 +808,7 @@ data Post
   , postChannelId     :: ChannelId
   , postHasReactions  :: Bool
   , postPinned        :: Maybe Bool
+  , postMetadata      :: PostMetadata
   } deriving (Read, Show, Eq)
 
 instance HasId Post PostId where
@@ -832,6 +833,7 @@ instance A.FromJSON Post where
     postChannelId     <- v .: "channel_id"
     postHasReactions  <- v .:? "has_reactions" .!= False
     postPinned        <- v .:? "is_pinned"
+    postMetadata      <- (v .: "metadata") <|> (return $ PostMetadata mempty mempty)
     return Post { .. }
 
 instance A.ToJSON Post where
@@ -852,7 +854,25 @@ instance A.ToJSON Post where
     , "channel_id"      .= postChannelId
     , "has_reactions"   .= postHasReactions
     , "is_pinned"       .= postPinned
+    , "metadata"        .= postMetadata
     ]
+
+data PostMetadata =
+    PostMetadata { postMetadataFiles :: Seq FileInfo
+                 , postMetadataReactions :: Seq Reaction
+                 }
+                 deriving (Read, Show, Eq)
+
+instance A.FromJSON PostMetadata where
+    parseJSON = A.withObject "PostMetadata" $ \o -> do
+        PostMetadata <$> (o A..: "files" <|> return mempty)
+                     <*> (o A..: "reactions" <|> return mempty)
+
+instance A.ToJSON PostMetadata where
+    toJSON pm =
+        A.object [ "files" A..= postMetadataFiles pm
+                 , "reactions" A..= postMetadataReactions pm
+                 ]
 
 data PendingPost
   = PendingPost
