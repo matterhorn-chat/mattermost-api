@@ -1,4 +1,14 @@
 
+50200.15.0
+==========
+
+API changes:
+ * The `Post` data type got a new `postMetadata` field of type
+   `PostMetadata` which carries the `metadata` JSON data that the server
+   provides in API responses. As of this implementation, only the file
+   list (`files`) and reactions (`reactions`) are parsed from the post
+   metdata.
+
 50200.14.0
 ==========
 
