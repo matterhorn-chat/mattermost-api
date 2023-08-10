@@ -117,7 +117,7 @@ main = do
     pPrint teams
   forM_ teams $ \t -> do
     when (teamName t == configTeam config) $ do
-      users <- mmGetUsers (defaultUserQuery { userQueryInTeam = Just (getId t), userQueryPerPage = Just 1000 }) session
+      users <- mmGetUsers (defaultUserQuery { userQueryInTeam = Just (getId t), userQueryPerPage = Just 200 }) session
       let userMap = HM.fromList [ (getId u, u) | u <- toList users ]
       when (optVerbose opts) $ do
         pPrint userMap
