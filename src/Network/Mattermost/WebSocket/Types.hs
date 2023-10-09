@@ -15,6 +15,7 @@ module Network.Mattermost.WebSocket.Types
 
 import           Control.Applicative
 import           Control.Exception ( throw )
+import           Control.Monad ( forM )
 import           Data.Aeson ( FromJSON(..)
                             , ToJSON(..)
                             , (.:)
@@ -22,6 +23,8 @@ import           Data.Aeson ( FromJSON(..)
                             , (.=)
                             )
 import qualified Data.Aeson as A
+import qualified Data.Aeson.Key as A
+import qualified Data.Aeson.KeyMap as A
 import qualified Data.Aeson.Types as A
 #if !MIN_VERSION_base(4,11,0)
 import           Data.Monoid ( (<>) )
@@ -69,6 +72,7 @@ data WebsocketEventType
   | WMReactionAdded
   | WMReactionRemoved
   | WMChannelViewed
+  | WMMultipleChannelsViewed
   | WMChannelUpdated
   | WMChannelMemberUpdated
   | WMEmojiAdded
@@ -107,6 +111,7 @@ instance FromJSON WebsocketEventType where
     "authentication_challenge" -> return WMAuthenticationChallenge
     "preferences_deleted" -> return WMPreferenceDeleted
     "channel_viewed"     -> return WMChannelViewed
+    "multiple_channels_viewed"     -> return WMMultipleChannelsViewed
     "channel_updated"    -> return WMChannelUpdated
     "channel_member_updated" -> return WMChannelMemberUpdated
     "emoji_added"        -> return WMEmojiAdded
@@ -143,6 +148,7 @@ instance ToJSON WebsocketEventType where
   toJSON WMWebRTC                  = "webrtc"
   toJSON WMAuthenticationChallenge = "authentication_challenge"
   toJSON WMChannelViewed           = "channel_viewed"
+  toJSON WMMultipleChannelsViewed  = "multiple_channels_viewed"
   toJSON WMChannelUpdated          = "channel_updated"
   toJSON WMChannelMemberUpdated    = "channel_member_updated"
   toJSON WMEmojiAdded              = "emoji_added"
@@ -162,6 +168,14 @@ fromValueString = A.withText "string-encoded json" $ \s -> do
     case A.eitherDecode (fromStrict (encodeUtf8 s)) of
       Right v  -> return v
       Left err -> throw (JSONDecodeException err (T.unpack s))
+
+fromChannelTimesMap :: A.Value -> A.Parser (HM.HashMap ChannelId ServerTime)
+fromChannelTimesMap = A.withObject "Channel times map" $ \o -> do
+    pairs <- forM (A.toList o) $ \(k, v) -> do
+        t <- timeFromServer <$> A.parseJSON v
+        return (fromId $ Id $ T.pack $ A.toString k, t)
+
+    return $ HM.fromList pairs
 
 --
 
@@ -212,6 +226,7 @@ data WEData = WEData
   , wepMentions           :: Maybe (Set UserId)
   , wepPreferences        :: Maybe (Seq Preference)
   , wepChannelMember      :: Maybe ChannelMember
+  , wepChannelTimes       :: Maybe (HM.HashMap ChannelId ServerTime)
   } deriving (Read, Show, Eq)
 
 instance FromJSON WEData where
@@ -229,6 +244,7 @@ instance FromJSON WEData where
     wepMentions           <- mapM fromValueString =<< o .:? "mentions"
     wepPreferences        <- mapM fromValueString =<< o .:? "preferences"
     wepChannelMember      <- mapM fromValueString =<< o .:? "channelMember"
+    wepChannelTimes       <- mapM fromChannelTimesMap =<< o .:? "channel_times"
     return WEData { .. }
 
 instance ToJSON WEData where
@@ -244,6 +260,11 @@ instance ToJSON WEData where
     , "mentions"     .= toValueString wepMentions
     , "preferences"  .= toValueString wepPreferences
     , "channelMember" .= toValueString wepChannelMember
+    , "channelTimes" .= do
+          m <- wepChannelTimes
+          let pairs = HM.toList m
+              mkEntry (cId, t) = (A.fromString $ T.unpack $ unId $ toId cId, timeToServer t)
+          return $ A.fromList $ mkEntry <$> pairs
     ]
 
 --
