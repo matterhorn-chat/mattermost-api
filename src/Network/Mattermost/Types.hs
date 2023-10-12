@@ -1483,7 +1483,7 @@ instance A.ToJSON MinChannelMember where
     ]
 
 data ChannelMember = ChannelMember
-  { channelMemberMsgCount :: Integer
+  { channelMemberMsgCount :: Int
   , channelMemberUserId :: UserId
   , channelMemberRoles :: Text
   , channelMemberMentionCount :: Int
