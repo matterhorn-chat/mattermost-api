@@ -50,7 +50,7 @@ library
                      , websockets >= 0.11.0.0
                      , stm
                      , aeson >= 2.0.1.0 && < 2.2.0.0
-                     , connection
+                     , crypton-connection
                      , memory
                      , resource-pool >= 0.2.3
                      -- To prevent broken websockets versions from using
