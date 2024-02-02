@@ -1,4 +1,18 @@
 
+90000.0.0
+=========
+
+Package changes:
+* Updated the package to use `crypton-connection` since `connection` is
+  now unmaintained.
+
+API changes:
+* Updated the `ChannelMember` type's `channelMemberMsgCount` field to
+  have type `Int`, not `Integer`, to match all other numeric types in
+  the API.
+* Added support for `multiple_channels_viewed` websocket event added in
+  Mattermost 9.0.
+
 50200.15.0
 ==========
 
