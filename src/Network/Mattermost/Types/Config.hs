@@ -217,7 +217,7 @@ data ClientConfig = ClientConfig
   , clientConfigSiteURL :: T.Text
   , clientConfigSiteName :: T.Text
   , clientConfigEnableOpenServer :: T.Text
-  , clientConfigRestrictDirectMessage :: RestrictDirectMessageSetting
+  , clientConfigRestrictDirectMessage :: Maybe RestrictDirectMessageSetting
   , clientConfigTeammateNameDisplay :: TeammateNameDisplayMode
 
   , clientConfigEnableOAuthServiceProvider :: T.Text
@@ -313,7 +313,7 @@ instance A.FromJSON ClientConfig where
     clientConfigSiteURL <- o A..: "SiteURL"
     clientConfigSiteName <- o A..: "SiteName"
     clientConfigEnableOpenServer <- o A..: "EnableOpenServer"
-    clientConfigRestrictDirectMessage <- o A..: "RestrictDirectMessage"
+    clientConfigRestrictDirectMessage <- o A..:? "RestrictDirectMessage"
     clientConfigTeammateNameDisplay <- o A..: "TeammateNameDisplay"
 
     clientConfigEnableOAuthServiceProvider <- o A..: "EnableOAuthServiceProvider"
