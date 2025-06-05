@@ -1,4 +1,15 @@
 
+90000.1.0
+=========
+
+API changes:
+* The `clientConfigRestrictDirectMessage` field of `ClientConfig`
+  is now optional (as a `Maybe`) in order to more accurately reflect
+  configurations found in the wild.
+
+Other changes:
+* Raised upper bound on `aeson` to 2.3.
+
 90000.0.0
 =========
 
