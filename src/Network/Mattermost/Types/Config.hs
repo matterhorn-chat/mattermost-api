@@ -241,7 +241,7 @@ data ClientConfig = ClientConfig
   , clientConfigRequireEmailVerification :: T.Text
   , clientConfigEnableEmailBatching :: T.Text
 
-  , clientConfigEnableSignUpWithGitLab :: T.Text
+  , clientConfigEnableSignUpWithGitLab :: Maybe T.Text
 
   , clientConfigShowEmailAddress :: T.Text
 
@@ -337,7 +337,7 @@ instance A.FromJSON ClientConfig where
     clientConfigRequireEmailVerification <- o A..: "RequireEmailVerification"
     clientConfigEnableEmailBatching <- o A..: "EnableEmailBatching"
 
-    clientConfigEnableSignUpWithGitLab <- o A..: "EnableSignUpWithGitLab"
+    clientConfigEnableSignUpWithGitLab <- o A..:? "EnableSignUpWithGitLab"
 
     clientConfigShowEmailAddress <- o A..: "ShowEmailAddress"
 
