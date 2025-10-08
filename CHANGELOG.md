@@ -1,4 +1,13 @@
 
+90000.1.1
+=========
+
+Bug fixes:
+* The `EnableSignUpWithGitLab` field of `ClientConfig` is now optional
+  using `Maybe` since some servers do not provide it. Prior to this
+  change, the library would fail to decode the `ClientConfig` completely
+  if the field was missing.
+
 90000.1.0
 =========
 
