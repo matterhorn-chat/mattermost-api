@@ -19,16 +19,16 @@ type Logger = LogEvent -> IO ()
 -- | If there is a 'Logger' in the 'ConnectionData' struct, it will
 --   be sporadically called with values of type 'LogEvent'.
 data LogEvent = LogEvent
-  { logFunction  :: String
-  , logEventType :: LogEventType
+  { logFunction  :: !String
+  , logEventType :: !LogEventType
   } deriving (Eq, Show)
 
 -- | A 'LogEventType' describes the particular event that happened
 data LogEventType
-  = HttpRequest RequestMethod String (Maybe String)
-  | HttpResponse Int String (Maybe String)
-  | WebSocketRequest A.Value
-  | WebSocketResponse (Either String String)
+  = HttpRequest !RequestMethod !String !(Maybe String)
+  | HttpResponse !Int !String !(Maybe String)
+  | WebSocketRequest !A.Value
+  | WebSocketResponse !(Either String String)
   -- ^ Left means we got an exception trying to parse the response;
   -- Right means we succeeded and here it is.
   | WebSocketPing

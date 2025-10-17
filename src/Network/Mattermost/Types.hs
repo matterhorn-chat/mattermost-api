@@ -104,24 +104,24 @@ noLogger :: ConnectionData -> ConnectionData
 noLogger cd = cd { cdLogger = Nothing }
 
 data ConnectionPoolConfig = ConnectionPoolConfig
-  { cpStripesCount    :: Int
-  , cpIdleConnTimeout :: NominalDiffTime
-  , cpMaxConnCount    :: Int
+  { cpStripesCount    :: !Int
+  , cpIdleConnTimeout :: !NominalDiffTime
+  , cpMaxConnCount    :: !Int
   }
 
 defaultConnectionPoolConfig :: ConnectionPoolConfig
 defaultConnectionPoolConfig = ConnectionPoolConfig 1 30 5
 
 data Session = Session
-  { sessConn :: ConnectionData
-  , sessTok  :: Token
+  { sessConn :: !ConnectionData
+  , sessTok  :: !Token
   }
 
 data Login
   = Login
-  { username :: Text
-  , otpToken :: Maybe Text
-  , password :: Text
+  { username :: !Text
+  , otpToken :: !(Maybe Text)
+  , password :: !Text
   } deriving (Show)
 
 instance A.ToJSON Login where
@@ -132,8 +132,8 @@ instance A.ToJSON Login where
 
 
 data SetChannelHeader = SetChannelHeader
-  { setChannelHeaderChanId :: ChannelId
-  , setChannelHeaderString :: Text
+  { setChannelHeaderChanId :: !ChannelId
+  , setChannelHeaderString :: !Text
   } deriving (Show)
 
 instance A.ToJSON SetChannelHeader where
@@ -143,8 +143,8 @@ instance A.ToJSON SetChannelHeader where
                ]
 
 data SearchPosts = SearchPosts
- { searchPostsTerms      :: Text
- , searchPostsIsOrSearch :: Bool
+ { searchPostsTerms      :: !Text
+ , searchPostsIsOrSearch :: !Bool
  } deriving (Show)
 
 instance A.ToJSON SearchPosts where
@@ -157,7 +157,7 @@ data Type = Ordinary
           | Direct
           | Private
           | Group
-          | Unknown Text
+          | Unknown !Text
   deriving (Read, Show, Ord, Eq)
 
 instance A.FromJSON Type where
@@ -219,18 +219,18 @@ instance PrintfArg TeamId where
 
 data Team
   = Team
-  { teamId              :: TeamId
-  , teamCreateAt        :: ServerTime
-  , teamUpdateAt        :: ServerTime
-  , teamDeleteAt        :: ServerTime
-  , teamDisplayName     :: UserText
-  , teamName            :: UserText
-  , teamEmail           :: UserText
-  , teamType            :: Type
-  , teamCompanyName     :: UserText
-  , teamAllowedDomains  :: UserText
-  , teamInviteId        :: Maybe Id
-  , teamAllowOpenInvite :: Bool
+  { teamId              :: !TeamId
+  , teamCreateAt        :: !ServerTime
+  , teamUpdateAt        :: !ServerTime
+  , teamDeleteAt        :: !ServerTime
+  , teamDisplayName     :: !UserText
+  , teamName            :: !UserText
+  , teamEmail           :: !UserText
+  , teamType            :: !Type
+  , teamCompanyName     :: !UserText
+  , teamAllowedDomains  :: !UserText
+  , teamInviteId        :: !(Maybe Id)
+  , teamAllowOpenInvite :: !Bool
   }
   deriving (Read, Show, Eq, Ord)
 
@@ -254,9 +254,9 @@ instance A.FromJSON Team where
     return Team { .. }
 
 data TeamMember = TeamMember
-  { teamMemberUserId :: UserId
-  , teamMemberTeamId :: TeamId
-  , teamMemberRoles  :: Text
+  { teamMemberUserId :: !UserId
+  , teamMemberTeamId :: !TeamId
+  , teamMemberRoles  :: !Text
   } deriving (Read, Show, Eq, Ord)
 
 instance A.FromJSON TeamMember where
@@ -275,7 +275,7 @@ instance A.ToJSON TeamMember where
 --
 
 data WithDefault a
-  = IsValue a
+  = IsValue !a
   | Default
     deriving (Read, Show, Eq, Ord)
 
@@ -309,21 +309,21 @@ instance A.FromJSON NotifyOption where
   parseJSON xs                   = fail ("Unknown NotifyOption value: " ++ show xs)
 
 data UserNotifyProps = UserNotifyProps
-  { userNotifyPropsMentionKeys  :: [UserText]
-  , userNotifyPropsEmail        :: Bool
-  , userNotifyPropsPush         :: NotifyOption
-  , userNotifyPropsDesktop      :: NotifyOption
-  , userNotifyPropsDesktopSound :: Bool
-  , userNotifyPropsChannel      :: Bool
-  , userNotifyPropsFirstName    :: Bool
+  { userNotifyPropsMentionKeys  :: ![UserText]
+  , userNotifyPropsEmail        :: !Bool
+  , userNotifyPropsPush         :: !NotifyOption
+  , userNotifyPropsDesktop      :: !NotifyOption
+  , userNotifyPropsDesktopSound :: !Bool
+  , userNotifyPropsChannel      :: !Bool
+  , userNotifyPropsFirstName    :: !Bool
   } deriving (Eq, Show, Read, Ord)
 
 data ChannelNotifyProps = ChannelNotifyProps
-  { channelNotifyPropsEmail                 :: WithDefault Bool
-  , channelNotifyPropsDesktop               :: WithDefault NotifyOption
-  , channelNotifyPropsPush                  :: WithDefault NotifyOption
-  , channelNotifyPropsMarkUnread            :: WithDefault NotifyOption
-  , channelNotifyPropsIgnoreChannelMentions :: WithDefault Bool
+  { channelNotifyPropsEmail                 :: !(WithDefault Bool)
+  , channelNotifyPropsDesktop               :: !(WithDefault NotifyOption)
+  , channelNotifyPropsPush                  :: !(WithDefault NotifyOption)
+  , channelNotifyPropsMarkUnread            :: !(WithDefault NotifyOption)
+  , channelNotifyPropsIgnoreChannelMentions :: !(WithDefault Bool)
   } deriving (Eq, Show, Read, Ord)
 
 emptyUserNotifyProps :: UserNotifyProps
@@ -429,19 +429,19 @@ instance PrintfArg ChannelId where
 
 data Channel
   = Channel
-  { channelId            :: ChannelId
-  , channelCreateAt      :: ServerTime
-  , channelUpdateAt      :: ServerTime
-  , channelDeleteAt      :: ServerTime
-  , channelTeamId        :: Maybe TeamId
-  , channelType          :: Type
-  , channelDisplayName   :: UserText
-  , channelName          :: UserText
-  , channelHeader        :: UserText
-  , channelPurpose       :: UserText
-  , channelLastPostAt    :: ServerTime
-  , channelTotalMsgCount :: Int
-  , channelCreatorId     :: Maybe UserId
+  { channelId            :: !ChannelId
+  , channelCreateAt      :: !ServerTime
+  , channelUpdateAt      :: !ServerTime
+  , channelDeleteAt      :: !ServerTime
+  , channelTeamId        :: !(Maybe TeamId)
+  , channelType          :: !Type
+  , channelDisplayName   :: !UserText
+  , channelName          :: !UserText
+  , channelHeader        :: !UserText
+  , channelPurpose       :: !UserText
+  , channelLastPostAt    :: !ServerTime
+  , channelTotalMsgCount :: !Int
+  , channelCreatorId     :: !(Maybe UserId)
   } deriving (Read, Show, Eq, Ord)
 
 instance HasId Channel ChannelId where
@@ -480,14 +480,14 @@ instance HasId ChannelData ChannelId where
 
 data ChannelData
   = ChannelData
-  { channelDataChannelId    :: ChannelId
-  , channelDataUserId       :: UserId
-  , channelDataRoles        :: Text
-  , channelDataLastViewedAt :: ServerTime
-  , channelDataMsgCount     :: Int
-  , channelDataMentionCount :: Int
-  , channelDataNotifyProps  :: ChannelNotifyProps
-  , channelDataLastUpdateAt :: ServerTime
+  { channelDataChannelId    :: !ChannelId
+  , channelDataUserId       :: !UserId
+  , channelDataRoles        :: !Text
+  , channelDataLastViewedAt :: !ServerTime
+  , channelDataMsgCount     :: !Int
+  , channelDataMentionCount :: !Int
+  , channelDataNotifyProps  :: !ChannelNotifyProps
+  , channelDataLastUpdateAt :: !ServerTime
   } deriving (Read, Show, Eq)
 
 instance A.FromJSON ChannelData where
@@ -514,12 +514,12 @@ instance A.FromJSON ChannelWithData where
 type Channels = Seq Channel
 
 data MinChannel = MinChannel
-  { minChannelName        :: Text
-  , minChannelDisplayName :: Text
-  , minChannelPurpose     :: Maybe Text
-  , minChannelHeader      :: Maybe Text
-  , minChannelType        :: Type
-  , minChannelTeamId      :: TeamId
+  { minChannelName        :: !Text
+  , minChannelDisplayName :: !Text
+  , minChannelPurpose     :: !(Maybe Text)
+  , minChannelHeader      :: !(Maybe Text)
+  , minChannelType        :: !Type
+  , minChannelTeamId      :: !TeamId
   } deriving (Read, Eq, Show)
 
 instance A.ToJSON MinChannel where
@@ -544,7 +544,7 @@ instance PrintfArg UserId where
   formatArg = formatArg . idString
 
 data UserParam
-  = UserById UserId
+  = UserById !UserId
   | UserMe
   deriving (Read, Show, Eq, Ord)
 
@@ -561,8 +561,8 @@ userParamString UserMe         = "me"
 -- this is what we use for now.
 data InitialLoad
   = InitialLoad
-  { initialLoadUser :: User
-  , initialLoadTeams :: Seq Team
+  { initialLoadUser :: !User
+  , initialLoadTeams :: !(Seq Team)
   } deriving (Eq, Show)
 
 instance A.FromJSON InitialLoad where
@@ -578,23 +578,23 @@ instance HasId User UserId where
 
 data User
   = User
-  { userId                 :: UserId
-  , userCreateAt           :: Maybe ServerTime
-  , userUpdateAt           :: Maybe ServerTime
-  , userDeleteAt           :: ServerTime
-  , userUsername           :: Text
-  , userAuthData           :: Maybe Text
-  , userAuthService        :: Text
-  , userEmail              :: UserText
-  , userEmailVerified      :: Bool
-  , userNickname           :: UserText
-  , userFirstName          :: UserText
-  , userLastName           :: UserText
-  , userRoles              :: Text
-  , userNotifyProps        :: UserNotifyProps
-  , userLastPasswordUpdate :: Maybe ServerTime
-  , userLastPictureUpdate  :: Maybe ServerTime
-  , userLocale             :: Text
+  { userId                 :: !UserId
+  , userCreateAt           :: !(Maybe ServerTime)
+  , userUpdateAt           :: !(Maybe ServerTime)
+  , userDeleteAt           :: !ServerTime
+  , userUsername           :: !Text
+  , userAuthData           :: !(Maybe Text)
+  , userAuthService        :: !Text
+  , userEmail              :: !UserText
+  , userEmailVerified      :: !Bool
+  , userNickname           :: !UserText
+  , userFirstName          :: !UserText
+  , userLastName           :: !UserText
+  , userRoles              :: !Text
+  , userNotifyProps        :: !UserNotifyProps
+  , userLastPasswordUpdate :: !(Maybe ServerTime)
+  , userLastPictureUpdate  :: !(Maybe ServerTime)
+  , userLocale             :: !Text
   } deriving (Read, Show, Eq)
 
 instance A.FromJSON User where
@@ -626,9 +626,9 @@ instance A.FromJSON User where
 -- https://api.slack.com/docs/message-attachments
 
 data PostPropAttachmentField = PostPropAttachmentField
-  { ppafTitle :: Text
-  , ppafValue :: Text
-  , ppafShort :: Bool
+  { ppafTitle :: !Text
+  , ppafValue :: !Text
+  , ppafShort :: !Bool
   } deriving (Read, Show, Eq)
 
 instance A.FromJSON PostPropAttachmentField where
@@ -640,21 +640,21 @@ instance A.FromJSON PostPropAttachmentField where
 
 data PostPropAttachment
   = PostPropAttachment
-  { ppaId         :: Int
-  , ppaFallback   :: Text
-  , ppaColor      :: Text
-  , ppaPretext    :: Text
-  , ppaAuthorName :: Text
-  , ppaAuthorLink :: Text
-  , ppaAuthorIcon :: Text
-  , ppaTitle      :: Text
-  , ppaTitleLink  :: Text
-  , ppaText       :: Text
-  , ppaFields     :: Seq PostPropAttachmentField
-  , ppaImageURL   :: Text
-  , ppaThumbURL   :: Text
-  , ppaFooter     :: Text
-  , ppaFooterIcon :: Text
+  { ppaId         :: !Int
+  , ppaFallback   :: !Text
+  , ppaColor      :: !Text
+  , ppaPretext    :: !Text
+  , ppaAuthorName :: !Text
+  , ppaAuthorLink :: !Text
+  , ppaAuthorIcon :: !Text
+  , ppaTitle      :: !Text
+  , ppaTitleLink  :: !Text
+  , ppaText       :: !Text
+  , ppaFields     :: !(Seq PostPropAttachmentField)
+  , ppaImageURL   :: !Text
+  , ppaThumbURL   :: !Text
+  , ppaFooter     :: !Text
+  , ppaFooterIcon :: !Text
   } deriving (Read, Show, Eq)
 
 instance A.FromJSON PostPropAttachment where
@@ -685,12 +685,12 @@ instance A.ToJSON PostPropAttachment where
 
 data PostProps
   = PostProps
-  { postPropsOverrideIconUrl  :: Maybe Text
-  , postPropsOverrideUsername :: Maybe Text
-  , postPropsFromWebhook      :: Maybe Bool
-  , postPropsAttachments      :: Maybe (Seq PostPropAttachment) -- A.Value
-  , postPropsNewHeader        :: Maybe Text
-  , postPropsOldHeader        :: Maybe Text
+  { postPropsOverrideIconUrl  :: !(Maybe Text)
+  , postPropsOverrideUsername :: !(Maybe Text)
+  , postPropsFromWebhook      :: !(Maybe Bool)
+  , postPropsAttachments      :: !(Maybe (Seq PostPropAttachment))
+  , postPropsNewHeader        :: !(Maybe Text)
+  , postPropsOldHeader        :: !(Maybe Text)
   } deriving (Read, Show, Eq)
 
 emptyPostProps :: PostProps
@@ -760,7 +760,7 @@ data PostType
   | PostTypePurposeChange
   | PostTypeChannelDeleted
   | PostTypeEphemeral
-  | PostTypeUnknown T.Text
+  | PostTypeUnknown !T.Text
     deriving (Read, Show, Eq)
 
 instance A.FromJSON PostType where
@@ -791,24 +791,24 @@ instance A.ToJSON PostType where
 
 data Post
   = Post
-  { postPendingPostId :: Maybe PostId
-  , postOriginalId    :: Maybe PostId
-  , postProps         :: PostProps
-  , postRootId        :: Maybe PostId
-  , postFileIds       :: Seq FileId
-  , postId            :: PostId
-  , postType          :: PostType
-  , postMessage       :: UserText
-  , postDeleteAt      :: Maybe ServerTime
-  , postHashtags      :: Text
-  , postUpdateAt      :: ServerTime
-  , postEditAt        :: ServerTime
-  , postUserId        :: Maybe UserId
-  , postCreateAt      :: ServerTime
-  , postChannelId     :: ChannelId
-  , postHasReactions  :: Bool
-  , postPinned        :: Maybe Bool
-  , postMetadata      :: PostMetadata
+  { postPendingPostId :: !(Maybe PostId)
+  , postOriginalId    :: !(Maybe PostId)
+  , postProps         :: !PostProps
+  , postRootId        :: !(Maybe PostId)
+  , postFileIds       :: !(Seq FileId)
+  , postId            :: !PostId
+  , postType          :: !PostType
+  , postMessage       :: !UserText
+  , postDeleteAt      :: !(Maybe ServerTime)
+  , postHashtags      :: !Text
+  , postUpdateAt      :: !ServerTime
+  , postEditAt        :: !ServerTime
+  , postUserId        :: !(Maybe UserId)
+  , postCreateAt      :: !ServerTime
+  , postChannelId     :: !ChannelId
+  , postHasReactions  :: !Bool
+  , postPinned        :: !(Maybe Bool)
+  , postMetadata      :: !PostMetadata
   } deriving (Read, Show, Eq)
 
 instance HasId Post PostId where
@@ -858,8 +858,8 @@ instance A.ToJSON Post where
     ]
 
 data PostMetadata =
-    PostMetadata { postMetadataFiles :: Seq FileInfo
-                 , postMetadataReactions :: Seq Reaction
+    PostMetadata { postMetadataFiles :: !(Seq FileInfo)
+                 , postMetadataReactions :: !(Seq Reaction)
                  }
                  deriving (Read, Show, Eq)
 
@@ -876,13 +876,13 @@ instance A.ToJSON PostMetadata where
 
 data PendingPost
   = PendingPost
-  { pendingPostChannelId :: ChannelId
-  , pendingPostCreateAt  :: Maybe ServerTime
-  , pendingPostFilenames :: Seq FilePath
-  , pendingPostMessage   :: Text
-  , pendingPostId        :: PendingPostId
-  , pendingPostUserId    :: UserId
-  , pendingPostRootId    :: Maybe PostId
+  { pendingPostChannelId :: !ChannelId
+  , pendingPostCreateAt  :: !(Maybe ServerTime)
+  , pendingPostFilenames :: !(Seq FilePath)
+  , pendingPostMessage   :: !Text
+  , pendingPostId        :: !PendingPostId
+  , pendingPostUserId    :: !UserId
+  , pendingPostRootId    :: !(Maybe PostId)
   } deriving (Read, Show, Eq)
 
 instance A.ToJSON PendingPost where
@@ -925,19 +925,19 @@ mkPendingPost msg userid channelid = do
 
 data FileInfo
   = FileInfo
-  { fileInfoId         :: FileId
-  , fileInfoUserId     :: UserId
-  , fileInfoPostId     :: Maybe PostId
-  , fileInfoCreateAt   :: ServerTime
-  , fileInfoUpdateAt   :: ServerTime
-  , fileInfoDeleteAt   :: ServerTime
-  , fileInfoName       :: Text
-  , fileInfoExtension  :: Text
-  , fileInfoSize       :: Int
-  , fileInfoMimeType   :: Text
-  , fileInfoWidth      :: Maybe Int
-  , fileInfoHeight     :: Maybe Int
-  , fileInfoHasPreview :: Bool
+  { fileInfoId         :: !FileId
+  , fileInfoUserId     :: !UserId
+  , fileInfoPostId     :: !(Maybe PostId)
+  , fileInfoCreateAt   :: !ServerTime
+  , fileInfoUpdateAt   :: !ServerTime
+  , fileInfoDeleteAt   :: !ServerTime
+  , fileInfoName       :: !Text
+  , fileInfoExtension  :: !Text
+  , fileInfoSize       :: !Int
+  , fileInfoMimeType   :: !Text
+  , fileInfoWidth      :: !(Maybe Int)
+  , fileInfoHeight     :: !(Maybe Int)
+  , fileInfoHasPreview :: !Bool
   } deriving (Read, Show, Eq)
 
 instance ToJSON FileInfo where
@@ -964,8 +964,8 @@ instance FromJSON FileInfo where
 
 data Posts
   = Posts
-  { postsPosts :: HM.HashMap PostId Post
-  , postsOrder :: Seq PostId
+  { postsPosts :: !(HM.HashMap PostId Post)
+  , postsOrder :: !(Seq PostId)
   } deriving (Read, Show, Eq)
 
 instance A.FromJSON Posts where
@@ -990,11 +990,11 @@ timeToServer time = truncate ((utcTimeToPOSIXSeconds $ withServerTime time)*1000
 
 data MinCommand
   = MinCommand
-  { minComChannelId :: ChannelId
-  , minComCommand   :: Text
-  , minComParentId  :: Maybe PostId
-  , minComRootId    :: Maybe PostId
-  , minComTeamId    :: TeamId
+  { minComChannelId :: !ChannelId
+  , minComCommand   :: !Text
+  , minComParentId  :: !(Maybe PostId)
+  , minComRootId    :: !(Maybe PostId)
+  , minComTeamId    :: !TeamId
   } deriving (Read, Show, Eq)
 
 instance A.ToJSON MinCommand where
@@ -1010,23 +1010,23 @@ instance A.ToJSON MinCommand where
 
 data Command
   = Command
-  { commandId               :: Maybe CommandId
-  , commandToken            :: Text
-  , commandCreateAt         :: ServerTime
-  , commandUpdateAt         :: ServerTime
-  , commandDeleteAt         :: ServerTime
-  , commandCreatorId        :: Maybe UserId
-  , commandTeamId           :: Maybe TeamId
-  , commandTrigger          :: Text
-  , commandMethod           :: Text
-  , commandUsername         :: Text
-  , commandIconURL          :: Text
-  , commandAutoComplete     :: Bool
-  , commandAutoCompleteDesc :: Text
-  , commandAutoCompleteHint :: Text
-  , commandDisplayName      :: Text
-  , commandDescription      :: Text
-  , commandURL              :: Text
+  { commandId               :: !(Maybe CommandId)
+  , commandToken            :: !Text
+  , commandCreateAt         :: !ServerTime
+  , commandUpdateAt         :: !ServerTime
+  , commandDeleteAt         :: !ServerTime
+  , commandCreatorId        :: !(Maybe UserId)
+  , commandTeamId           :: !(Maybe TeamId)
+  , commandTrigger          :: !Text
+  , commandMethod           :: !Text
+  , commandUsername         :: !Text
+  , commandIconURL          :: !Text
+  , commandAutoComplete     :: !Bool
+  , commandAutoCompleteDesc :: !Text
+  , commandAutoCompleteHint :: !Text
+  , commandDisplayName      :: !Text
+  , commandDescription      :: !Text
+  , commandURL              :: !Text
   } deriving (Read, Show, Eq)
 
 instance A.FromJSON Command where
@@ -1073,12 +1073,12 @@ instance A.FromJSON CommandResponseType where
 
 data CommandResponse
   = CommandResponse
-  { commandResponseType         :: Maybe CommandResponseType
-  , commandResponseText         :: Text
-  , commandResponseUsername     :: Text
-  , commandResponseIconURL      :: Text
-  , commandResponseGotoLocation :: Text
-  , commandResponseAttachments  :: Seq PostPropAttachment
+  { commandResponseType         :: !(Maybe CommandResponseType)
+  , commandResponseText         :: !Text
+  , commandResponseUsername     :: !Text
+  , commandResponseIconURL      :: !Text
+  , commandResponseGotoLocation :: !Text
+  , commandResponseAttachments  :: !(Seq PostPropAttachment)
   } deriving (Read, Show, Eq)
 
 instance A.FromJSON CommandResponse where
@@ -1095,10 +1095,10 @@ instance A.FromJSON CommandResponse where
 
 data UsersCreate
   = UsersCreate
-  { usersCreateEmail          :: Text
-  , usersCreatePassword       :: Text
-  , usersCreateUsername       :: Text
-  , usersCreateAllowMarketing :: Bool
+  { usersCreateEmail          :: !Text
+  , usersCreatePassword       :: !Text
+  , usersCreateUsername       :: !Text
+  , usersCreateAllowMarketing :: !Bool
   } deriving (Read, Show, Eq)
 
 instance A.ToJSON UsersCreate where
@@ -1113,9 +1113,9 @@ instance A.ToJSON UsersCreate where
 
 data TeamsCreate
   = TeamsCreate
-  { teamsCreateDisplayName :: Text
-  , teamsCreateName        :: Text
-  , teamsCreateType        :: Type
+  { teamsCreateDisplayName :: !Text
+  , teamsCreateName        :: !Text
+  , teamsCreateType        :: !Type
   } deriving (Read, Show, Eq)
 
 instance A.ToJSON TeamsCreate where
@@ -1129,10 +1129,10 @@ instance A.ToJSON TeamsCreate where
 
 data Reaction
   = Reaction
-  { reactionUserId    :: UserId
-  , reactionPostId    :: PostId
-  , reactionEmojiName :: Text
-  , reactionCreateAt  :: ServerTime
+  { reactionUserId    :: !UserId
+  , reactionPostId    :: !PostId
+  , reactionEmojiName :: !Text
+  , reactionCreateAt  :: !ServerTime
   } deriving (Read, Show, Eq)
 
 instance A.FromJSON Reaction where
@@ -1202,7 +1202,7 @@ instance A.ToJSON PreferenceCategory where
     PreferenceCategoryOther t             -> t
 
 data PreferenceName
-  = PreferenceName { fromRawPreferenceName :: Text }
+  = PreferenceName { fromRawPreferenceName :: !Text }
     deriving (Read, Show, Eq)
 
 instance A.FromJSON PreferenceName where
@@ -1212,7 +1212,7 @@ instance A.ToJSON PreferenceName where
   toJSON = A.toJSON . fromRawPreferenceName
 
 data PreferenceValue
-  = PreferenceValue { fromRawPreferenceValue :: Text }
+  = PreferenceValue { fromRawPreferenceValue :: !Text }
     deriving (Read, Show, Eq)
 
 instance A.FromJSON PreferenceValue where
@@ -1223,10 +1223,10 @@ instance A.ToJSON PreferenceValue where
 
 data Preference
   = Preference
-  { preferenceUserId   :: UserId
-  , preferenceCategory :: PreferenceCategory
-  , preferenceName     :: PreferenceName
-  , preferenceValue    :: PreferenceValue
+  { preferenceUserId   :: !UserId
+  , preferenceCategory :: !PreferenceCategory
+  , preferenceName     :: !PreferenceName
+  , preferenceValue    :: !PreferenceValue
   } deriving (Read, Show, Eq)
 
 instance A.FromJSON Preference where
@@ -1246,8 +1246,8 @@ instance A.ToJSON Preference where
     ]
 
 data FavoriteChannelPreference =
-    FavoriteChannelPreference { favoriteChannelId :: ChannelId
-                              , favoriteChannelShow :: Bool
+    FavoriteChannelPreference { favoriteChannelId :: !ChannelId
+                              , favoriteChannelShow :: !Bool
                               } deriving (Read, Show, Eq)
 
 -- | Attempt to expose a 'Preference' as a 'FavoriteChannelPreference'
@@ -1264,8 +1264,8 @@ preferenceToFavoriteChannelPreference
 preferenceToFavoriteChannelPreference _ = Nothing
 
 data GroupChannelPreference =
-    GroupChannelPreference { groupChannelId :: ChannelId
-                           , groupChannelShow :: Bool
+    GroupChannelPreference { groupChannelId :: !ChannelId
+                           , groupChannelShow :: !Bool
                            } deriving (Read, Show, Eq)
 
 -- | Attempt to expose a 'Preference' as a 'GroupChannelPreference'
@@ -1282,14 +1282,14 @@ preferenceToGroupChannelPreference
 preferenceToGroupChannelPreference _ = Nothing
 
 data FlaggedPost = FlaggedPost
-  { flaggedPostUserId :: UserId
-  , flaggedPostId     :: PostId
-  , flaggedPostStatus :: Bool
+  { flaggedPostUserId :: !UserId
+  , flaggedPostId     :: !PostId
+  , flaggedPostStatus :: !Bool
   } deriving (Read, Show, Eq)
 
 data DirectChannelShowStatus =
-    DirectChannelShowStatus { directChannelShowUserId :: UserId
-                            , directChannelShowValue :: Bool
+    DirectChannelShowStatus { directChannelShowUserId :: !UserId
+                            , directChannelShowValue :: !Bool
                             }
 
 hideGroupChannelPref :: ChannelId -> UserId -> Preference
@@ -1466,8 +1466,8 @@ instance A.ToJSON Team where toJSON = error "to team"
 -- --
 
 data MinChannelMember = MinChannelMember
-  { minChannelMemberUserId :: UserId
-  , minChannelMemberChannelId :: ChannelId
+  { minChannelMemberUserId :: !UserId
+  , minChannelMemberChannelId :: !ChannelId
   } deriving (Read, Show, Eq)
 
 instance A.FromJSON MinChannelMember where
@@ -1483,14 +1483,14 @@ instance A.ToJSON MinChannelMember where
     ]
 
 data ChannelMember = ChannelMember
-  { channelMemberMsgCount :: Int
-  , channelMemberUserId :: UserId
-  , channelMemberRoles :: Text
-  , channelMemberMentionCount :: Int
-  , channelMemberLastViewedAt :: ServerTime
-  , channelMemberChannelId :: ChannelId
-  , channelMemberLastUpdateAt :: ServerTime
-  , channelMemberNotifyProps :: ChannelNotifyProps
+  { channelMemberMsgCount :: !Int
+  , channelMemberUserId :: !UserId
+  , channelMemberRoles :: !Text
+  , channelMemberMentionCount :: !Int
+  , channelMemberLastViewedAt :: !ServerTime
+  , channelMemberChannelId :: !ChannelId
+  , channelMemberLastUpdateAt :: !ServerTime
+  , channelMemberNotifyProps :: !ChannelNotifyProps
   } deriving (Read, Show, Eq)
 
 instance A.FromJSON ChannelMember where
@@ -1519,10 +1519,10 @@ instance A.ToJSON ChannelMember where
 
 
 data Status = Status
-  { statusUserId :: UserId
-  , statusStatus :: T.Text
-  , statusManual :: Bool
-  , statusLastActivityAt :: ServerTime
+  { statusUserId :: !UserId
+  , statusStatus :: !T.Text
+  , statusManual :: !Bool
+  , statusLastActivityAt :: !ServerTime
   }
 
 instance A.FromJSON Status where
@@ -1543,18 +1543,18 @@ instance A.ToJSON Status where
 
 
 data UserSearch = UserSearch
-  { userSearchTerm :: Text
-  , userSearchAllowInactive :: Bool
+  { userSearchTerm :: !Text
+  , userSearchAllowInactive :: !Bool
     -- ^ When `true`, include deactivated users in the results
-  , userSearchWithoutTeam :: Bool
+  , userSearchWithoutTeam :: !Bool
     -- ^ Set this to `true` if you would like to search for users that are not on a team. This option takes precendence over `team_id`, `in_channel_id`, and `not_in_channel_id`.
-  , userSearchInChannelId :: Maybe ChannelId
+  , userSearchInChannelId :: !(Maybe ChannelId)
     -- ^ If provided, only search users in this channel
-  , userSearchNotInTeamId :: Maybe TeamId
+  , userSearchNotInTeamId :: !(Maybe TeamId)
     -- ^ If provided, only search users not on this team
-  , userSearchNotInChannelId :: Maybe ChannelId
+  , userSearchNotInChannelId :: !(Maybe ChannelId)
     -- ^ If provided, only search users not in this channel. Must specifiy `team_id` when using this option
-  , userSearchTeamId :: Maybe TeamId
+  , userSearchTeamId :: !(Maybe TeamId)
     -- ^ If provided, only search users on this team
   } deriving (Read, Show, Eq)
 
@@ -1583,12 +1583,12 @@ instance A.ToJSON UserSearch where
 -- --
 
 data RawPost = RawPost
-  { rawPostChannelId :: ChannelId
-  , rawPostMessage :: Text
+  { rawPostChannelId :: !ChannelId
+  , rawPostMessage :: !Text
     -- ^ The message contents, can be formatted with Markdown
-  , rawPostFileIds :: Seq FileId
+  , rawPostFileIds :: !(Seq FileId)
     -- ^ A list of file IDs to associate with the post
-  , rawPostRootId :: Maybe PostId
+  , rawPostRootId :: !(Maybe PostId)
     -- ^ The post ID to comment on
   } deriving (Read, Show, Eq)
 
@@ -1620,14 +1620,14 @@ rawPost message channelId = RawPost
 
 
 data PostUpdate = PostUpdate
-  { postUpdateIsPinned :: Maybe Bool
-  , postUpdateMessage :: Text
+  { postUpdateIsPinned :: !(Maybe Bool)
+  , postUpdateMessage :: !Text
     -- ^ The message text of the post
-  , postUpdateHasReactions :: Maybe Bool
+  , postUpdateHasReactions :: !(Maybe Bool)
     -- ^ Set to `true` if the post has reactions to it
-  , postUpdateFileIds :: Maybe (Seq FileId)
+  , postUpdateFileIds :: !(Maybe (Seq FileId))
     -- ^ The list of files attached to this post
-  , postUpdateProps :: Maybe Text
+  , postUpdateProps :: !(Maybe Text)
     -- ^ A general JSON property bag to attach to the post
   } deriving (Read, Show, Eq)
 
@@ -1658,12 +1658,12 @@ postUpdateBody message =
                }
 
 data ChannelPatch = ChannelPatch
-  { channelPatchHeader :: Maybe Text
-  , channelPatchDisplayName :: Maybe Text
+  { channelPatchHeader :: !(Maybe Text)
+  , channelPatchDisplayName :: !(Maybe Text)
     -- ^ The non-unique UI name for the channel
-  , channelPatchName :: Maybe Text
+  , channelPatchName :: !(Maybe Text)
     -- ^ The unique handle for the channel, will be present in the channel URL
-  , channelPatchPurpose :: Maybe Text
+  , channelPatchPurpose :: !(Maybe Text)
     -- ^ A short description of the purpose of the channel
   } deriving (Read, Show, Eq)
 
@@ -1692,10 +1692,10 @@ defaultChannelPatch = ChannelPatch
 
 
 data InitialTeamData = InitialTeamData
-  { initialTeamDataDisplayName :: Text
-  , initialTeamDataType :: Text
+  { initialTeamDataDisplayName :: !Text
+  , initialTeamDataType :: !Text
     -- ^ `'O'` for open, `'I'` for invite only
-  , initialTeamDataName :: Text
+  , initialTeamDataName :: !Text
     -- ^ Unique handler for a team, will be present in the team URL
   } deriving (Read, Show, Eq)
 
@@ -1714,8 +1714,8 @@ instance A.ToJSON InitialTeamData where
     ]
 
 data ChannelStats = ChannelStats
-  { channelStatsChannelId   :: Text
-  , channelStatsMemberCount :: Int
+  { channelStatsChannelId   :: !Text
+  , channelStatsMemberCount :: !Int
   } deriving (Read, Show, Eq)
 
 instance A.FromJSON ChannelStats where
@@ -1733,10 +1733,10 @@ instance A.ToJSON ChannelStats where
 -- --
 
 data ChannelUnread = ChannelUnread
-  { channelUnreadChannelId :: Text
-  , channelUnreadTeamId :: Text
-  , channelUnreadMsgCount :: Int
-  , channelUnreadMentionCount :: Int
+  { channelUnreadChannelId :: !Text
+  , channelUnreadTeamId :: !Text
+  , channelUnreadMsgCount :: !Int
+  , channelUnreadMentionCount :: !Int
   } deriving (Read, Show, Eq)
 
 instance A.FromJSON ChannelUnread where
