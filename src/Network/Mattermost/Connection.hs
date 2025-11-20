@@ -137,8 +137,9 @@ submitRequest cd mToken method uri payload = do
         }
 
       go = withConnection cd $ \con -> do
-          runLogger cd "submitRequest" (HttpRequest method uri Nothing)
+          runLogger cd "submitRequest (request)" (HttpRequest method uri Nothing)
           result <- HTTP.simpleHTTP_ con request
+          runLogger cd "submitRequest (response)" (HttpRequest method uri Nothing)
           case result of
               Left e -> return $ Left e
               Right response -> do
