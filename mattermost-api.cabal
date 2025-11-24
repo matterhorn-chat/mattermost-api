@@ -23,10 +23,6 @@ source-repository    head
   type: git
   location: https://github.com/matterhorn-chat/mattermost-api.git
 
-flag build-examples
-  description: Build example applications
-  default:     False
-
 library
   exposed-modules:     Network.Mattermost.Exceptions
                        Network.Mattermost.Lenses
@@ -79,108 +75,6 @@ library
   hs-source-dirs:      src
   default-language:    Haskell2010
   ghc-options:       -Wall -Wcompat
-
-executable mm-get-teams
-  if !flag(build-examples)
-    buildable: False
-  default-language: Haskell2010
-  main-is:          GetTeams.hs
-  other-modules:    Config
-                    LocalConfig
-  hs-source-dirs:   examples
-  build-depends:    base
-                  , mattermost-api
-                  , aeson
-                  , text
-                  , connection
-                  , process
-                  , unordered-containers
-                  , pretty-show
-
-executable mm-get-channels
-  if !flag(build-examples)
-    buildable:        False
-  default-language: Haskell2010
-  main-is:          GetChannels.hs
-  other-modules:    Config
-                    LocalConfig
-  hs-source-dirs:   examples
-  build-depends:    base
-                  , mattermost-api
-                  , aeson
-                  , text
-                  , connection
-                  , process
-                  , unordered-containers
-                  , pretty-show
-
-executable mm-get-posts
-  if !flag(build-examples)
-    buildable:        False
-  default-language: Haskell2010
-  main-is:          GetPosts.hs
-  other-modules:    Config
-                    LocalConfig
-  hs-source-dirs:   examples
-  build-depends:    base
-                  , mattermost-api
-                  , aeson
-                  , text
-                  , connection
-                  , process
-                  , unordered-containers
-                  , pretty-show
-
-executable mm-make-post
-  if !flag(build-examples)
-    buildable:        False
-  default-language: Haskell2010
-  main-is:          MakePost.hs
-  other-modules:    Config
-                    LocalConfig
-  hs-source-dirs:   examples
-  build-depends:    base
-                  , mattermost-api
-                  , aeson
-                  , text
-                  , connection
-                  , process
-                  , unordered-containers
-                  , pretty-show
-
-executable mm-get-websocket-connection
-  if !flag(build-examples)
-    buildable:        False
-  default-language: Haskell2010
-  main-is:          GetWebsocketConnection.hs
-  other-modules:    Config
-                    LocalConfig
-  hs-source-dirs:   examples
-  build-depends:    base
-                  , mattermost-api
-                  , aeson
-                  , text
-                  , connection
-                  , process
-                  , unordered-containers
-                  , pretty-show
-
-executable mm-show-raw-events
-  if !flag(build-examples)
-    buildable:        False
-  default-language: Haskell2010
-  main-is:          ShowRawEvents.hs
-  other-modules:    Config
-                    LocalConfig
-  hs-source-dirs:   examples
-  build-depends:    base
-                  , mattermost-api
-                  , aeson
-                  , text
-                  , connection
-                  , process
-                  , unordered-containers
-                  , pretty-show
 
 test-suite test-mm-api
   type:             exitcode-stdio-1.0
