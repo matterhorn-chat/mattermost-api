@@ -6,11 +6,123 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 
 module Network.Mattermost.Types
-    ( module Network.Mattermost.Types
-    , module Network.Mattermost.Types.Base
+    ( module Network.Mattermost.Types.Base
+    , ConnectionPoolConfig(..)
+    , defaultConnectionPoolConfig
+    , ConnectionData(..)
+
     , ConnectionType(..)
     , connectionDataURL
+
+    , Session(..)
+    , initConnectionData
+    , closeSession
+
     , ServerBaseURL(..)
+
+    , IsId(..)
+    , HasId(..)
+    , Id(..)
+    , idString
+
+    , TeamId(..)
+    , PostId(..)
+    , UserId(..)
+    , ChannelId(..)
+    , Command(..)
+    , CommandId(..)
+    , MinCommand(..)
+    , CommandResponse(..)
+    , CommandResponseType(..)
+
+    , Preference(..)
+    , preferenceToTeamOrder
+    , preferenceToDirectChannelShowStatus
+    , preferenceToFlaggedPost
+    , preferenceToFavoriteChannelPreference
+    , preferenceToGroupChannelPreference
+    , showGroupChannelPref
+    , hideGroupChannelPref
+    , showDirectChannelPref
+    , teamOrderPref
+
+    , DirectChannelShowStatus(..)
+    , GroupChannelPreference(..)
+    , FavoriteChannelPreference(..)
+    , PreferenceCategory(..)
+    , PreferenceName(..)
+    , PreferenceValue(..)
+    , Post(..)
+    , Posts(..)
+    , PostProps(..)
+    , PostPropAttachment(..)
+    , PostPropAttachmentField(..)
+
+    , PostUpdate(..)
+    , postUpdateBody
+
+    , PostMetadata(..)
+    , PostType(..)
+
+    , PendingPost(..)
+    , PendingPostId(..)
+    , mkPendingPost
+
+    , FlaggedPost(..)
+    , Reaction(..)
+    , User(..)
+    , Channel(..)
+    , Channels
+    , ChannelData(..)
+    , ChannelMember(..)
+    , ChannelWithData(..)
+    , MinChannel(..)
+    , MinChannelMember(..)
+    , Login(..)
+    , Team(..)
+    , TeamsCreate(..)
+    , TeamMember(..)
+
+    , UserNotifyProps(..)
+    , emptyUserNotifyProps
+
+    , ChannelNotifyProps(..)
+    , emptyChannelNotifyProps
+
+    , UsersCreate(..)
+    , FileId(..)
+    , urlForFile
+    , FileInfo(..)
+    , UserParam(..)
+    , InitialLoad(..)
+    , SetChannelHeader(..)
+    , SearchPosts(..)
+    , UserSearch(..)
+
+    , RawPost(..)
+    , rawPost
+
+    , ChannelStats(..)
+    , ChannelUnread(..)
+    , Status(..)
+    , NotifyOption(..)
+    , WithDefault(..)
+    , Type(..)
+
+    , ChannelPatch(..)
+    , defaultChannelPatch
+
+    , timeToServer
+    , timeFromServer
+    , maybeFail
+
+    , runLogger
+    , runLoggerS
+    , withLogger
+    , noLogger
+
+    , UserText(..)
+    , unsafeUserText
     )
     where
 
@@ -96,6 +208,9 @@ initConnectionData host port path connTy cpc = do
 
 destroyConnectionData :: ConnectionData -> IO ()
 destroyConnectionData = Pool.destroyAllResources . cdConnectionPool
+
+closeSession :: Session -> IO ()
+closeSession (Session cd _) = destroyConnectionData cd
 
 withLogger :: ConnectionData -> Logger -> ConnectionData
 withLogger cd logger = cd { cdLogger = Just logger }

@@ -65,7 +65,6 @@ import Test.Tasty.HUnit (testCaseSteps)
 import Control.Monad.State.Lazy (evalStateT, gets, modify)
 import System.Timeout (timeout)
 
-import Network.Mattermost (ConnectionData)
 import Network.Mattermost.Endpoints
 import Network.Mattermost.Types
 import Network.Mattermost.Types.Config

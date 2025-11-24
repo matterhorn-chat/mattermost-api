@@ -3,7 +3,15 @@
 -- Network.Mattermost.Types.Internal, but are not subject to the
 -- cautions that as associated with the latter.
 
-module Network.Mattermost.Types.Base where
+module Network.Mattermost.Types.Base
+  ( Logger
+  , LogEvent(..)
+  , LogEventType(..)
+  , Hostname
+  , Port
+  , ServerTime(..)
+  )
+where
 
 import qualified Data.Aeson as A
 import           Data.Text (Text)

@@ -28,8 +28,7 @@ flag build-examples
   default:     False
 
 library
-  exposed-modules:     Network.Mattermost
-                       Network.Mattermost.Exceptions
+  exposed-modules:     Network.Mattermost.Exceptions
                        Network.Mattermost.Lenses
                        Network.Mattermost.Logging
                        Network.Mattermost.Util
