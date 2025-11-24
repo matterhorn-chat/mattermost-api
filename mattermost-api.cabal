@@ -12,7 +12,7 @@ description:         Client API for Mattermost chat system.  Mattermost is a
 license:             BSD3
 license-file:        LICENSE
 maintainer:          matterhorn@galois.com
-copyright:           2016-2020 Jason Dagit, Getty Ritter, Jonathan Daugherty
+copyright:           2016-2025 Galois, Inc.
 category:            Web
 build-type:          Simple
 extra-doc-files:     README.md,
