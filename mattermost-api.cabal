@@ -45,7 +45,7 @@ library
                      , websockets >= 0.11.0.0
                      , stm
                      , aeson >= 2.0.1.0 && < 2.3.0.0
-                     , crypton-connection
+                     , crypton-connection >= 0.4.0 && < 0.5.0
                      , memory
                      , resource-pool >= 0.2.3
                      -- To prevent broken websockets versions from using
@@ -69,6 +69,7 @@ library
                      , template-haskell
                      , microlens
                      , microlens-th
+                     , data-default-class
                      -- Only here to make debugging easier
                      , pretty-show
                      , split
