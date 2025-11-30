@@ -15,6 +15,7 @@ module Network.Mattermost.Util
 
 import           Control.Exception (finally, onException)
 import           Data.Char ( toUpper )
+import           Data.Default.Class (def)
 import qualified Data.ByteString.Char8 as B
 import qualified Data.Text as T
 import qualified Text.URI as URI
@@ -95,7 +96,7 @@ mkConnection ctx host port connTy = do
             -- The first argument to TLSSettingsSimple is whether to
             -- /disable/ cert validation. If requireTrustedCert is True,
             -- we want that argument to be False to force validation.
-            Just (TLSSettingsSimple (not requireTrustedCert) False False)
+            Just (TLSSettingsSimple (not requireTrustedCert) False False def)
     , connectionUseSocks  = do
         (ty, cHost, cPort) <- proxy
         case ty of
