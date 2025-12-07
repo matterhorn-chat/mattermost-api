@@ -23,6 +23,7 @@ import           Data.Monoid ((<>))
 import           Control.Exception ( Exception
                                    , throwIO )
 import           Data.Pool (takeResource, putResource, destroyResource)
+import           Network.TLS (defaultSupported)
 import           Network.Connection ( Connection
                                     , ConnectionContext
                                     , ConnectionParams(..)
@@ -95,7 +96,7 @@ mkConnection ctx host port connTy = do
             -- The first argument to TLSSettingsSimple is whether to
             -- /disable/ cert validation. If requireTrustedCert is True,
             -- we want that argument to be False to force validation.
-            Just (TLSSettingsSimple (not requireTrustedCert) False False)
+            Just (TLSSettingsSimple (not requireTrustedCert) False False defaultSupported)
     , connectionUseSocks  = do
         (ty, cHost, cPort) <- proxy
         case ty of
