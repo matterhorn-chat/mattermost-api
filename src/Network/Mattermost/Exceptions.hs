@@ -13,6 +13,7 @@ module Network.Mattermost.Exceptions
 , ConnectionException(..)
 , MattermostServerError(..)
 , RateLimitException(..)
+, RequestTooLargeException(..)
 ) where
 
 import qualified Data.Aeson as A
@@ -85,6 +86,13 @@ data MattermostServerError = MattermostServerError T.Text
   deriving (Show, Typeable)
 
 instance Exception MattermostServerError
+
+-- | An exception raised when a request's size was too large for the
+-- server and was thus rejected.
+data RequestTooLargeException = RequestTooLargeException
+                              deriving (Eq, Show)
+
+instance Exception RequestTooLargeException
 
 -- | An exception raised when a request could not be completed due to a
 -- request rate limit violation.

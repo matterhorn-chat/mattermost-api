@@ -102,6 +102,9 @@ doUnauthRequest cd = submitRequest cd Nothing
 -- raises 'RateLimitException' with the fields populated from the
 -- response headers where possible.
 --
+-- If the request fails due to a 413 (too-large) response, this raises
+-- 'RequestTooLargeException'.
+--
 -- If the response status is 2XX, the response is returned.
 --
 -- If the response status is anything else, its body is assumed to be
@@ -165,6 +168,9 @@ submitRequest cd mToken method uri payload = do
 
   rsp <- hoistE (left ConnectionException rawResponse)
   case HTTP.rspCode rsp of
+    (4, 1, 3) ->
+        throwIO RequestTooLargeException
+
     (4, 2, 9) -> do
         -- Extract rate limit information if possible
         let headers = HTTP.getHeaders rsp
