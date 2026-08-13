@@ -159,6 +159,11 @@ mmGetChannelPinnedPosts :: ChannelId -> Session -> IO Posts
 mmGetChannelPinnedPosts channelId =
   inGet (printf "/channels/%s/pinned" channelId) noBody jsonResponse
 
+-- | Get a list of bookmarks for a channel.
+mmGetChannelBookmarks :: ChannelId -> Session -> IO (Seq Bookmark)
+mmGetChannelBookmarks channelId =
+  inGet (printf "/channels/%s/bookmarks" channelId) noBody jsonResponse
+
 -- | Get statistics for a channel.
 --
 --   /Permissions/: Must have the @read_channel@ permission.
