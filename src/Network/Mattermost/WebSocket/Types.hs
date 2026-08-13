@@ -272,9 +272,9 @@ instance ToJSON WEData where
     , "parent_id"    .= wepParentId
     , "channel_name" .= wepChannelDisplayName
     , "post"         .= toValueString wepPost
-    , "reaction"     .= wepReaction
-    , "bookmark"     .= wepBookmark
-    , "bookmarks"    .= wepBookmarks
+    , "reaction"     .= toValueString wepReaction
+    , "bookmark"     .= toValueString wepBookmark
+    , "bookmarks"    .= toValueString wepBookmarks
     , "mentions"     .= toValueString wepMentions
     , "preferences"  .= toValueString wepPreferences
     , "channelMember" .= toValueString wepChannelMember
