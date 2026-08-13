@@ -236,6 +236,7 @@ data WEData = WEData
   , wepStatus             :: Maybe Text
   , wepReaction           :: Maybe Reaction
   , wepBookmark           :: Maybe Bookmark
+  , wepBookmarks          :: Maybe (Seq Bookmark)
   , wepMentions           :: Maybe (Set UserId)
   , wepPreferences        :: Maybe (Seq Preference)
   , wepChannelMember      :: Maybe ChannelMember
@@ -255,6 +256,7 @@ instance FromJSON WEData where
     wepStatus             <- o .:? "status"
     wepReaction           <- mapM fromValueString =<< o .:? "reaction"
     wepBookmark           <- mapM fromValueString =<< o .:? "bookmark"
+    wepBookmarks          <- mapM fromValueString =<< o .:? "bookmarks"
     wepMentions           <- mapM fromValueString =<< o .:? "mentions"
     wepPreferences        <- mapM fromValueString =<< o .:? "preferences"
     wepChannelMember      <- mapM fromValueString =<< o .:? "channelMember"
@@ -272,6 +274,7 @@ instance ToJSON WEData where
     , "post"         .= toValueString wepPost
     , "reaction"     .= wepReaction
     , "bookmark"     .= wepBookmark
+    , "bookmarks"    .= wepBookmarks
     , "mentions"     .= toValueString wepMentions
     , "preferences"  .= toValueString wepPreferences
     , "channelMember" .= toValueString wepChannelMember
