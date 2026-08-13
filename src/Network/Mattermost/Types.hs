@@ -1138,7 +1138,7 @@ mkPendingPost msg userid channelid = do
 data FileInfo
   = FileInfo
   { fileInfoId         :: !FileId
-  , fileInfoUserId     :: !UserId
+  , fileInfoUserId     :: !(Maybe UserId)
   , fileInfoPostId     :: !(Maybe PostId)
   , fileInfoCreateAt   :: !ServerTime
   , fileInfoUpdateAt   :: !ServerTime
@@ -1158,7 +1158,7 @@ instance ToJSON FileInfo where
 instance FromJSON FileInfo where
   parseJSON = A.withObject "file_info" $ \o -> do
     fileInfoId         <- o .: "id"
-    fileInfoUserId     <- o .: "user_id"
+    fileInfoUserId     <- maybeFail (o .: "user_id")
     fileInfoPostId     <- o .:? "post_id"
     fileInfoCreateAt   <- timeFromServer <$> o .: "create_at"
     fileInfoUpdateAt   <- timeFromServer <$> o .: "update_at"
