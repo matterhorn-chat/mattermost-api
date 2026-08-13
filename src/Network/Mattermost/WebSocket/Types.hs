@@ -11,6 +11,7 @@ module Network.Mattermost.WebSocket.Types
 , WebsocketAction(..)
 , WebsocketActionResponse(..)
 , WebsocketActionStatus(..)
+, BookmarkUpdate(..)
 ) where
 
 import           Control.Applicative
@@ -224,6 +225,17 @@ instance WebSocketsData WebsocketEvent where
 
 --
 
+data BookmarkUpdate = One Bookmark | Many (Seq Bookmark)
+                    deriving (Read, Show, Eq)
+
+instance A.FromJSON BookmarkUpdate where
+  parseJSON v = (One <$> (A.withObject "BookmarkUpdate" $ \o -> o .: "updated") v) <|>
+                (Many <$> parseJSON v)
+
+instance A.ToJSON BookmarkUpdate where
+  toJSON (One a) = toJSON a
+  toJSON (Many as) = toJSON as
+
 data WEData = WEData
   { wepChannelId          :: Maybe ChannelId
   , wepTeamId             :: Maybe TeamId
@@ -236,7 +248,7 @@ data WEData = WEData
   , wepStatus             :: Maybe Text
   , wepReaction           :: Maybe Reaction
   , wepBookmark           :: Maybe Bookmark
-  , wepBookmarks          :: Maybe (Seq Bookmark)
+  , wepBookmarks          :: Maybe BookmarkUpdate
   , wepMentions           :: Maybe (Set UserId)
   , wepPreferences        :: Maybe (Seq Preference)
   , wepChannelMember      :: Maybe ChannelMember
