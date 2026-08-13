@@ -75,6 +75,10 @@ data WebsocketEventType
   | WMMultipleChannelsViewed
   | WMChannelUpdated
   | WMChannelMemberUpdated
+  | WMChannelBookmarkCreated
+  | WMChannelBookmarkDeleted
+  | WMChannelBookmarkUpdated
+  | WMChannelBookmarkSorted
   | WMEmojiAdded
   | WMUserRoleUpdated
   | WMPluginStatusesChanged
@@ -119,6 +123,10 @@ instance FromJSON WebsocketEventType where
     "plugin_statuses_changed" -> return WMPluginStatusesChanged
     "plugin_enabled"     -> return WMPluginEnabled
     "plugin_disabled"    -> return WMPluginDisabled
+    "channel_bookmark_created" -> return WMChannelBookmarkCreated
+    "channel_bookmark_deleted" -> return WMChannelBookmarkDeleted
+    "channel_bookmark_updated" -> return WMChannelBookmarkUpdated
+    "channel_bookmark_sorted"  -> return WMChannelBookmarkSorted
     _                    -> return $ WMUnknownEvent s
 
 instance ToJSON WebsocketEventType where
@@ -156,6 +164,10 @@ instance ToJSON WebsocketEventType where
   toJSON WMPluginStatusesChanged   = "plugin_statuses_changed"
   toJSON WMPluginEnabled           = "plugin_enabled"
   toJSON WMPluginDisabled          = "plugin_disabled"
+  toJSON WMChannelBookmarkCreated  = "channel_bookmark_created"
+  toJSON WMChannelBookmarkDeleted  = "channel_bookmark_deleted"
+  toJSON WMChannelBookmarkUpdated  = "channel_bookmark_updated"
+  toJSON WMChannelBookmarkSorted   = "channel_bookmark_sorted"
   toJSON (WMUnknownEvent s)        = toJSON s
 
 --
@@ -223,6 +235,7 @@ data WEData = WEData
   , wepPost               :: Maybe Post
   , wepStatus             :: Maybe Text
   , wepReaction           :: Maybe Reaction
+  , wepBookmark           :: Maybe Bookmark
   , wepMentions           :: Maybe (Set UserId)
   , wepPreferences        :: Maybe (Seq Preference)
   , wepChannelMember      :: Maybe ChannelMember
@@ -241,6 +254,7 @@ instance FromJSON WEData where
     wepPost               <- mapM fromValueString =<< o .:? "post"
     wepStatus             <- o .:? "status"
     wepReaction           <- mapM fromValueString =<< o .:? "reaction"
+    wepBookmark           <- mapM fromValueString =<< o .:? "bookmark"
     wepMentions           <- mapM fromValueString =<< o .:? "mentions"
     wepPreferences        <- mapM fromValueString =<< o .:? "preferences"
     wepChannelMember      <- mapM fromValueString =<< o .:? "channelMember"
@@ -257,6 +271,7 @@ instance ToJSON WEData where
     , "channel_name" .= wepChannelDisplayName
     , "post"         .= toValueString wepPost
     , "reaction"     .= wepReaction
+    , "bookmark"     .= wepBookmark
     , "mentions"     .= toValueString wepMentions
     , "preferences"  .= toValueString wepPreferences
     , "channelMember" .= toValueString wepChannelMember

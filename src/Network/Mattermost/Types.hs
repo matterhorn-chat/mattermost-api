@@ -99,6 +99,11 @@ module Network.Mattermost.Types
     , SearchPosts(..)
     , UserSearch(..)
 
+    , BookmarkId(..)
+    , Bookmark(..)
+    , BookmarkType(..)
+    , BookmarkContents(..)
+
     , RawPost(..)
     , rawPost
 
@@ -529,6 +534,98 @@ instance A.ToJSON ChannelNotifyProps where
     , "mark_unread"             .= channelNotifyPropsMarkUnread
     , "ignore_channel_mentions" .= fmap OnOffString channelNotifyPropsIgnoreChannelMentions
     ]
+
+--
+
+newtype BookmarkId = BI { unBI :: Id }
+  deriving (Read, Show, Eq, Ord, Hashable, ToJSON, ToJSONKey, FromJSONKey, FromJSON)
+
+instance IsId BookmarkId where
+  toId   = unBI
+  fromId = BI
+
+instance PrintfArg BookmarkId where
+  formatArg = formatArg . idString
+
+data BookmarkType =
+    BookmarkTypeLink
+    | BookmarkTypeFile
+    deriving (Eq, Show, Read)
+
+instance A.FromJSON BookmarkType where
+  parseJSON = A.withText "Type" $ \t ->
+      case t of
+        "link" -> return BookmarkTypeLink
+        "file" -> return BookmarkTypeFile
+        _      -> fail $ "Unknown bookmark type: " <> show t
+
+instance A.ToJSON BookmarkType where
+  toJSON BookmarkTypeLink = A.String "link"
+  toJSON BookmarkTypeFile = A.String "file"
+
+data BookmarkContents =
+    BookmarkLink !UserText
+    | BookmarkFile !FileInfo
+    deriving (Eq, Show, Read)
+
+data Bookmark =
+  Bookmark
+  { bookmarkId            :: !BookmarkId
+  , bookmarkCreateAt      :: !ServerTime
+  , bookmarkUpdateAt      :: !ServerTime
+  , bookmarkDeleteAt      :: !ServerTime
+  , bookmarkChannelId     :: !ChannelId
+  , bookmarkOwnerId       :: !(Maybe UserId)
+  , bookmarkDisplayName   :: !UserText
+  , bookmarkSortOrder     :: !Int
+  , bookmarkEmojiName     :: !(Maybe UserText)
+  , bookmarkContents      :: BookmarkContents
+  }
+  deriving (Eq, Show, Read)
+
+instance HasId Bookmark BookmarkId where
+  getId = bookmarkId
+
+instance A.FromJSON Bookmark where
+  parseJSON = A.withObject "Bookmark" $ \v -> do
+    bookmarkId              <- v .: "id"
+    bookmarkChannelId       <- v .: "channel_id"
+    bookmarkCreateAt        <- timeFromServer <$> v .: "create_at"
+    bookmarkUpdateAt        <- timeFromServer <$> v .: "update_at"
+    bookmarkDeleteAt        <- timeFromServer <$> v .: "delete_at"
+    bookmarkOwnerId         <- maybeFail (v .: "owner_id")
+    bookmarkDisplayName     <- v .: "display_name"
+    bookmarkSortOrder       <- v .: "sort_order"
+    bookmarkEmojiName       <- maybeFail (v .: "emoji")
+
+    ty <- v .: "type"
+    bookmarkContents <- case ty of
+        BookmarkTypeLink -> BookmarkLink <$> v .: "link_url"
+        BookmarkTypeFile -> BookmarkFile <$> v .: "file"
+
+    return Bookmark { .. }
+
+instance A.ToJSON Bookmark where
+  toJSON Bookmark { .. }  = A.object $
+    [ "id"           .= bookmarkId
+    , "create_at"    .= timeToServer bookmarkCreateAt
+    , "update_at"    .= timeToServer bookmarkUpdateAt
+    , "delete_at"    .= timeToServer bookmarkDeleteAt
+    , "display_name" .= bookmarkDisplayName
+    , "sort_order"   .= bookmarkSortOrder
+    , "channel_id"   .= bookmarkChannelId
+    ] <>
+    [ "emoji_name"  .= v | Just v <- [bookmarkEmojiName] ] <>
+    [ "owner_id"    .= v | Just v <- [bookmarkOwnerId] ] <>
+    case bookmarkContents of
+        BookmarkLink url ->
+            [ "type"     .= BookmarkTypeFile
+            , "link_url" .= url
+            ]
+        BookmarkFile f ->
+            [ "type" .= BookmarkTypeLink
+            , "file" .= f
+            ]
 
 --
 
