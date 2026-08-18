@@ -164,6 +164,10 @@ mmGetChannelBookmarks :: ChannelId -> Session -> IO (Seq Bookmark)
 mmGetChannelBookmarks channelId =
   inGet (printf "/channels/%s/bookmarks" channelId) noBody jsonResponse
 
+mmSetChannelBookmarkOrder :: ChannelId -> BookmarkId -> Int -> Session -> IO ()
+mmSetChannelBookmarkOrder cId bId order =
+  inPost (printf "/channels/%s/bookmarks/%s/sort_order" cId bId) (jsonBody order) noResponse
+
 -- | Get statistics for a channel.
 --
 --   /Permissions/: Must have the @read_channel@ permission.
