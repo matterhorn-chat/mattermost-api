@@ -69,7 +69,7 @@ library
                      , template-haskell
                      , microlens
                      , microlens-th
-                     , tls
+                     , tls >= 2.1.3
                      -- Only here to make debugging easier
                      , pretty-show
                      , split
